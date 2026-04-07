@@ -1,0 +1,63 @@
+/* react-rnd handles: hover = thin blue lines (edges) or L-shaped lines (corners) */
+.chat-overlay-rnd {
+  --chat-rnd-line: rgba(24, 104, 219, 0.78);
+  transition: background 0.12s ease;
+}
+
+/* ---- Edges: single 2px line on the side that meets the panel ---- */
+/* Line on the edge that touches the panel (inner edge of the hit area) */
+.chat-overlay-rnd-top:hover {
+  background: linear-gradient(to top, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-bottom:hover {
+  background: linear-gradient(to bottom, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-left:hover {
+  background: linear-gradient(to left, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-right:hover {
+  background: linear-gradient(to right, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-top:active,
+.chat-overlay-rnd-bottom:active,
+.chat-overlay-rnd-left:active,
+.chat-overlay-rnd-right:active {
+  --chat-rnd-line: rgba(24, 104, 219, 0.95);
+}
+
+/* ---- Corners: L = two thin lines (gradients, no border jump) ---- */
+.chat-overlay-rnd-corner-tl:hover {
+  /* inner toward panel: bottom + right edges of handle */
+  background:
+    linear-gradient(to top, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px),
+    linear-gradient(to left, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-corner-tr:hover {
+  background:
+    linear-gradient(to top, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px),
+    linear-gradient(to right, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-corner-bl:hover {
+  background:
+    linear-gradient(to bottom, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px),
+    linear-gradient(to left, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-corner-br:hover {
+  background:
+    linear-gradient(to bottom, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px),
+    linear-gradient(to right, var(--chat-rnd-line) 0, var(--chat-rnd-line) 2px, transparent 2px);
+}
+
+.chat-overlay-rnd-corner-tl:active,
+.chat-overlay-rnd-corner-tr:active,
+.chat-overlay-rnd-corner-bl:active,
+.chat-overlay-rnd-corner-br:active {
+  --chat-rnd-line: rgba(24, 104, 219, 0.95);
+}

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Rnd } from "react-rnd";
-import { Send, Edit2, Share2, Trash2, Coins } from "lucide-react";
+import { Send, Edit2, Share2, Trash2, Coins, MessageSquarePlus, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import aiAvatarIcon from "../../imports/Appfire_AI_Logo.png";
@@ -14,6 +14,17 @@ import { Tooltip } from "./Tooltip";
 
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
+
+const rndResizeHandleClasses = {
+  top: "chat-overlay-rnd chat-overlay-rnd-top",
+  right: "chat-overlay-rnd chat-overlay-rnd-right",
+  bottom: "chat-overlay-rnd chat-overlay-rnd-bottom",
+  left: "chat-overlay-rnd chat-overlay-rnd-left",
+  topLeft: "chat-overlay-rnd chat-overlay-rnd-corner-tl",
+  topRight: "chat-overlay-rnd chat-overlay-rnd-corner-tr",
+  bottomLeft: "chat-overlay-rnd chat-overlay-rnd-corner-bl",
+  bottomRight: "chat-overlay-rnd chat-overlay-rnd-corner-br",
+};
 
 interface Message {
   id: string;
@@ -62,9 +73,13 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [editingConvId, setEditingConvId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  const [newChatBannerVisible, setNewChatBannerVisible] = useState(false);
+  const [newChatBadgeConvId, setNewChatBadgeConvId] = useState<string | null>(null);
+  const [newChatBannerMeta, setNewChatBannerMeta] = useState<{ totalChats: number; title: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const newChatTimersRef = useRef<number[]>([]);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
@@ -91,6 +106,12 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [openMenuId]);
+
+  useEffect(() => {
+    return () => {
+      newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !activeConversation) return;
@@ -148,9 +169,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   };
 
   const handleNewConversation = () => {
+    const nextIndex = conversations.length + 1;
     const newConv: Conversation = {
       id: Date.now().toString(),
-      title: `Conversation ${conversations.length + 1}`,
+      title: `Conversation ${nextIndex}`,
       messages: [
         {
           id: Date.now().toString(),
@@ -161,9 +183,27 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       totalTokens: 12,
       createdAt: new Date(),
     };
-    setConversations([...conversations, newConv]);
+    newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
+    newChatTimersRef.current = [];
+
+    setConversations((prev) => [...prev, newConv]);
     setActiveConversationId(newConv.id);
     setShowHistory(false);
+    setInputValue("");
+    setNewChatBannerMeta({ totalChats: nextIndex, title: newConv.title });
+    setNewChatBannerVisible(true);
+    setNewChatBadgeConvId(newConv.id);
+
+    newChatTimersRef.current.push(
+      window.setTimeout(() => setNewChatBannerVisible(false), 6500)
+    );
+    newChatTimersRef.current.push(
+      window.setTimeout(() => setNewChatBadgeConvId(null), 14000)
+    );
+  };
+
+  const dismissNewChatBanner = () => {
+    setNewChatBannerVisible(false);
   };
 
   const handleDeleteConversation = (id: string) => {
@@ -250,6 +290,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
   if (!isOpen) return null;
 
+  const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <Rnd
@@ -266,6 +308,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
         dragHandleClassName="chat-drag-handle"
         enableUserSelectHack={false}
         cancel="input, button, textarea, .no-drag"
+        resizeHandleClasses={rndResizeHandleClasses}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -274,22 +317,34 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           className="w-full h-full bg-white rounded-lg shadow-lg border border-gray-300 flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="chat-drag-handle bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between cursor-move">
-            <div className="flex items-center gap-3">
-              
-              <h2 className="text-sm font-semibold" style={{ color: '#292A2E' }}>AI Assistant</h2>
-              {!showHistory && activeConversation && (
-                <>
-                  
-                  
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Tooltip content="New conversation">
+          <div className="chat-drag-handle flex cursor-move items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 py-3">
+            <span className="sr-only">Drag the header to move this window</span>
+            <div className="flex min-w-0 flex-1 items-center gap-2 pr-2">
+              <h2 className="text-sm font-semibold shrink-0" style={{ color: '#292A2E' }}>
+                AI Assistant
+              </h2>
+              <Tooltip
+                content={`Tokens (all conversations): ${totalTokensUsed} / 1500`}
+              >
                 <button
+                  type="button"
+                  className="no-drag flex items-center justify-center rounded p-1.5 transition-colors"
+                  style={{ color: '#505258' }}
+                  aria-label="Token usage for entire chat"
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F4F5F7')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <Coins className="w-4 h-4 shrink-0" style={{ color: 'currentColor' }} />
+                </button>
+              </Tooltip>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Tooltip content="New chat">
+                <button
+                  type="button"
                   onClick={handleNewConversation}
-                  className="flex items-center justify-center rounded transition-colors"
+                  className="no-drag flex items-center justify-center rounded transition-colors"
+                  aria-label="Start a new conversation"
                   style={{ 
                     backgroundColor: 'rgba(255,255,255,0)',
                     color: '#505258',
@@ -386,11 +441,92 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             </div>
           </div>
 
+          <AnimatePresence>
+            {newChatBannerVisible && newChatBannerMeta && (
+              <motion.div
+                role="status"
+                aria-live="polite"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="no-drag overflow-hidden border-b"
+                style={{ borderColor: "#90CAF9", backgroundColor: "#E8F4FD" }}
+              >
+                <div className="flex items-start gap-3 px-4 py-3">
+                  <MessageSquarePlus
+                    className="size-5 shrink-0 mt-0.5"
+                    style={{ color: "#1868DB" }}
+                    strokeWidth={2.25}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-sm font-semibold" style={{ color: "#0747A6" }}>
+                      New conversation started
+                    </p>
+                    <p className="text-xs leading-snug" style={{ color: "#292A2E" }}>
+                      You’re now in a fresh chat ({newChatBannerMeta.title}). You have{" "}
+                      <strong>{newChatBannerMeta.totalChats}</strong> conversations — open{" "}
+                      <strong>Chat history</strong> to switch or delete.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={dismissNewChatBanner}
+                    className="no-drag shrink-0 rounded p-1 transition-colors"
+                    style={{ color: "#505258" }}
+                    aria-label="Dismiss notice"
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.7)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                  >
+                    <X className="size-4" strokeWidth={2} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {showHistory ? (
             <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
               <div className="p-4 space-y-2 flex-1 overflow-y-auto">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between gap-3 mb-3">
                   <span className="text-base font-semibold text-gray-700">Chat history</span>
+                  <Tooltip content="New chat">
+                    <button
+                      type="button"
+                      onClick={handleNewConversation}
+                      className="no-drag flex shrink-0 items-center justify-center rounded transition-colors"
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0)",
+                        color: "#505258",
+                        width: "32px",
+                        height: "32px",
+                      }}
+                      aria-label="Start a new conversation"
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#EBECF0")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0)")
+                      }
+                      onMouseDown={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                      }
+                      onMouseUp={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#EBECF0")
+                      }
+                    >
+                      <span
+                        className={headerToolbarIconClass}
+                        aria-hidden
+                        dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
+                      />
+                    </button>
+                  </Tooltip>
                 </div>
                 {conversations.map((conv) => (
                     <div
@@ -515,20 +651,22 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               </div>
           ) : ( 
             <>
-              {/* Token counter */}
-              <div className="px-4 py-2 border-b flex items-center justify-between gap-3" style={{ backgroundColor: '#E3F2FD', borderColor: '#BBDEFB' }}>
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Tooltip content={activeConversation?.title || 'New Chat'}>
-                    <span className="text-sm font-medium truncate block" style={{ color: '#292A2E' }}>
-                      {activeConversation?.title || 'New Chat'} <span className="font-normal text-xs">({activeConversation?.messages.length || 0} messages)</span>
+              {/* Active conversation title */}
+              <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-100 px-4 py-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {newChatBadgeConvId === activeConversationId && (
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                      style={{ backgroundColor: "#1868DB" }}
+                    >
+                      New
+                    </span>
+                  )}
+                  <Tooltip content={activeConversation?.title || "New Chat"}>
+                    <span className="block truncate text-sm font-medium" style={{ color: "#292A2E" }}>
+                      {activeConversation?.title || "New Chat"}
                     </span>
                   </Tooltip>
-                </div>
-                <div className="relative group flex-shrink-0">
-                  <Coins className="w-4 h-4" style={{ color: '#505258' }} />
-                  <div className="absolute right-0 top-full mt-1 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    Tokens: {conversations.reduce((sum, conv) => sum + conv.totalTokens, 0)} / 1500
-                  </div>
                 </div>
               </div>
 
