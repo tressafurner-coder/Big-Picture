@@ -15,17 +15,6 @@ import { Tooltip } from "./Tooltip";
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
 
-const rndResizeHandleClasses = {
-  top: "chat-overlay-rnd chat-overlay-rnd-top",
-  right: "chat-overlay-rnd chat-overlay-rnd-right",
-  bottom: "chat-overlay-rnd chat-overlay-rnd-bottom",
-  left: "chat-overlay-rnd chat-overlay-rnd-left",
-  topLeft: "chat-overlay-rnd chat-overlay-rnd-corner-tl",
-  topRight: "chat-overlay-rnd chat-overlay-rnd-corner-tr",
-  bottomLeft: "chat-overlay-rnd chat-overlay-rnd-corner-bl",
-  bottomRight: "chat-overlay-rnd chat-overlay-rnd-corner-br",
-};
-
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -46,6 +35,25 @@ interface ChatOverlayProps {
   onClose: () => void;
   onThinkingChange: (isThinking: boolean) => void;
   onNewResponse: () => void;
+}
+
+/** Two thin parallel diagonals (classic resize affordance); parent must be `relative`. */
+function ResizeCornerHint() {
+  return (
+    <div
+      className="pointer-events-none absolute bottom-2 left-2 z-10 text-[#9CA3AF]"
+      aria-hidden
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M2 10L6 6M4 10L8 6"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  );
 }
 
 export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }: ChatOverlayProps) {
@@ -77,6 +85,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [newChatBadgeConvId, setNewChatBadgeConvId] = useState<string | null>(null);
   const [newChatBannerMeta, setNewChatBannerMeta] = useState<{ totalChats: number; title: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const newChatTimersRef = useRef<number[]>([]);
@@ -86,6 +95,15 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation?.messages]);
+
+  // Keep focus on the chat input whenever the conversation view is visible
+  useEffect(() => {
+    if (!isOpen || showHistory || confirmDelete) return;
+    const id = window.requestAnimationFrame(() => {
+      chatInputRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isOpen, showHistory, activeConversationId, isThinking, confirmDelete]);
 
   // Zamknij menu po kliknięciu poza nim
   useEffect(() => {
@@ -308,13 +326,12 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
         dragHandleClassName="chat-drag-handle"
         enableUserSelectHack={false}
         cancel="input, button, textarea, .no-drag"
-        resizeHandleClasses={rndResizeHandleClasses}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          className="w-full h-full bg-white rounded-lg shadow-lg border border-gray-300 flex flex-col overflow-hidden"
+          className="relative w-full h-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg flex flex-col"
         >
           {/* Header */}
           <div className="chat-drag-handle flex cursor-move items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 py-3">
@@ -467,7 +484,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           </AnimatePresence>
 
           {showHistory ? (
-            <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+            <div className="relative flex flex-1 flex-col overflow-hidden bg-gray-50">
               <div className="p-4 space-y-2 flex-1 overflow-y-auto">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <span className="text-base font-semibold text-gray-700">Chat history</span>
@@ -624,7 +641,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     </div>
                   ))}
                 </div>
-              </div>
+              <ResizeCornerHint />
+            </div>
           ) : ( 
             <>
               {/* Active conversation title */}
@@ -751,9 +769,11 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               </div>
 
               {/* Input */}
-              <div className="border-t border-gray-200 p-4">
+              <div className="relative border-t border-gray-200 p-4">
+                <ResizeCornerHint />
                 <div className="flex gap-2 items-center">
                   <input
+                    ref={chatInputRef}
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
@@ -790,7 +810,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     <Send width="18" height="18" />
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="mt-2 pl-7 text-xs text-gray-500">
                   Your data is secure and not processed or stored. Errors may occur. Learn more:{" "}
                   <a href="#" className="underline hover:opacity-80" style={{ color: '#1868DB' }}>
                     Data Policy
