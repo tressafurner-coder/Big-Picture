@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Rnd } from "react-rnd";
-import { Send, Edit2, Share2, Trash2, Coins, MessageSquarePlus, X } from "lucide-react";
+import { Send, Edit2, Share2, Trash2, Coins, MessageSquarePlus, X, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import aiAvatarIcon from "../../imports/Appfire_AI_Logo.png";
@@ -339,30 +339,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               </Tooltip>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Tooltip content="New chat">
-                <button
-                  type="button"
-                  onClick={handleNewConversation}
-                  className="no-drag flex items-center justify-center rounded transition-colors"
-                  aria-label="Start a new conversation"
-                  style={{ 
-                    backgroundColor: 'rgba(255,255,255,0)',
-                    color: '#505258',
-                    width: '32px',
-                    height: '32px'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EBECF0'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0)'}
-                  onMouseDown={(e) => e.currentTarget.style.backgroundColor = '#DFE1E6'}
-                  onMouseUp={(e) => e.currentTarget.style.backgroundColor = '#EBECF0'}
-                >
-                  <span
-                    className={headerToolbarIconClass}
-                    aria-hidden
-                    dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
-                  />
-                </button>
-              </Tooltip>
               <Tooltip content="Chat history">
                 <button
                   onClick={() => setShowHistory(!showHistory)}
@@ -652,7 +628,30 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           ) : ( 
             <>
               {/* Active conversation title */}
-              <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-100 px-4 py-2">
+              <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-100 px-4 py-2">
+                <Tooltip content="Chat history">
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory(true)}
+                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                    style={{ color: "#505258" }}
+                    aria-label="Back to chat history"
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#EBECF0")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                    onMouseDown={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                    }
+                    onMouseUp={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#EBECF0")
+                    }
+                  >
+                    <ArrowLeft className="size-4" strokeWidth={2} aria-hidden />
+                  </button>
+                </Tooltip>
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {newChatBadgeConvId === activeConversationId && (
                     <span
@@ -668,6 +667,33 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     </span>
                   </Tooltip>
                 </div>
+                <Tooltip content="New chat">
+                  <button
+                    type="button"
+                    onClick={handleNewConversation}
+                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                    aria-label="Start a new conversation"
+                    style={{ color: "#505258" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#EBECF0")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                    onMouseDown={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                    }
+                    onMouseUp={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#EBECF0")
+                    }
+                  >
+                    <span
+                      className={headerToolbarIconClass}
+                      aria-hidden
+                      dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
+                    />
+                  </button>
+                </Tooltip>
               </div>
 
               {/* Wiadomości */}
