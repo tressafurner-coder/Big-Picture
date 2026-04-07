@@ -4,6 +4,8 @@ Prototype UI for an AI chat assistant (Vite, React, Tailwind). The original desi
 
 ## Repository
 
+- **GitHub profile:** [karolinachrzanowska-ux](https://github.com/karolinachrzanowska-ux)
+- **This project:** [BigPicture](https://github.com/karolinachrzanowska-ux/BigPicture)
 - **SSH:** `git@github.com:karolinachrzanowska-ux/BigPicture.git`
 - **HTTPS:** https://github.com/karolinachrzanowska-ux/BigPicture.git
 
