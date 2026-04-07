@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import chatIconUrl from "../../assets/chat-bot-icon-square.svg";
+import chatIconUrl from "../../assets/chat-bot-icon-square.png";
 
 interface ChatButtonProps {
   onClick: () => void;

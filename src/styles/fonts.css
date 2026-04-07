@@ -1,34 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-/* Atlassian Sans via Atlassian CDN */
+/* Single local font (bundled by Vite — no Google Fonts / CDN, less FOUT) */
 @font-face {
   font-family: 'Atlassian Sans';
-  src: url('https://atlassian.design/fonts/AtlassianSans-Regular.woff2') format('woff2');
-  font-weight: 400;
+  src: url('../assets/fonts/AtlassianSans.v2.ttf') format('truetype');
+  font-weight: 100 900;
   font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Atlassian Sans';
-  src: url('https://atlassian.design/fonts/AtlassianSans-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Atlassian Sans';
-  src: url('https://atlassian.design/fonts/AtlassianSans-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Atlassian Sans';
-  src: url('https://atlassian.design/fonts/AtlassianSans-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }

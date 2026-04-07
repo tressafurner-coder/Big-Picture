@@ -15,6 +15,9 @@ import { Tooltip } from "./Tooltip";
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
 
+/** Shared token budget across all conversations (UI + mock usage). */
+const TOKEN_LIMIT = 1500;
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -35,25 +38,6 @@ interface ChatOverlayProps {
   onClose: () => void;
   onThinkingChange: (isThinking: boolean) => void;
   onNewResponse: () => void;
-}
-
-/** Two thin parallel diagonals (classic resize affordance); parent must be `relative`. */
-function ResizeCornerHint() {
-  return (
-    <div
-      className="pointer-events-none absolute bottom-2 left-2 z-10 text-[#9CA3AF]"
-      aria-hidden
-    >
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M2 10L6 6M4 10L8 6"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
-  );
 }
 
 export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }: ChatOverlayProps) {
@@ -91,6 +75,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const newChatTimersRef = useRef<number[]>([]);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
+  const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
+  const tokenLimitExceeded = totalTokensUsed >= TOKEN_LIMIT;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -98,12 +84,12 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
   // Keep focus on the chat input whenever the conversation view is visible
   useEffect(() => {
-    if (!isOpen || showHistory || confirmDelete) return;
+    if (!isOpen || showHistory || confirmDelete || tokenLimitExceeded) return;
     const id = window.requestAnimationFrame(() => {
       chatInputRef.current?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(id);
-  }, [isOpen, showHistory, activeConversationId, isThinking, confirmDelete]);
+  }, [isOpen, showHistory, activeConversationId, isThinking, confirmDelete, tokenLimitExceeded]);
 
   // Zamknij menu po kliknięciu poza nim
   useEffect(() => {
@@ -132,7 +118,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   }, []);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !activeConversation) return;
+    if (tokenLimitExceeded || !inputValue.trim() || !activeConversation) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -308,8 +294,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
   if (!isOpen) return null;
 
-  const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <Rnd
@@ -333,7 +317,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           exit={{ opacity: 0, scale: 0.9 }}
           className="relative w-full h-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg flex flex-col"
         >
-          {/* Header */}
           <div className="chat-drag-handle flex cursor-move items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 py-3">
             <span className="sr-only">Drag the header to move this window</span>
             <div className="flex min-w-0 flex-1 items-center gap-2 pr-2">
@@ -341,17 +324,29 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                 AI Assistant
               </h2>
               <Tooltip
-                content={`Tokens (all conversations): ${totalTokensUsed} / 1500`}
+                content={
+                  tokenLimitExceeded
+                    ? `Token limit reached (${totalTokensUsed} / ${TOKEN_LIMIT}). You cannot send more messages until usage is reset.`
+                    : `Tokens (all conversations): ${totalTokensUsed} / ${TOKEN_LIMIT}`
+                }
               >
                 <button
                   type="button"
                   className="no-drag flex items-center justify-center rounded p-1.5 transition-colors"
-                  style={{ color: '#505258' }}
-                  aria-label="Token usage for entire chat"
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F4F5F7')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  style={tokenLimitExceeded ? { color: "#DC2626" } : { color: "#505258" }}
+                  aria-label={
+                    tokenLimitExceeded
+                      ? "Token limit reached — no messages can be sent"
+                      : "Token usage for entire chat"
+                  }
+                  onMouseEnter={(e) => {
+                    if (!tokenLimitExceeded) e.currentTarget.style.backgroundColor = "#F4F5F7";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!tokenLimitExceeded) e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                 >
-                  <Coins className="w-4 h-4 shrink-0" style={{ color: 'currentColor' }} />
+                  <Coins className="w-4 h-4 shrink-0" style={{ color: "currentColor" }} />
                 </button>
               </Tooltip>
             </div>
@@ -641,7 +636,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     </div>
                   ))}
                 </div>
-              <ResizeCornerHint />
             </div>
           ) : ( 
             <>
@@ -770,7 +764,20 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
               {/* Input */}
               <div className="relative border-t border-gray-200 p-4">
-                <ResizeCornerHint />
+                {tokenLimitExceeded && (
+                  <div
+                    className="mb-3 rounded-lg border px-3 py-2 text-xs leading-snug"
+                    style={{
+                      borderColor: "#FECACA",
+                      backgroundColor: "#FEF2F2",
+                      color: "#991B1B",
+                    }}
+                    role="status"
+                  >
+                    You have used all available tokens ({totalTokensUsed} / {TOKEN_LIMIT}). Sending
+                    messages is disabled until your token allowance is increased or reset.
+                  </div>
+                )}
                 <div className="flex gap-2 items-center">
                   <input
                     ref={chatInputRef}
@@ -778,18 +785,22 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                    placeholder="Chat with Appfire AI"
-                    className="flex-1 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent text-sm placeholder:text-gray-400"
+                    placeholder={
+                      tokenLimitExceeded
+                        ? "Token limit reached"
+                        : "Chat with Appfire AI"
+                    }
+                    className="flex-1 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent text-sm placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
                     style={{ 
                       '--tw-ring-color': '#1868DB',
                       border: '1px solid #DFE1E6',
                       backgroundColor: '#FAFBFC'
                     } as React.CSSProperties}
-                    disabled={isThinking}
+                    disabled={isThinking || tokenLimitExceeded}
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isThinking}
+                    disabled={!inputValue.trim() || isThinking || tokenLimitExceeded}
                     className="flex items-center justify-center text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                     style={{ 
                       backgroundColor: '#1868DB',
@@ -810,7 +821,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     <Send width="18" height="18" />
                   </button>
                 </div>
-                <p className="mt-2 pl-7 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-gray-500">
                   Your data is secure and not processed or stored. Errors may occur. Learn more:{" "}
                   <a href="#" className="underline hover:opacity-80" style={{ color: '#1868DB' }}>
                     Data Policy
