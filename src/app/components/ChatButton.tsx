@@ -10,8 +10,9 @@ interface ChatButtonProps {
 export function ChatButton({ onClick, isThinking, hasNotification }: ChatButtonProps) {
   return (
     <motion.button
+      type="button"
       onClick={onClick}
-      className="fixed top-6 right-6 w-16 h-16 flex items-center justify-center z-[60]"
+      className="fixed top-6 right-6 z-[60] flex h-16 w-16 cursor-pointer items-center justify-center"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
     >

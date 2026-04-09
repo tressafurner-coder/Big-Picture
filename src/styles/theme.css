@@ -174,9 +174,34 @@
     line-height: 1.5;
   }
 
+  /**
+   * Wskaźnik „ręka” — nadpisuje dziedziczone cursor-move z np. nagłówka Rnd (.chat-drag-handle).
+   */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   input {
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="tel"],
+  input:not([type]) {
+    cursor: text;
+  }
+
+  a[href] {
+    cursor: pointer;
   }
 }

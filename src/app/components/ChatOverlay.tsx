@@ -790,7 +790,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                         ? "Token limit reached"
                         : "Chat with Appfire AI"
                     }
-                    className="flex-1 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent text-sm placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 cursor-text rounded-lg px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
                     style={{ 
                       '--tw-ring-color': '#1868DB',
                       border: '1px solid #DFE1E6',

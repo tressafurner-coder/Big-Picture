@@ -86,7 +86,7 @@ export function Tooltip({ content, children, delay = 0 }: TooltipProps) {
         ref={triggerRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{ display: "inline-flex", minWidth: 0 }}
+        className="inline-flex min-w-0 cursor-pointer"
       >
         {children}
       </div>
