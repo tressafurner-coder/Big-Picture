@@ -18,6 +18,22 @@ const headerToolbarIconClass =
 /** Shared token budget across all conversations (UI + mock usage). */
 const TOKEN_LIMIT = 1500;
 
+function DataPolicyDisclaimer({ className }: { className?: string }) {
+  return (
+    <p className={className ?? "text-xs text-gray-500"}>
+      Your data is secure and not processed or stored. Errors may occur. Learn more:{" "}
+      <a href="#" className="underline hover:opacity-80" style={{ color: "#1868DB" }}>
+        Data Policy
+      </a>
+      {" & "}
+      <a href="#" className="underline hover:opacity-80" style={{ color: "#1868DB" }}>
+        Security
+      </a>
+      .
+    </p>
+  );
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -479,8 +495,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           </AnimatePresence>
 
           {showHistory ? (
-            <div className="relative flex flex-1 flex-col overflow-hidden bg-gray-50">
-              <div className="p-4 space-y-2 flex-1 overflow-y-auto">
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <span className="text-base font-semibold text-gray-700">Chat history</span>
                   <Tooltip content="New chat">
@@ -636,6 +652,9 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     </div>
                   ))}
                 </div>
+              <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-4 pb-4 pt-3">
+                <DataPolicyDisclaimer />
+              </div>
             </div>
           ) : ( 
             <>
@@ -821,17 +840,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     <Send width="18" height="18" />
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  Your data is secure and not processed or stored. Errors may occur. Learn more:{" "}
-                  <a href="#" className="underline hover:opacity-80" style={{ color: '#1868DB' }}>
-                    Data Policy
-                  </a>
-                  {" & "}
-                  <a href="#" className="underline hover:opacity-80" style={{ color: '#1868DB' }}>
-                    Security
-                  </a>
-                  .
-                </p>
+                <DataPolicyDisclaimer className="mt-2 text-xs text-gray-500" />
               </div>
             </>
           )}

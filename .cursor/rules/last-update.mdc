@@ -1,0 +1,14 @@
+---
+description: Keep the home-screen “Last update” string in sync with shipped changes
+globs: "**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# Last update (home screen)
+
+Whenever you change app behaviour or UI in a way that is worth tracking on the **main screen** (`App.tsx`), update **`src/app/lastUpdate.ts`**:
+
+- Set `LAST_UPDATE_DISPLAY` to the current date/time (e.g. run `date '+%d %b %Y, %H:%M'` and paste the result).
+- Commit that file together with the rest of the change so GitHub Pages and reviewers see a fresh stamp.
+
+Do not leave `lastUpdate.ts` stale across meaningful commits.

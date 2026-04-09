@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChatButton } from "./components/ChatButton";
 import { ChatOverlay } from "./components/ChatOverlay";
 import { Notification } from "./components/Notification";
+import { LAST_UPDATE_DISPLAY } from "./lastUpdate";
 
 export default function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -41,8 +42,8 @@ export default function App() {
           <p className="text-gray-600">
             Click the icon in the top right corner to start a conversation
           </p>
-          <p className="mt-3 text-sm text-gray-500" title="From the last production build or dev server start">
-            Last update: {__APP_LAST_UPDATE__}
+          <p className="mt-3 text-sm text-gray-500" title="Release stamp — edit src/app/lastUpdate.ts when shipping changes">
+            Last update: {LAST_UPDATE_DISPLAY}
           </p>
         </div>
       </div>
