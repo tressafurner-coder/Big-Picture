@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "git@github.com:karolinachrzanowska-ux/BigPicture.git"
+    "url": "https://github.com/fuegokit/BigPicture.git"
   },
   "type": "module",
   "scripts": {
