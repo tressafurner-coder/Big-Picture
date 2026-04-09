@@ -41,6 +41,9 @@ export default function App() {
           <p className="text-gray-600">
             Click the icon in the top right corner to start a conversation
           </p>
+          <p className="mt-3 text-sm text-gray-500" title="From the last production build or dev server start">
+            Last update: {__APP_LAST_UPDATE__}
+          </p>
         </div>
       </div>
 
