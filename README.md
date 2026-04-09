@@ -4,10 +4,10 @@ Prototype UI for an AI chat assistant (Vite, React, Tailwind). The original desi
 
 ## Repository
 
-- **GitHub profile:** [karolinachrzanowska-ux](https://github.com/karolinachrzanowska-ux)
-- **This project:** [BigPicture](https://github.com/karolinachrzanowska-ux/BigPicture)
-- **SSH:** `git@github.com:karolinachrzanowska-ux/BigPicture.git`
-- **HTTPS:** https://github.com/karolinachrzanowska-ux/BigPicture.git
+- **Organization:** [fuegokit](https://github.com/fuegokit)
+- **This project:** [BigPicture](https://github.com/fuegokit/BigPicture)
+- **SSH:** `git@github.com:fuegokit/BigPicture.git`
+- **HTTPS:** https://github.com/fuegokit/BigPicture.git
 
 ## GitHub Pages (live demo)
 
@@ -16,13 +16,13 @@ Each push to `main` runs **Deploy to GitHub Pages** and publishes `dist/`.
 
 ### One-time setup (required)
 
-1. Open **https://github.com/karolinachrzanowska-ux/BigPicture/settings/pages**
+1. Open **https://github.com/fuegokit/BigPicture/settings/pages**
 2. Under **Build and deployment** → **Source**, choose **GitHub Actions** (not “Deploy from a branch”).
 3. Save if prompted, then run the workflow again: **Actions** → **Deploy to GitHub Pages** → **Run workflow**, or push any commit to `main`.
 
 ### Live URL
 
-**https://karolinachrzanowska-ux.github.io/BigPicture/** (after a successful run).
+**https://fuegokit.github.io/BigPicture/** (after a successful run).
 
 Local preview with the same URL shape as GitHub Pages (`/BigPicture/`):
 

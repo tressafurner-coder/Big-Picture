@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  // GitHub Pages project site: https://<user>.github.io/<repo>/
+  // GitHub Pages project site: https://<org>.github.io/<repo>/ e.g. fuegokit.github.io/BigPicture/
   base: process.env.GITHUB_PAGES === 'true' ? '/BigPicture/' : '/',
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
