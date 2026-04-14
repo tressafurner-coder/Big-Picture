@@ -784,17 +784,24 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                       aria-label="Conversation title"
                     />
                   ) : (
-                    <Tooltip content="Click to rename">
+                    <Tooltip
+                      content={
+                        activeConversation?.title?.trim() || "New Chat"
+                      }
+                    >
                       <button
                         type="button"
-                        className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center truncate rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
+                        className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center overflow-hidden rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
                         style={{ color: "#292A2E" }}
+                        aria-label={`Rename: ${activeConversation?.title || "New Chat"}`}
                         onClick={() =>
                           activeConversationId &&
                           handleEditConversation(activeConversationId)
                         }
                       >
-                        {activeConversation?.title || "New Chat"}
+                        <span className="min-w-0 flex-1 truncate">
+                          {activeConversation?.title || "New Chat"}
+                        </span>
                       </button>
                     </Tooltip>
                   )}
