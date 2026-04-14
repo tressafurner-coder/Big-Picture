@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect, ReactNode } from "react";
 import { motion } from "motion/react";
 import { createPortal } from "react-dom";
+import { cn } from "./ui/utils";
 
 interface TooltipProps {
   content: string;
   children: ReactNode;
   delay?: number;
+  /** Merged onto the trigger wrapper (e.g. `flex w-full cursor-not-allowed`). */
+  className?: string;
 }
 
-export function Tooltip({ content, children, delay = 0 }: TooltipProps) {
+export function Tooltip({ content, children, delay = 0, className }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [style, setStyle] = useState<React.CSSProperties>({});
   const timeoutRef = useRef<number | null>(null);
@@ -86,7 +89,7 @@ export function Tooltip({ content, children, delay = 0 }: TooltipProps) {
         ref={triggerRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="inline-flex min-w-0 cursor-pointer"
+        className={cn("inline-flex min-w-0 cursor-pointer", className)}
       >
         {children}
       </div>
@@ -96,7 +99,7 @@ export function Tooltip({ content, children, delay = 0 }: TooltipProps) {
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed pointer-events-none px-2 py-1 rounded text-xs text-white whitespace-nowrap"
+          className="fixed max-w-[14rem] pointer-events-none rounded px-2 py-1 text-left text-xs leading-snug text-white"
           style={{
             ...style,
             backgroundColor: "#172B4D",

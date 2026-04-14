@@ -3,7 +3,6 @@ import { Rnd } from "react-rnd";
 import {
   Send,
   Edit2,
-  Share2,
   Trash2,
   Coins,
   MessageSquarePlus,
@@ -311,33 +310,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
   const handleCloseMenu = () => {
     setOpenMenuId(null);
-  };
-
-  const handleShareConversation = (id: string) => {
-    const conv = conversations.find((c) => c.id === id);
-    if (conv) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("conv", id);
-      
-      // Fallback method for copying to clipboard
-      const textArea = document.createElement("textarea");
-      textArea.value = url.toString();
-      textArea.style.position = "fixed";
-      textArea.style.left = "-999999px";
-      textArea.style.top = "-999999px";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      
-      try {
-        document.execCommand('copy');
-        textArea.remove();
-        alert("Conversation link copied to clipboard!");
-      } catch (err) {
-        textArea.remove();
-        alert(`Copy this link: ${url.toString()}`);
-      }
-    }
   };
 
   const handleOpenInNewPage = () => {
@@ -1040,47 +1012,46 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               <Edit2 className="w-3.5 h-3.5" style={{ color: '#292A2E' }} />
               <span>Rename</span>
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShareConversation(openMenuId);
-                handleCloseMenu();
-              }}
-              className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
-              style={{ 
-                backgroundColor: 'transparent',
-                color: '#292A2E'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EBECF0'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <Share2 className="w-3.5 h-3.5" style={{ color: '#292A2E' }} />
-              <span>Share</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const conv = conversations.find((c) => c.id === openMenuId);
-                if (conv) {
-                  setConfirmDelete({ id: conv.id, title: conv.title });
-                }
-                handleCloseMenu();
-              }}
-              className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              style={{ 
-                backgroundColor: 'transparent'
-              }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = '#FFEBE6';
-                }
-              }}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              disabled={conversations.length === 1}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete</span>
-            </button>
+            {conversations.length === 1 ? (
+              <Tooltip
+                content="You can't delete your only conversation. Start another chat first."
+                className="flex w-full cursor-not-allowed"
+              >
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full cursor-not-allowed items-center gap-2 px-3 py-2 text-left text-sm text-gray-400 transition-colors"
+                  style={{ backgroundColor: "transparent" }}
+                  aria-disabled
+                >
+                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Delete</span>
+                </button>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const conv = conversations.find((c) => c.id === openMenuId);
+                  if (conv) {
+                    setConfirmDelete({ id: conv.id, title: conv.title });
+                  }
+                  handleCloseMenu();
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors"
+                style={{ backgroundColor: "transparent" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#FFEBE6";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Delete</span>
+              </button>
+            )}
           </motion.div>
         </AnimatePresence>
         </>,
