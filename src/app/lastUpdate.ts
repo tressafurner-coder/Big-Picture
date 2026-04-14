@@ -3,4 +3,4 @@
  * Bump `LAST_UPDATE_DISPLAY` whenever you merge meaningful UI or behaviour changes
  * (run `date '+%d %b %Y, %H:%M'` in the project root and paste the result).
  */
-export const LAST_UPDATE_DISPLAY = "14 Apr 2026, 13:05";
+export const LAST_UPDATE_DISPLAY = "14 Apr 2026, 14:17";

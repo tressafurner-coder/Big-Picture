@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Rnd } from "react-rnd";
 import {
   Send,
@@ -10,6 +10,7 @@ import {
   X,
   ArrowLeft,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
@@ -100,6 +101,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [newChatBannerVisible, setNewChatBannerVisible] = useState(false);
   const [newChatBadgeConvId, setNewChatBadgeConvId] = useState<string | null>(null);
   const [newChatBannerMeta, setNewChatBannerMeta] = useState<{ totalChats: number; title: string } | null>(null);
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -117,9 +119,23 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     activeConversation.messages.length === 1 &&
     activeConversation.messages[0].role === "assistant";
 
+  const filteredConversations = useMemo(() => {
+    const q = historySearchQuery.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((conv) => {
+      if (conv.title.toLowerCase().includes(q)) return true;
+      const dateStr = new Date(conv.createdAt).toLocaleDateString().toLowerCase();
+      return dateStr.includes(q);
+    });
+  }, [conversations, historySearchQuery]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation?.messages]);
+
+  useEffect(() => {
+    if (!showHistory) setHistorySearchQuery("");
+  }, [showHistory]);
 
   // Keep focus on the chat input whenever the conversation view is visible
   useEffect(() => {
@@ -556,7 +572,30 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     </button>
                   </Tooltip>
                 </div>
-                {conversations.map((conv) => (
+                <div className="relative mb-3">
+                  <Search
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  <input
+                    type="search"
+                    value={historySearchQuery}
+                    onChange={(e) => setHistorySearchQuery(e.target.value)}
+                    placeholder="Search conversations…"
+                    className="no-drag w-full cursor-text rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2"
+                    style={
+                      { "--tw-ring-color": "#1868DB" } as React.CSSProperties
+                    }
+                    aria-label="Search conversations"
+                  />
+                </div>
+                {filteredConversations.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-gray-500">
+                    No conversations match your search.
+                  </p>
+                ) : (
+                  filteredConversations.map((conv) => (
                     <div
                       key={conv.id}
                       className={`relative flex items-center justify-between p-2 rounded-lg transition-colors ${
@@ -674,7 +713,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                         </>
                       )}
                     </div>
-                  ))}
+                  ))
+                )}
                 </div>
               <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-4 pb-4 pt-3">
                 <DataPolicyDisclaimer />
