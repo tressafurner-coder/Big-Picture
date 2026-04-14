@@ -776,7 +776,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                         if (editingTitle.trim()) handleSaveEdit();
                         else handleCancelEdit();
                       }}
-                      className="no-drag min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm font-normal text-gray-900 focus:border-transparent focus:outline-none focus:ring-2"
+                      className="no-drag h-8 min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 text-sm font-normal text-gray-900 focus:border-transparent focus:outline-none focus:ring-2"
                       style={
                         { "--tw-ring-color": "#1868DB" } as React.CSSProperties
                       }
@@ -787,7 +787,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     <Tooltip content="Click to rename">
                       <button
                         type="button"
-                        className="no-drag min-w-0 flex-1 cursor-pointer truncate text-left text-sm font-medium"
+                        className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center truncate rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
                         style={{ color: "#292A2E" }}
                         onClick={() =>
                           activeConversationId &&
