@@ -756,11 +756,48 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                       New
                     </span>
                   )}
-                  <Tooltip content={activeConversation?.title || "New Chat"}>
-                    <span className="block truncate text-sm font-medium" style={{ color: "#292A2E" }}>
-                      {activeConversation?.title || "New Chat"}
-                    </span>
-                  </Tooltip>
+                  {activeConversationId &&
+                  editingConvId === activeConversationId ? (
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSaveEdit();
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          handleCancelEdit();
+                        }
+                      }}
+                      onBlur={() => {
+                        if (editingTitle.trim()) handleSaveEdit();
+                        else handleCancelEdit();
+                      }}
+                      className="no-drag min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm font-normal text-gray-900 focus:border-transparent focus:outline-none focus:ring-2"
+                      style={
+                        { "--tw-ring-color": "#1868DB" } as React.CSSProperties
+                      }
+                      autoFocus
+                      aria-label="Conversation title"
+                    />
+                  ) : (
+                    <Tooltip content="Click to rename">
+                      <button
+                        type="button"
+                        className="no-drag min-w-0 flex-1 cursor-pointer truncate text-left text-sm font-medium"
+                        style={{ color: "#292A2E" }}
+                        onClick={() =>
+                          activeConversationId &&
+                          handleEditConversation(activeConversationId)
+                        }
+                      >
+                        {activeConversation?.title || "New Chat"}
+                      </button>
+                    </Tooltip>
+                  )}
                 </div>
                 <Tooltip content="New chat">
                   <button
