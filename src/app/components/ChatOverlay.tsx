@@ -508,42 +508,40 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
           {showHistory ? (
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
+              {/* Ta sama wysokość co pasek rozmowy; ikona „+” w tym samym miejscu co w czacie */}
+              <div className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-100 px-4">
+                <span className="min-w-0 flex-1 truncate text-base font-semibold text-gray-700">
+                  Chat history
+                </span>
+                <Tooltip content="New chat">
+                  <button
+                    type="button"
+                    onClick={handleNewConversation}
+                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                    aria-label="Start a new conversation"
+                    style={{ color: "#505258" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#EBECF0")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                    onMouseDown={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                    }
+                    onMouseUp={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#EBECF0")
+                    }
+                  >
+                    <span
+                      className={headerToolbarIconClass}
+                      aria-hidden
+                      dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
+                    />
+                  </button>
+                </Tooltip>
+              </div>
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <span className="text-base font-semibold text-gray-700">Chat history</span>
-                  <Tooltip content="New chat">
-                    <button
-                      type="button"
-                      onClick={handleNewConversation}
-                      className="no-drag flex shrink-0 items-center justify-center rounded transition-colors"
-                      style={{
-                        backgroundColor: "rgba(255,255,255,0)",
-                        color: "#505258",
-                        width: "32px",
-                        height: "32px",
-                      }}
-                      aria-label="Start a new conversation"
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#EBECF0")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0)")
-                      }
-                      onMouseDown={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                      }
-                      onMouseUp={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#EBECF0")
-                      }
-                    >
-                      <span
-                        className={headerToolbarIconClass}
-                        aria-hidden
-                        dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
-                      />
-                    </button>
-                  </Tooltip>
-                </div>
                 <div className="relative mb-3">
                   <Search
                     className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400"
@@ -694,8 +692,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             </div>
           ) : ( 
             <>
-              {/* Active conversation title */}
-              <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-100 px-4 py-2">
+              {/* Active conversation title — ta sama wysokość co pasek „Chat history” */}
+              <div className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-100 px-4">
                 <Tooltip content="Chat history">
                   <button
                     type="button"
