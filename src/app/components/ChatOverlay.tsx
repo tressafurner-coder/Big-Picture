@@ -1,6 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Rnd } from "react-rnd";
-import { Send, Edit2, Share2, Trash2, Coins, MessageSquarePlus, X, ArrowLeft } from "lucide-react";
+import {
+  Send,
+  Edit2,
+  Share2,
+  Trash2,
+  Coins,
+  MessageSquarePlus,
+  X,
+  ArrowLeft,
+  Sparkles,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import aiAvatarIcon from "../../imports/Appfire_AI_Logo.png";
@@ -17,6 +27,12 @@ const headerToolbarIconClass =
 
 /** Shared token budget across all conversations (UI + mock usage). */
 const TOKEN_LIMIT = 1500;
+
+const STARTER_PROMPTS = [
+  "How to implement SAFe® in BigPicture",
+  "Learn how BigPicture is easy as 1-2-3",
+  "Summarize the main product releases from the recent cycle, highlighting key features and improvements.",
+] as const;
 
 function DataPolicyDisclaimer({ className }: { className?: string }) {
   return (
@@ -94,6 +110,13 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
   const tokenLimitExceeded = totalTokensUsed >= TOKEN_LIMIT;
 
+  const showStarterPrompts =
+    !tokenLimitExceeded &&
+    !isThinking &&
+    !!activeConversation &&
+    activeConversation.messages.length === 1 &&
+    activeConversation.messages[0].role === "assistant";
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation?.messages]);
@@ -133,14 +156,15 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     };
   }, []);
 
-  const handleSendMessage = async () => {
-    if (tokenLimitExceeded || !inputValue.trim() || !activeConversation) return;
+  const handleSendMessage = async (preset?: string) => {
+    const text = (preset ?? inputValue).trim();
+    if (tokenLimitExceeded || !text || !activeConversation) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: inputValue.trim(),
-      tokens: Math.ceil(inputValue.trim().split(" ").length * 1.3),
+      content: text,
+      tokens: Math.ceil(text.split(" ").length * 1.3),
     };
 
     setConversations((prev) =>
@@ -735,22 +759,47 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     {message.role === "assistant" && (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
-                        <img src={aiAvatarIcon} alt="AI" className="w-6 h-6 rounded-lg" />
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                        <img src={aiAvatarIcon} alt="AI" className="h-6 w-6 rounded-lg" />
                       </div>
                     )}
                     <div
-                      className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                         message.role === "user"
                           ? "text-white"
                           : "bg-gray-100 text-gray-900"
                       }`}
-                      style={message.role === "user" ? { backgroundColor: '#1868DB' } : {}}
+                      style={message.role === "user" ? { backgroundColor: "#1868DB" } : {}}
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
                     </div>
                   </div>
                 ))}
+
+                {showStarterPrompts && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="w-8 shrink-0" aria-hidden />
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      {STARTER_PROMPTS.map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          onClick={() => void handleSendMessage(prompt)}
+                          className="no-drag flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left font-normal shadow-sm transition-colors hover:bg-gray-50"
+                          aria-label={prompt}
+                        >
+                          <Sparkles
+                            className="mt-0.5 size-5 shrink-0"
+                            style={{ color: "#6554C0" }}
+                            strokeWidth={2}
+                            aria-hidden
+                          />
+                          <span className="text-sm font-normal leading-snug text-gray-900">{prompt}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {isThinking && (
                   <div className="flex gap-3 justify-start">
