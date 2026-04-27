@@ -321,6 +321,16 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     }
   };
 
+  const handleHistoryToggle = () => {
+    // On an empty-history screen, clicking the history icon should start a new chat
+    // and display the same "new conversation" banner as other creation paths.
+    if (showHistory && conversations.length === 0) {
+      handleNewConversation();
+      return;
+    }
+    setShowHistory(!showHistory);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -382,7 +392,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             <div className="flex shrink-0 items-center gap-2">
               <Tooltip content="Chat history">
                 <button
-                  onClick={() => setShowHistory(!showHistory)}
+                  onClick={handleHistoryToggle}
                   className="flex items-center justify-center rounded transition-colors"
                   style={{ 
                     backgroundColor: showHistory ? '#E3F2FD' : 'rgba(255,255,255,0)',
