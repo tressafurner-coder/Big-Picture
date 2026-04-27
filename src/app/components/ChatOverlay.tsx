@@ -127,6 +127,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       return dateStr.includes(q);
     });
   }, [conversations, historySearchQuery]);
+  const hasConversations = conversations.length > 0;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -170,6 +171,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
     };
   }, []);
+
 
   const handleSendMessage = async (preset?: string) => {
     const text = (preset ?? inputValue).trim();
@@ -267,7 +269,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
   const handleDeleteConversation = (id: string) => {
     setConversations((prev) => {
-      if (prev.length <= 1) return prev;
       const next = prev.filter((c) => c.id !== id);
       setActiveConversationId((cur) => (cur === id ? next[0]?.id ?? "" : cur));
       return next;
@@ -542,25 +543,50 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                 </Tooltip>
               </div>
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
-                <div className="relative mb-3">
-                  <Search
-                    className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
-                  <input
-                    type="search"
-                    value={historySearchQuery}
-                    onChange={(e) => setHistorySearchQuery(e.target.value)}
-                    placeholder="Search conversations…"
-                    className="no-drag w-full cursor-text rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2"
-                    style={
-                      { "--tw-ring-color": "#1868DB" } as React.CSSProperties
-                    }
-                    aria-label="Search conversations"
-                  />
-                </div>
-                {filteredConversations.length === 0 ? (
+                {hasConversations && (
+                  <div className="relative mb-3">
+                    <Search
+                      className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    <input
+                      type="search"
+                      value={historySearchQuery}
+                      onChange={(e) => setHistorySearchQuery(e.target.value)}
+                      placeholder="Search conversations…"
+                      className="no-drag w-full cursor-text rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2"
+                      style={
+                        { "--tw-ring-color": "#1868DB" } as React.CSSProperties
+                      }
+                      aria-label="Search conversations"
+                    />
+                  </div>
+                )}
+                {!hasConversations ? (
+                  <div className="flex h-full min-h-[260px] w-full flex-col items-center justify-center rounded-xl bg-white px-4 py-8 text-center sm:min-h-[320px] sm:px-6 sm:py-10">
+                    <p className="text-[20px] font-semibold leading-[1.2] text-gray-900">
+                      No conversation yet
+                    </p>
+                    <p className="mt-3 max-w-[320px] text-[14px] leading-[1.4] text-gray-800">
+                      Start a new chat to begin your conversation history
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleNewConversation}
+                      className="no-drag mt-8 inline-flex h-8 items-center justify-center rounded-lg px-5 text-[14px] font-semibold leading-none text-white transition-colors"
+                      style={{ backgroundColor: "#1868DB" }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#0D47A1")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#1868DB")
+                      }
+                    >
+                      <span>Create a new chat</span>
+                    </button>
+                  </div>
+                ) : filteredConversations.length === 0 ? (
                   <p className="py-8 text-center text-sm text-gray-500">
                     No conversations match your search.
                   </p>
@@ -1010,46 +1036,28 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               <Edit2 className="w-3.5 h-3.5" style={{ color: '#292A2E' }} />
               <span>Rename</span>
             </button>
-            {conversations.length === 1 ? (
-              <Tooltip
-                content="You can't delete your only conversation. Start another chat first."
-                className="flex w-full cursor-not-allowed"
-              >
-                <button
-                  type="button"
-                  disabled
-                  className="flex w-full cursor-not-allowed items-center gap-2 px-3 py-2 text-left text-sm text-gray-400 transition-colors"
-                  style={{ backgroundColor: "transparent" }}
-                  aria-disabled
-                >
-                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>Delete</span>
-                </button>
-              </Tooltip>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const conv = conversations.find((c) => c.id === openMenuId);
-                  if (conv) {
-                    setConfirmDelete({ id: conv.id, title: conv.title });
-                  }
-                  handleCloseMenu();
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors"
-                style={{ backgroundColor: "transparent" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#FFEBE6";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Delete</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const conv = conversations.find((c) => c.id === openMenuId);
+                if (conv) {
+                  setConfirmDelete({ id: conv.id, title: conv.title });
+                }
+                handleCloseMenu();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors"
+              style={{ backgroundColor: "transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#FFEBE6";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Delete</span>
+            </button>
           </motion.div>
         </AnimatePresence>
         </>,
