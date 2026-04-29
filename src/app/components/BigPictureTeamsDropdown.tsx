@@ -388,10 +388,11 @@ export function BigPictureTeamsDropdown({
         onOpenChange={handleMenuOpenChange}
       >
         {compactEmptyAnchor ? (
-          <Tooltip delayDuration={250}>
+          <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
                 <div
+                  aria-label="Add teams"
                   className={cn(
                     "flex h-9 max-h-9 min-h-9 w-full max-w-full min-w-0 shrink-0 cursor-pointer flex-row items-center justify-center rounded-md border border-transparent bg-transparent px-0 py-0 opacity-0 shadow-none outline-none transition-[opacity,background-color,border-color] duration-150 group-hover:border-[#DFE1E6] group-hover:bg-[#F1F2F4] group-hover:opacity-100 group-hover:shadow-none hover:bg-[#EBECF0] focus-visible:border-[#DFE1E6] focus-visible:bg-[#F1F2F4] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30 aria-expanded:border-[#DFE1E6] aria-expanded:bg-[#F1F2F4] aria-expanded:opacity-100 data-[state=open]:border-[#DFE1E6] data-[state=open]:bg-[#F1F2F4] data-[state=open]:opacity-100 [&_button_svg]:pointer-events-auto",
                     triggerClassName,
@@ -409,9 +410,9 @@ export function BigPictureTeamsDropdown({
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent
+              variant="atlassian"
               side="bottom"
               sideOffset={6}
-              className="border-0 bg-[#42526E] px-3 py-2 text-xs font-normal text-white shadow-lg [&_svg]:fill-[#42526E]"
             >
               Add teams
             </TooltipContent>
@@ -567,7 +568,7 @@ export function BigPictureTeamsDropdown({
               >
                 Global teams
               </Link>{" "}
-              to create and manage your teams.
+              to manage your teams.
             </p>
           </div>
         </DropdownMenuContent>
