@@ -20,6 +20,10 @@ Tracked paths include `TeamsDemoPage.tsx`, `BigPictureTeamsDropdown.tsx`, `BigPi
 
 Tracked paths include `ChatbotPrototype.tsx`, `ChatOverlay.tsx`, `ChatButton.tsx`.
 
+## Risk Management / Jira mapping prototype
+
+Tracked paths include `RiskManagementJiraMappingPage.tsx`.
+
 ## Independent prototype (`prototypes/independent/`)
 
 Still uses **`prototypes/independent/src/prototypeLastEdited.ts`** for its own bundle/hub link if re-added; hub rows are generated as above for app routes.

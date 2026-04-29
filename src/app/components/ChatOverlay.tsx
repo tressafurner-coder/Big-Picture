@@ -1238,7 +1238,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                           key={prompt}
                           type="button"
                           onClick={() => void handleSendMessage(prompt)}
-                          className="no-drag flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left font-normal shadow-sm transition-colors hover:bg-gray-50"
+                          className="no-drag flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left font-normal transition-colors hover:bg-gray-50"
                           aria-label={prompt}
                         >
                           <Sparkles

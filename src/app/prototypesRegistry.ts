@@ -1,5 +1,6 @@
 import {
   CHATBOT_LAST_UPDATE_DISPLAY,
+  RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
 } from "./generated/prototypeHubDates";
 
@@ -13,7 +14,17 @@ export type PrototypeEntry = {
   staticPath?: string;
 };
 
+/** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
+  {
+    id: "risk-jira-mapping",
+    name: "Jira Custom field mapping in Risk Management module",
+    summary:
+      "Risk register frameworks UI: framework name, Risk Score formula (metrics), Likelihood and Consequence scales.",
+    lastEdited: RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "risk-jira-mapping",
+  },
   {
     id: "teams-dropdown",
     name: "Moving Teams from OKR to BigPicture Global Teams",

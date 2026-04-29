@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import ChatbotPrototype from "./app/ChatbotPrototype.tsx";
 import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
+import RiskManagementJiraMappingPage from "./app/RiskManagementJiraMappingPage.tsx";
 import TeamsDemoPage from "./app/TeamsDemoPage.tsx";
 import "./styles/index.css";
 
@@ -19,6 +20,10 @@ createRoot(document.getElementById("root")!).render(
       <Route path="/teams-demo" element={<TeamsDemoPage />} />
       <Route path="/global-teams" element={<GlobalTeamsPage />} />
       <Route path="/chatbot" element={<ChatbotPrototype />} />
+      <Route
+        path="/risk-jira-mapping"
+        element={<RiskManagementJiraMappingPage />}
+      />
     </Routes>
   </BrowserRouter>,
 );
