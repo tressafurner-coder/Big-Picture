@@ -13,6 +13,9 @@ dist/
 .npm
 .vite
 
+# Synced from repo-root bigpicture-logo.png by scripts/ensure-public-logo.mjs
+public/bigpicture-logo.png
+
 # OS / editor
 .DS_Store
 Thumbs.db

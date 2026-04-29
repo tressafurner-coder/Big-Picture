@@ -1,14 +1,19 @@
 ---
-description: Keep the home-screen “Last update” string in sync with shipped changes
+description: Keep prototype “last update” strings in sync with shipped changes
 globs: "**/*.{ts,tsx}"
 alwaysApply: true
 ---
 
-# Last update (home screen)
+# Last update stamps
 
-Whenever you change app behaviour or UI in a way that is worth tracking on the **main screen** (`App.tsx`), update **`src/app/lastUpdate.ts`**:
+The **prototypes hub** table reads each row’s date from that prototype’s source — keep those files in sync with real edits.
 
-- Set `LAST_UPDATE_DISPLAY` to the current date/time (e.g. run `date '+%d %b %Y, %H:%M'` and paste the result).
-- Commit that file together with the rest of the change so GitHub Pages and reviewers see a fresh stamp.
+## Chatbot prototype (`ChatbotPrototype`, chat components)
 
-Do not leave `lastUpdate.ts` stale across meaningful commits.
+Update **`src/app/lastUpdate.ts`**: set `CHATBOT_LAST_UPDATE_DISPLAY` to the current date/time (e.g. run `date '+%d %b %Y, %H:%M'` and paste). Commit with the change.
+
+## Independent prototype (`prototypes/independent/`)
+
+Update **`prototypes/independent/src/prototypeLastEdited.ts`**: set `INDEPENDENT_LAST_EDITED` when that standalone app changes meaningfully. Commit with the change.
+
+Hub-only changes (copy/layout on `PrototypesHub` that are not a prototype edit) do not require bumping the other prototypes’ dates.

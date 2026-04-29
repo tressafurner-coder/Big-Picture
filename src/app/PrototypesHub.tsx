@@ -1,0 +1,77 @@
+import { Link } from "react-router";
+import { BigPictureLogo } from "./components/BigPictureLogo";
+import { PROTOTYPE_ENTRIES } from "./prototypesRegistry";
+
+function joinBase(path: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base}${path.replace(/^\//, "")}`;
+}
+
+export default function PrototypesHub() {
+  return (
+    <div className="min-h-dvh w-full bg-gray-50 px-4 py-10">
+      <div className="mx-auto max-w-4xl">
+        <header className="mb-8">
+          <BigPictureLogo className="mb-6" />
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Prototypes
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Choose a prototype — each link opens the live build on this GitHub
+            Pages site.
+          </p>
+          <p className="mt-3 text-sm text-gray-500">
+            Created by{" "}
+            <span className="font-medium text-gray-700">Karolina Chrzanowska</span>
+            . For questions, please get in touch directly.
+          </p>
+        </header>
+
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3 whitespace-nowrap">
+                  Last updated
+                </th>
+                <th className="px-4 py-3">Open</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {PROTOTYPE_ENTRIES.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50/80">
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {p.name}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{p.summary}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 tabular-nums">
+                    {p.lastEdited}
+                  </td>
+                  <td className="px-4 py-3">
+                    {p.kind === "route" && p.routeSegment ? (
+                      <Link
+                        to={`/${p.routeSegment}`}
+                        className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
+                      >
+                        Open
+                      </Link>
+                    ) : p.kind === "static" && p.staticPath ? (
+                      <a
+                        href={joinBase(p.staticPath)}
+                        className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
+                      >
+                        Open
+                      </a>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,27 +1,22 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { ChatButton } from "./components/ChatButton";
 import { ChatOverlay } from "./components/ChatOverlay";
 import { Notification } from "./components/Notification";
-import { LAST_UPDATE_DISPLAY } from "./lastUpdate";
+import { CHATBOT_LAST_UPDATE_DISPLAY } from "./lastUpdate";
 
-export default function App() {
+export default function ChatbotPrototype() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
 
   const handleNewResponse = () => {
-    console.log('handleNewResponse called');
-    // Sprawdzamy aktualny stan w momencie wywołania
     setIsChatOpen((currentChatOpen) => {
-      console.log('Current isChatOpen:', currentChatOpen);
       if (!currentChatOpen) {
-        console.log('Setting showNotification to TRUE');
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 5000);
-      } else {
-        console.log('Chat is open, NOT showing notification');
       }
-      return currentChatOpen; // Nie zmieniamy stanu
+      return currentChatOpen;
     });
   };
 
@@ -30,20 +25,32 @@ export default function App() {
       setIsChatOpen(false);
     } else {
       setIsChatOpen(true);
-      setShowNotification(false); // Wyczyść notyfikację gdy otwieramy chat
+      setShowNotification(false);
     }
   };
 
   return (
     <div className="relative min-h-dvh w-full bg-gray-50">
+      <Link
+        to="/"
+        className="absolute left-4 top-4 z-10 text-sm font-medium text-blue-600 underline-offset-4 hover:underline"
+      >
+        ← All prototypes
+      </Link>
+
       <div className="flex min-h-dvh w-full items-center justify-center px-4">
         <div className="max-w-2xl text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Chatbot for BigPicture</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            AI Chatbot for BigPicture
+          </h1>
           <p className="text-gray-600">
             Click the icon in the top right corner to start a conversation
           </p>
-          <p className="mt-3 text-sm text-gray-500" title="Release stamp — edit src/app/lastUpdate.ts when shipping changes">
-            Last update: {LAST_UPDATE_DISPLAY}
+          <p
+            className="mt-3 text-sm text-gray-500"
+            title="Release stamp — edit CHATBOT_LAST_UPDATE_DISPLAY in src/app/lastUpdate.ts when shipping chatbot changes"
+          >
+            Last update: {CHATBOT_LAST_UPDATE_DISPLAY}
           </p>
         </div>
       </div>
@@ -54,7 +61,6 @@ export default function App() {
         hasNotification={showNotification}
       />
 
-      {/* Overlay z czatem */}
       <ChatOverlay
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
@@ -62,7 +68,6 @@ export default function App() {
         onNewResponse={handleNewResponse}
       />
 
-      {/* Notyfikacja */}
       <Notification
         show={showNotification}
         onClose={() => setShowNotification(false)}
