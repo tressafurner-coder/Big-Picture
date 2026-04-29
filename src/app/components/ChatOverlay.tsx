@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { Rnd } from "react-rnd";
 import {
   Send,
@@ -34,6 +34,47 @@ const STARTER_PROMPTS = [
   "Summarize the main product releases from the recent cycle, highlighting key features and improvements.",
 ] as const;
 
+const STYLE_GUIDE_DEMO_MARKDOWN = `# 1) Heading level 1 (H1)
+## 2) Heading level 2 (H2)
+### 3) Heading level 3 (H3)
+
+This is the first paragraph block. It demonstrates standard body text spacing.
+
+This is the second paragraph block. Keep a visible gap between text blocks so content is easier to scan.
+
+**Links:** Use descriptive labels, for example [Atlassian Design System](https://atlassian.design/).
+
+**Lists (unordered + ordered):**
+- First unordered item
+- Second unordered item
+- Third unordered item
+
+1. First ordered item
+2. Second ordered item
+3. Third ordered item
+
+---
+
+> **Blockquote:** Use this style for quoted text, notes, or contextual callouts from external sources.
+
+**Table example:**
+| Element | Markdown syntax |
+| --- | --- |
+| Heading H1 | \`# Heading\` |
+| Heading H2 | \`## Heading\` |
+| Code block | \`\`\`ts ... \`\`\` |
+
+**Highlight:** Use ==highlight== to emphasize key phrases in long responses.
+
+**Inline code:** Example \`const status = "ok"\`.
+
+\`\`\`tsx
+// Code block example
+function Greeting() {
+  return <h1>Hello from a code block</h1>;
+}
+\`\`\``;
+
 function DataPolicyDisclaimer({ className }: { className?: string }) {
   return (
     <p className={className ?? "text-xs text-gray-500"}>
@@ -55,6 +96,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   tokens?: number;
+  contentType?: "plain" | "markdown";
 }
 
 interface Conversation {
@@ -172,6 +214,244 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     };
   }, []);
 
+  const renderInlineMarkdown = (text: string) => {
+    const tokens = text.split(/(\[[^\]]+\]\([^)]+\)|`[^`]+`|==[^=]+==)/g).filter(Boolean);
+
+    return tokens.map((token, index) => {
+      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (linkMatch) {
+        return (
+          <a
+            key={`${token}-${index}`}
+            href={linkMatch[2]}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline hover:opacity-80"
+            style={{ color: "#1868DB" }}
+          >
+            {linkMatch[1]}
+          </a>
+        );
+      }
+
+      if (token.startsWith("`") && token.endsWith("`")) {
+        return (
+          <code
+            key={`${token}-${index}`}
+            className="rounded bg-gray-200 px-1.5 py-0.5 font-mono text-[12px] text-gray-800"
+          >
+            {token.slice(1, -1)}
+          </code>
+        );
+      }
+
+      if (token.startsWith("==") && token.endsWith("==")) {
+        return (
+          <mark
+            key={`${token}-${index}`}
+            className="rounded px-1 py-0.5"
+            style={{ backgroundColor: "#FFF0B3", color: "#172B4D" }}
+          >
+            {token.slice(2, -2)}
+          </mark>
+        );
+      }
+
+      return <span key={`${token}-${index}`}>{token}</span>;
+    });
+  };
+
+  const renderMarkdownContent = (content: string) => {
+    const lines = content.split("\n");
+    const blocks: ReactNode[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        i += 1;
+        continue;
+      }
+
+      if (trimmed.startsWith("```")) {
+        const lang = trimmed.slice(3).trim();
+        i += 1;
+        const codeLines: string[] = [];
+        while (i < lines.length && !lines[i].trim().startsWith("```")) {
+          codeLines.push(lines[i]);
+          i += 1;
+        }
+        if (i < lines.length) i += 1;
+
+        blocks.push(
+          <div key={`code-${blocks.length}`} className="my-3 overflow-hidden rounded-lg border border-gray-300 bg-gray-900">
+            {lang && <div className="border-b border-gray-700 px-3 py-1.5 text-[11px] uppercase tracking-wide text-gray-300">{lang}</div>}
+            <pre className="overflow-x-auto p-3 text-xs leading-relaxed text-gray-100">
+              <code>{codeLines.join("\n")}</code>
+            </pre>
+          </div>
+        );
+        continue;
+      }
+
+      if (/^-{3,}$/.test(trimmed)) {
+        blocks.push(<hr key={`hr-${blocks.length}`} className="my-4 border-gray-300" />);
+        i += 1;
+        continue;
+      }
+
+      const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2];
+        const headingClass =
+          level === 1
+            ? "mt-2 text-lg font-semibold text-gray-900"
+            : level === 2
+              ? "mt-2 text-base font-semibold text-gray-900"
+              : "mt-2 text-sm font-semibold text-gray-800";
+
+        blocks.push(
+          <div key={`heading-${blocks.length}`} className={headingClass}>
+            {renderInlineMarkdown(headingText)}
+          </div>
+        );
+        i += 1;
+        continue;
+      }
+
+      if (trimmed.startsWith(">")) {
+        const quoteLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith(">")) {
+          quoteLines.push(lines[i].replace(/^>\s?/, ""));
+          i += 1;
+        }
+        blocks.push(
+          <blockquote
+            key={`quote-${blocks.length}`}
+            className="my-3 rounded-r-md border-l-4 border-blue-500 bg-blue-50 px-3 py-2 text-sm leading-relaxed text-gray-800"
+          >
+            {quoteLines.map((quoteLine, quoteIdx) => (
+              <p key={`quote-line-${quoteIdx}`}>{renderInlineMarkdown(quoteLine)}</p>
+            ))}
+          </blockquote>
+        );
+        continue;
+      }
+
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        const tableLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+          tableLines.push(lines[i].trim());
+          i += 1;
+        }
+
+        const rows = tableLines
+          .map((row) => row.split("|").map((cell) => cell.trim()).filter(Boolean))
+          .filter((row) => row.length > 0);
+
+        const hasHeaderSeparator =
+          rows.length > 1 &&
+          rows[1].every((cell) => /^:?-{3,}:?$/.test(cell));
+
+        const header = rows[0] ?? [];
+        const body = hasHeaderSeparator ? rows.slice(2) : rows.slice(1);
+
+        blocks.push(
+          <div key={`table-${blocks.length}`} className="my-3 overflow-x-auto">
+            <table className="min-w-full border-collapse rounded-md border border-gray-300 text-left text-xs">
+              <thead className="bg-gray-200">
+                <tr>
+                  {header.map((cell, cellIdx) => (
+                    <th key={`head-${cellIdx}`} className="border border-gray-300 px-2.5 py-2 font-semibold text-gray-800">
+                      {renderInlineMarkdown(cell)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {body.map((row, rowIdx) => (
+                  <tr key={`row-${rowIdx}`} className="bg-white">
+                    {row.map((cell, cellIdx) => (
+                      <td key={`cell-${rowIdx}-${cellIdx}`} className="border border-gray-300 px-2.5 py-2 align-top text-gray-700">
+                        {renderInlineMarkdown(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+
+      if (/^\d+\.\s+/.test(trimmed)) {
+        const items: string[] = [];
+        while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^\d+\.\s+/, ""));
+          i += 1;
+        }
+        blocks.push(
+          <ol key={`ol-${blocks.length}`} className="my-2 list-decimal space-y-1 pl-5 text-sm text-gray-800">
+            {items.map((item, itemIdx) => (
+              <li key={`ol-item-${itemIdx}`}>{renderInlineMarkdown(item)}</li>
+            ))}
+          </ol>
+        );
+        continue;
+      }
+
+      if (/^[-*]\s+/.test(trimmed)) {
+        const items: string[] = [];
+        while (i < lines.length && /^[-*]\s+/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^[-*]\s+/, ""));
+          i += 1;
+        }
+        blocks.push(
+          <ul key={`ul-${blocks.length}`} className="my-2 list-disc space-y-1 pl-5 text-sm text-gray-800">
+            {items.map((item, itemIdx) => (
+              <li key={`ul-item-${itemIdx}`}>{renderInlineMarkdown(item)}</li>
+            ))}
+          </ul>
+        );
+        continue;
+      }
+
+      const paragraphLines: string[] = [];
+      while (i < lines.length && lines[i].trim()) {
+        const candidate = lines[i].trim();
+        if (
+          candidate.startsWith("```") ||
+          /^#{1,3}\s+/.test(candidate) ||
+          /^>\s?/.test(candidate) ||
+          /^[-*]\s+/.test(candidate) ||
+          /^\d+\.\s+/.test(candidate) ||
+          /^-{3,}$/.test(candidate) ||
+          (candidate.startsWith("|") && candidate.endsWith("|"))
+        ) {
+          break;
+        }
+        paragraphLines.push(candidate);
+        i += 1;
+      }
+
+      if (paragraphLines.length > 0) {
+        blocks.push(
+          <p key={`p-${blocks.length}`} className="my-2 text-sm leading-relaxed text-gray-800">
+            {renderInlineMarkdown(paragraphLines.join(" "))}
+          </p>
+        );
+      } else {
+        i += 1;
+      }
+    }
+
+    return blocks;
+  };
+
 
   const handleSendMessage = async (preset?: string) => {
     const text = (preset ?? inputValue).trim();
@@ -205,9 +485,9 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content:
-          "This is a prototype only. It cannot understand your question or provide real answers — those would come from a connected service in a finished product.",
-        tokens: 18,
+        content: STYLE_GUIDE_DEMO_MARKDOWN,
+        contentType: "markdown",
+        tokens: 120,
       };
 
       setConversations((prev) =>
@@ -492,9 +772,18 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                       New conversation started
                     </p>
                     <p className="text-xs leading-snug" style={{ color: "#292A2E" }}>
-                      You’re now in a fresh chat ({newChatBannerMeta.title}). You have{" "}
-                      <strong>{newChatBannerMeta.totalChats}</strong> conversations — open{" "}
-                      <strong>Chat history</strong> to switch or delete.
+                      {newChatBannerMeta.totalChats <= 1 ? (
+                        <>
+                          You’re now in your first chat ({newChatBannerMeta.title}). Ask a
+                          question to get started.
+                        </>
+                      ) : (
+                        <>
+                          You’re now in a fresh chat ({newChatBannerMeta.title}). You have{" "}
+                          <strong>{newChatBannerMeta.totalChats}</strong> conversations —
+                          open <strong>Chat history</strong> to switch or delete.
+                        </>
+                      )}
                     </p>
                   </div>
                   <button
@@ -843,28 +1132,39 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
               {/* Wiadomości */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {activeConversation?.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {message.role === "assistant" && (
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
-                        <img src={aiAvatarIcon} alt="AI" className="h-6 w-6 rounded-lg" />
-                      </div>
-                    )}
+                {activeConversation?.messages.map((message) => {
+                  const isMarkdownAssistant =
+                    message.role === "assistant" && message.contentType === "markdown";
+
+                  return (
                     <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                        message.role === "user"
-                          ? "text-white"
-                          : "bg-gray-100 text-gray-900"
-                      }`}
-                      style={message.role === "user" ? { backgroundColor: "#1868DB" } : {}}
+                      key={message.id}
+                      className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                     >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      {message.role === "assistant" && (
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                          <img src={aiAvatarIcon} alt="AI" className="h-6 w-6 rounded-lg" />
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-2xl px-4 py-2.5 ${
+                          isMarkdownAssistant
+                            ? "max-w-[92%] bg-gray-100 text-gray-900"
+                            : message.role === "user"
+                              ? "max-w-[75%] text-white"
+                              : "max-w-[75%] bg-gray-100 text-gray-900"
+                        }`}
+                        style={message.role === "user" ? { backgroundColor: "#1868DB" } : {}}
+                      >
+                        {isMarkdownAssistant ? (
+                          <div className="space-y-1">{renderMarkdownContent(message.content)}</div>
+                        ) : (
+                          <p className="text-sm leading-relaxed">{message.content}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {showStarterPrompts && (
                   <div className="flex gap-3 justify-start">
