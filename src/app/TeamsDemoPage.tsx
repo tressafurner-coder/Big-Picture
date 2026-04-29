@@ -5,6 +5,11 @@ import {
   BigPictureTeamsDropdown,
   EMPTY_TEAM_GROUPS,
 } from "./components/BigPictureTeamsDropdown";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
 import { GlobalTeamsSplash } from "./components/GlobalTeamsSplash";
 
 /** Demo OKR objectives — long copy so the OKR column exercises ellipsis in a narrow layout. */
@@ -31,15 +36,15 @@ const OKR_DEMO_ROWS = [
   },
 ] as const;
 
+/** Wide bar: invisible until row hover; gray chrome + no drop shadow (shadow-none). */
+const teamsTableWideAddClass =
+  "flex h-9 max-h-9 min-h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border border-transparent bg-transparent text-[#172B4D] opacity-0 shadow-none transition-[opacity,background-color,border-color] duration-150 group-hover:border-[#DFE1E6] group-hover:bg-[#F1F2F4] group-hover:opacity-100 group-hover:shadow-none hover:bg-[#EBECF0] focus-visible:border-[#DFE1E6] focus-visible:bg-[#F1F2F4] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30";
+
 export default function TeamsDemoPage() {
   /** Rows where the user clicked + and the teams multiselect should stay visible. */
   const [teamsPickerOpenRow, setTeamsPickerOpenRow] = useState<Set<string>>(
     () => new Set(),
   );
-  /** Per-row: once at least one team is chosen, hide the decorative + next to the trigger. */
-  const [teamsRowHasSelection, setTeamsRowHasSelection] = useState<
-    Record<string, boolean>
-  >({});
   /** Per-row open state for the dropdown menu (re-open on + click). */
   const [teamsRowMenuOpen, setTeamsRowMenuOpen] = useState<
     Record<string, boolean>
@@ -120,27 +125,7 @@ export default function TeamsDemoPage() {
                         </td>
                         <td className="px-3 py-3 align-middle">
                           {teamsPickerOpenRow.has(row.id) ? (
-                            <div className="flex min-h-10 w-full max-w-full min-w-0 items-center gap-2">
-                              {!teamsRowHasSelection[row.id] ? (
-                                <button
-                                  type="button"
-                                  className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-[#DFE1E6] bg-white text-[#0C66E4] opacity-0 shadow-sm transition-opacity hover:bg-[#F7F8F9] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30 group-hover:opacity-100"
-                                  aria-label="Open teams picker"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setTeamsRowMenuOpen((prev) => ({
-                                      ...prev,
-                                      [row.id]: true,
-                                    }));
-                                  }}
-                                >
-                                  <PlusIcon
-                                    className="size-4"
-                                    strokeWidth={2}
-                                  />
-                                </button>
-                              ) : null}
+                            <div className="flex h-9 max-h-9 min-h-9 w-full max-w-full min-w-0 items-center">
                               <BigPictureTeamsDropdown
                                 className="min-w-0 flex-1"
                                 compactTriggerUntilSelection
@@ -152,31 +137,37 @@ export default function TeamsDemoPage() {
                                     [row.id]: open,
                                   }));
                                 }}
-                                onValueChange={(ids) => {
-                                  setTeamsRowHasSelection((prev) => ({
-                                    ...prev,
-                                    [row.id]: ids.length > 0,
-                                  }));
-                                }}
                               />
                             </div>
                           ) : (
-                            <div className="flex min-h-10 min-w-[120px] items-center">
-                              <button
-                                type="button"
-                                className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-[#DFE1E6] bg-white text-[#0C66E4] opacity-0 shadow-sm transition-opacity hover:bg-[#F7F8F9] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30 group-hover:opacity-100"
-                                aria-label="Add teams"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  queueMicrotask(() =>
-                                    revealTeamsPicker(row.id),
-                                  );
-                                }}
+                            <Tooltip delayDuration={250}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className={teamsTableWideAddClass}
+                                  aria-label="Add teams"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    queueMicrotask(() =>
+                                      revealTeamsPicker(row.id),
+                                    );
+                                  }}
+                                >
+                                  <PlusIcon
+                                    className="size-5 shrink-0"
+                                    strokeWidth={2}
+                                  />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="bottom"
+                                sideOffset={6}
+                                className="border-0 bg-[#42526E] px-3 py-2 text-xs font-normal text-white shadow-lg [&_svg]:fill-[#42526E]"
                               >
-                                <PlusIcon className="size-4" strokeWidth={2} />
-                              </button>
-                            </div>
+                                Add teams
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                         </td>
                       </tr>

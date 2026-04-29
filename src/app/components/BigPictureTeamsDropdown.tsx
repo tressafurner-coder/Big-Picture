@@ -1,4 +1,4 @@
-import { ChevronDownIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, PlusIcon, XIcon } from "lucide-react";
 import { Link } from "react-router";
 import {
   useCallback,
@@ -17,6 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { cn } from "./ui/utils";
 
 /** Reference-style row variants (BigPicture / Atlaskit multi-select). */
@@ -99,10 +104,13 @@ function TriggerSelectedTags({
   selectedIds,
   idToLabel,
   onRemove,
+  bare = false,
 }: {
   selectedIds: string[];
   idToLabel: Map<string, string>;
   onRemove: (id: string) => void;
+  /** Table cell: chips read as plain inline values (no gray fills). */
+  bare?: boolean;
 }) {
   const selectionSignature = selectedIds.join("\0");
 
@@ -182,30 +190,41 @@ function TriggerSelectedTags({
   const overflow = layout.overflow;
 
   return (
-    <div className="relative min-h-6 min-w-0 flex-1">
+    <div
+      className={cn(
+        "relative min-w-0 flex-1",
+        bare ? "min-h-0" : "min-h-6",
+      )}
+    >
       <div
         ref={measureRef}
         className="pointer-events-none absolute left-0 top-0 z-[-1] flex w-max gap-1.5 opacity-0"
         aria-hidden
       >
         {selectedIds.map((id) => (
-          <BigPictureTag key={id} onRemove={() => {}}>
+          <BigPictureTag key={id} bare={bare} onRemove={() => {}}>
             {idToLabel.get(id) ?? id}
           </BigPictureTag>
         ))}
       </div>
       <div
         ref={rowRef}
-        className="flex min-h-6 min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden"
+        className={cn(
+          "flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden",
+          bare ? "min-h-0" : "min-h-6",
+        )}
       >
         {visibleIds.map((id) => (
-          <BigPictureTag key={id} onRemove={() => onRemove(id)}>
+          <BigPictureTag key={id} bare={bare} onRemove={() => onRemove(id)}>
             {idToLabel.get(id) ?? id}
           </BigPictureTag>
         ))}
         {overflow > 0 ? (
           <span
-            className="inline-flex shrink-0 items-center rounded-[3px] bg-[#EBECF0] px-2 py-1 text-[12px] tabular-nums leading-none text-[#626F86]"
+            className={cn(
+              "inline-flex shrink-0 items-center rounded-[3px] bg-[#EBECF0] px-2 py-1 tabular-nums leading-none text-[#626F86]",
+              bare ? "text-[13px]" : "text-[12px]",
+            )}
             title={`${overflow} more`}
           >
             +{overflow}
@@ -353,57 +372,113 @@ export function BigPictureTeamsDropdown({
   const compactEmptyAnchor =
     compactTriggerUntilSelection && !hasSelection;
 
+  const tableCompactShell = Boolean(compactTriggerUntilSelection);
+
   return (
-    <div className={cn(className)}>
+    <div
+      className={cn(
+        className,
+        compactTriggerUntilSelection &&
+          "flex h-9 max-h-9 min-h-9 min-w-0 flex-col justify-center",
+      )}
+    >
       <DropdownMenu
         modal={false}
         open={menuOpen}
         onOpenChange={handleMenuOpenChange}
       >
-        <DropdownMenuTrigger asChild>
-          <div
-            className={cn(
-              buttonVariants({ variant: "outline", size: "default" }),
-              !compactEmptyAnchor &&
-                "flex h-auto min-h-9 w-full min-w-[240px] cursor-pointer flex-row items-center justify-between gap-2 border-[#DFE1E6] bg-white px-3 py-2 text-left font-normal text-[#172B4D] shadow-none whitespace-normal hover:bg-[#F7F8F9] hover:text-[#172B4D]",
-              compactEmptyAnchor &&
-                "flex size-8 min-h-8 max-h-8 min-w-8 max-w-8 shrink-0 cursor-pointer flex-row items-center justify-center border-0 bg-transparent p-0 opacity-0 shadow-none hover:bg-transparent focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30",
-              !compactEmptyAnchor &&
-                "focus-visible:ring-[#0C66E4]/30 [&_button_svg]:pointer-events-auto",
-              triggerClassName,
-            )}
-          >
-            <div
-              className={cn(
-                "flex min-w-0 items-center gap-2",
-                !compactEmptyAnchor && "flex-1",
-              )}
-            >
-              {hasSelection ? (
-                <TriggerSelectedTags
-                  selectedIds={selectedIds}
-                  idToLabel={idToLabel}
-                  onRemove={removeSelected}
-                />
-              ) : (
-                <span
+        {compactEmptyAnchor ? (
+          <Tooltip delayDuration={250}>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <div
                   className={cn(
-                    "truncate text-sm font-normal text-[#97A0AF]",
-                    compactEmptyAnchor && "sr-only",
+                    "flex h-9 max-h-9 min-h-9 w-full max-w-full min-w-0 shrink-0 cursor-pointer flex-row items-center justify-center rounded-md border border-transparent bg-transparent px-0 py-0 opacity-0 shadow-none outline-none transition-[opacity,background-color,border-color] duration-150 group-hover:border-[#DFE1E6] group-hover:bg-[#F1F2F4] group-hover:opacity-100 group-hover:shadow-none hover:bg-[#EBECF0] focus-visible:border-[#DFE1E6] focus-visible:bg-[#F1F2F4] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30 aria-expanded:border-[#DFE1E6] aria-expanded:bg-[#F1F2F4] aria-expanded:opacity-100 data-[state=open]:border-[#DFE1E6] data-[state=open]:bg-[#F1F2F4] data-[state=open]:opacity-100 [&_button_svg]:pointer-events-auto",
+                    triggerClassName,
                   )}
                 >
-                  Select teams
-                </span>
+                  <div className="flex h-full min-h-9 w-full min-w-0 items-center justify-center gap-2">
+                    <span className="sr-only">Select teams</span>
+                    <PlusIcon
+                      className="size-5 shrink-0 text-[#172B4D]"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent
+              side="bottom"
+              sideOffset={6}
+              className="border-0 bg-[#42526E] px-3 py-2 text-xs font-normal text-white shadow-lg [&_svg]:fill-[#42526E]"
+            >
+              Add teams
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <DropdownMenuTrigger asChild>
+            <div
+              title={
+                compactTriggerUntilSelection && !compactEmptyAnchor
+                  ? "Add teams"
+                  : undefined
+              }
+              className={cn(
+                tableCompactShell &&
+                  cn(
+                    "flex h-9 max-h-9 min-h-9 w-full max-w-full min-w-0 shrink-0 cursor-pointer flex-row items-center px-0 py-0 shadow-none outline-none focus-visible:outline-none [&_button_svg]:pointer-events-auto",
+                    hasSelection &&
+                      cn(
+                        "justify-start gap-1.5 rounded-[3px] border border-transparent bg-transparent px-1 py-0.5 transition-[border-color] hover:bg-transparent",
+                        /* Inline-edit cue on row hover (`group` = `<tr>` in TeamsDemoPage table). */
+                        "group-hover:border-[#DFE1E6]",
+                        "focus-visible:border-[#0C66E4]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30",
+                      ),
+                  ),
+                !tableCompactShell && buttonVariants({ variant: "outline", size: "default" }),
+                !tableCompactShell &&
+                  "flex h-auto min-h-9 w-full min-w-[240px] cursor-pointer flex-row items-center justify-between gap-2 border-[#DFE1E6] bg-white px-3 py-2 text-left font-normal text-[#172B4D] shadow-none whitespace-normal hover:bg-[#F7F8F9] hover:text-[#172B4D]",
+                !tableCompactShell &&
+                  "focus-visible:ring-[#0C66E4]/30 [&_button_svg]:pointer-events-auto",
+                triggerClassName,
               )}
+            >
+              <div
+                className={cn(
+                  "flex min-w-0 items-center gap-2",
+                  tableCompactShell && hasSelection && "min-w-0 flex-1",
+                  tableCompactShell && !hasSelection && "w-full justify-center",
+                  !tableCompactShell && "flex-1",
+                )}
+              >
+                {hasSelection ? (
+                  <TriggerSelectedTags
+                    bare={compactTriggerUntilSelection}
+                    selectedIds={selectedIds}
+                    idToLabel={idToLabel}
+                    onRemove={removeSelected}
+                  />
+                ) : (
+                  <span className="truncate text-sm font-normal text-[#97A0AF]">
+                    Select teams
+                  </span>
+                )}
+              </div>
+              {!compactTriggerUntilSelection ? (
+                <ChevronDownIcon className="size-4 shrink-0 text-[#44546F]" />
+              ) : null}
             </div>
-            {!compactEmptyAnchor ? (
-              <ChevronDownIcon className="size-4 shrink-0 text-[#44546F]" />
-            ) : null}
-          </div>
-        </DropdownMenuTrigger>
+          </DropdownMenuTrigger>
+        )}
 
         <DropdownMenuContent
           align="start"
+          collisionPadding={8}
+          sticky={compactTriggerUntilSelection ? "always" : undefined}
+          updatePositionStrategy={
+            compactTriggerUntilSelection ? "always" : undefined
+          }
           className="w-[min(calc(100vw-2rem),420px)] border-[#DFE1E6] bg-white p-0 text-[#172B4D] shadow-lg"
           sideOffset={6}
           onCloseAutoFocus={(e) => e.preventDefault()}

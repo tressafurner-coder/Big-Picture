@@ -7,6 +7,8 @@ type Props = {
   /** Called when the dismiss control is activated */
   onRemove: () => void;
   className?: string;
+  /** Minimal inline text + dismiss (e.g. table cell “input” presentation). */
+  bare?: boolean;
 };
 
 /**
@@ -17,21 +19,26 @@ export function BigPictureTag({
   children,
   onRemove,
   className,
+  bare = false,
 }: Props) {
   return (
     <span
       className={cn(
-        "inline-flex max-w-full min-h-6 items-stretch overflow-hidden rounded-[3px] bg-[#EBECF0] text-[12px] font-normal leading-none text-[#172B4D]",
-        "hover:bg-[#DFE1E6]",
+        !bare &&
+          "inline-flex max-w-full min-h-6 items-stretch overflow-hidden rounded-[3px] bg-[#EBECF0] text-[12px] font-normal leading-none text-[#172B4D] hover:bg-[#DFE1E6]",
+        bare &&
+          "inline-flex max-w-full min-h-6 items-center gap-0.5 overflow-hidden rounded-[3px] bg-[#EBECF0] text-[13px] font-normal leading-snug text-[#172B4D] hover:bg-[#DFE1E6]",
         className,
       )}
     >
-      <span className="flex min-w-0 items-center truncate px-2">{children}</span>
+      <span className="flex min-w-0 items-center truncate px-2">
+        {children}
+      </span>
       <button
         type="button"
         className={cn(
-          "inline-flex shrink-0 items-center justify-center px-1 text-[#626F86]",
-          "rounded-none hover:bg-[rgba(9,30,66,0.08)] hover:text-[#172B4D]",
+          "inline-flex shrink-0 items-center justify-center text-[#626F86]",
+          "rounded-none px-1 hover:bg-[rgba(9,30,66,0.08)] hover:text-[#172B4D]",
           "focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35",
         )}
         aria-label={`Remove ${children}`}
