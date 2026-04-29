@@ -8,13 +8,13 @@
   },
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/ensure-public-logo.mjs",
-    "predev": "node scripts/ensure-public-logo.mjs",
+    "prebuild": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs",
+    "predev": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs",
     "build": "vite build",
     "build:independent": "npm install --prefix prototypes/independent && GITHUB_PAGES=true npm run build --prefix prototypes/independent",
-    "build:pages": "node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs",
+    "build:pages": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs",
     "dev": "vite",
-    "preview:pages": "node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs && vite preview --base /BigPicture/"
+    "preview:pages": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs && vite preview --base /BigPicture/"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

@@ -1,5 +1,7 @@
-import { CHATBOT_LAST_UPDATE_DISPLAY } from "./lastUpdate";
-import { TEAMS_DEMO_LAST_EDITED } from "./teamsPrototypeMeta";
+import {
+  CHATBOT_LAST_UPDATE_DISPLAY,
+  TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
+} from "./generated/prototypeHubDates";
 
 export type PrototypeEntry = {
   id: string;
@@ -17,7 +19,7 @@ export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
     name: "Moving Teams from OKR to BigPicture Global Teams",
     summary:
       "Global Teams multi-select, splash screens (no permission / module off), OKR → BigPicture migration.",
-    lastEdited: TEAMS_DEMO_LAST_EDITED,
+    lastEdited: TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
     kind: "route",
     routeSegment: "teams-demo",
   },

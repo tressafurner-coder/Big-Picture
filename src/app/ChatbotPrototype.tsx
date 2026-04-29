@@ -48,7 +48,7 @@ export default function ChatbotPrototype() {
           </p>
           <p
             className="mt-3 text-sm text-gray-500"
-            title="Release stamp — edit CHATBOT_LAST_UPDATE_DISPLAY in src/app/lastUpdate.ts"
+            title="Release stamp — regenerated with npm run dev/build from git (see generated/prototypeHubDates.ts)"
           >
             Last update: {CHATBOT_LAST_UPDATE_DISPLAY}
           </p>

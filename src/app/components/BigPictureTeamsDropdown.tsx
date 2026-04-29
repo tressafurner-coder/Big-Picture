@@ -1,6 +1,12 @@
 import { ChevronDownIcon, XIcon } from "lucide-react";
 import { Link } from "react-router";
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { BigPictureTag } from "./BigPictureTag";
 import { buttonVariants } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -63,6 +69,14 @@ type Props = {
   className?: string;
   /** Shown in the list area when `groups` contains no items (no teams configured). */
   emptyMessage?: string;
+  /** Open the menu as soon as this instance mounts (e.g. table “+ add teams”). */
+  defaultMenuOpen?: boolean;
+  /**
+   * Until at least one team is selected, shrink the trigger to an invisible 8×8 hit-area so a sibling “+” can stay visible (table rows).
+   */
+  compactTriggerUntilSelection?: boolean;
+  /** Extra classes on the menu trigger (after defaults). */
+  triggerClassName?: string;
   /** Controlled selection */
   value?: string[];
   defaultValue?: string[];
@@ -74,11 +88,138 @@ const checkboxClass =
 
 const DEFAULT_EMPTY_MESSAGE = "No teams added yet.";
 
+const TAG_GAP_PX = 6;
+
+/** Renders selected tags in one row; chips that do not fit are folded into a trailing “+N”. */
+function TriggerSelectedTags({
+  selectedIds,
+  idToLabel,
+  onRemove,
+}: {
+  selectedIds: string[];
+  idToLabel: Map<string, string>;
+  onRemove: (id: string) => void;
+}) {
+  const selectionSignature = selectedIds.join("\0");
+
+  const rowRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [chipWidths, setChipWidths] = useState<number[]>([]);
+  const [layout, setLayout] = useState<{ show: number; overflow: number }>(
+    () => ({ show: selectedIds.length, overflow: 0 }),
+  );
+
+  useLayoutEffect(() => {
+    const row = measureRef.current;
+    if (!row) return;
+    const children = Array.from(row.children) as HTMLElement[];
+    const next = children.map((c) =>
+      Math.ceil(c.getBoundingClientRect().width),
+    );
+    setChipWidths((prev) =>
+      prev.length === next.length && prev.every((v, i) => v === next[i])
+        ? prev
+        : next,
+    );
+  }, [selectionSignature]);
+
+  const estimateOverflowPillWidth = useCallback((overflow: number) => {
+    // Mirrors trailing “+N” pill (padding + tabular digits); avoids mis-layout when many hidden.
+    const t = `+${overflow}`;
+    return Math.ceil(16 + t.length * 7);
+  }, []);
+
+  const recomputeLayout = useCallback(() => {
+    const container = rowRef.current;
+    const n = chipWidths.length;
+    if (!container) return;
+    if (n !== selectedIds.length) return;
+    if (n === 0) {
+      setLayout({ show: 0, overflow: 0 });
+      return;
+    }
+
+    const maxW = container.clientWidth;
+    if (maxW <= 0) return;
+
+    for (let show = n; show >= 0; show--) {
+      const overflow = n - show;
+      let w = 0;
+      for (let i = 0; i < show; i++) {
+        w += chipWidths[i] + (i > 0 ? TAG_GAP_PX : 0);
+      }
+      if (overflow > 0) {
+        w += TAG_GAP_PX + estimateOverflowPillWidth(overflow);
+      }
+      if (w <= maxW || show === 0) {
+        setLayout((prev) =>
+          prev.show === show && prev.overflow === overflow
+            ? prev
+            : { show, overflow },
+        );
+        return;
+      }
+    }
+  }, [chipWidths, estimateOverflowPillWidth, selectedIds.length]);
+
+  useLayoutEffect(() => {
+    recomputeLayout();
+  }, [recomputeLayout]);
+
+  useLayoutEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => recomputeLayout());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recomputeLayout]);
+
+  const visibleIds = selectedIds.slice(0, layout.show);
+  const overflow = layout.overflow;
+
+  return (
+    <div className="relative min-h-6 min-w-0 flex-1">
+      <div
+        ref={measureRef}
+        className="pointer-events-none absolute left-0 top-0 z-[-1] flex w-max gap-1.5 opacity-0"
+        aria-hidden
+      >
+        {selectedIds.map((id) => (
+          <BigPictureTag key={id} onRemove={() => {}}>
+            {idToLabel.get(id) ?? id}
+          </BigPictureTag>
+        ))}
+      </div>
+      <div
+        ref={rowRef}
+        className="flex min-h-6 min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden"
+      >
+        {visibleIds.map((id) => (
+          <BigPictureTag key={id} onRemove={() => onRemove(id)}>
+            {idToLabel.get(id) ?? id}
+          </BigPictureTag>
+        ))}
+        {overflow > 0 ? (
+          <span
+            className="inline-flex shrink-0 items-center rounded-[3px] bg-[#EBECF0] px-2 py-1 text-[12px] tabular-nums leading-none text-[#626F86]"
+            title={`${overflow} more`}
+          >
+            +{overflow}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function BigPictureTeamsDropdown({
   groups = DEFAULT_GROUPS,
   globalTeamsTo = "/global-teams",
   className,
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
+  defaultMenuOpen = false,
+  compactTriggerUntilSelection = false,
+  triggerClassName,
   value: valueProp,
   defaultValue,
   onValueChange,
@@ -95,6 +236,7 @@ export function BigPictureTeamsDropdown({
     onValueChange?.([...next]);
   }
 
+  const [menuOpen, setMenuOpen] = useState(defaultMenuOpen);
   const [search, setSearch] = useState("");
 
   const filteredGroups = useMemo(() => {
@@ -195,42 +337,55 @@ export function BigPictureTeamsDropdown({
   const hasSelection = selected.size > 0;
   const selectedIds = [...selected];
 
+  const compactEmptyAnchor =
+    compactTriggerUntilSelection && !hasSelection;
+
   return (
     <div className={cn(className)}>
-      <DropdownMenu modal={false}>
+      <DropdownMenu
+        modal={false}
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+      >
         <DropdownMenuTrigger asChild>
           <div
             className={cn(
               buttonVariants({ variant: "outline", size: "default" }),
-              "flex h-auto min-h-9 w-full min-w-[240px] cursor-pointer flex-row items-center justify-between gap-2 border-[#DFE1E6] bg-white px-3 py-2 text-left font-normal text-[#172B4D] shadow-none",
-              "whitespace-normal hover:bg-[#F7F8F9] hover:text-[#172B4D]",
-              "focus-visible:ring-[#0C66E4]/30 [&_button_svg]:pointer-events-auto",
+              !compactEmptyAnchor &&
+                "flex h-auto min-h-9 w-full min-w-[240px] cursor-pointer flex-row items-center justify-between gap-2 border-[#DFE1E6] bg-white px-3 py-2 text-left font-normal text-[#172B4D] shadow-none whitespace-normal hover:bg-[#F7F8F9] hover:text-[#172B4D]",
+              compactEmptyAnchor &&
+                "flex size-8 min-h-8 max-h-8 min-w-8 max-w-8 shrink-0 cursor-pointer flex-row items-center justify-center border-0 bg-transparent p-0 opacity-0 shadow-none hover:bg-transparent focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30",
+              !compactEmptyAnchor &&
+                "focus-visible:ring-[#0C66E4]/30 [&_button_svg]:pointer-events-auto",
+              triggerClassName,
             )}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div
+              className={cn(
+                "flex min-w-0 items-center gap-2",
+                !compactEmptyAnchor && "flex-1",
+              )}
+            >
               {hasSelection ? (
-                <div className="max-h-[281px] min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
-                  <div className="flex flex-wrap content-start gap-1.5 py-0.5">
-                    {selectedIds.map((id) => {
-                      const label = idToLabel.get(id) ?? id;
-                      return (
-                        <BigPictureTag
-                          key={id}
-                          onRemove={() => removeSelected(id)}
-                        >
-                          {label}
-                        </BigPictureTag>
-                      );
-                    })}
-                  </div>
-                </div>
+                <TriggerSelectedTags
+                  selectedIds={selectedIds}
+                  idToLabel={idToLabel}
+                  onRemove={removeSelected}
+                />
               ) : (
-                <span className="truncate text-sm font-normal text-[#97A0AF]">
+                <span
+                  className={cn(
+                    "truncate text-sm font-normal text-[#97A0AF]",
+                    compactEmptyAnchor && "sr-only",
+                  )}
+                >
                   Select teams
                 </span>
               )}
             </div>
-            <ChevronDownIcon className="size-4 shrink-0 text-[#44546F]" />
+            {!compactEmptyAnchor ? (
+              <ChevronDownIcon className="size-4 shrink-0 text-[#44546F]" />
+            ) : null}
           </div>
         </DropdownMenuTrigger>
 

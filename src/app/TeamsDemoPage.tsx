@@ -1,3 +1,5 @@
+import { PlusIcon } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 import {
   BigPictureTeamsDropdown,
@@ -5,7 +7,44 @@ import {
 } from "./components/BigPictureTeamsDropdown";
 import { GlobalTeamsSplash } from "./components/GlobalTeamsSplash";
 
+/** Demo OKR objectives — long copy so the OKR column exercises ellipsis in a narrow layout. */
+const OKR_DEMO_ROWS = [
+  {
+    id: "okr-row-1",
+    objective:
+      "Increase enterprise ARR adoption across EU regions by aligning roadmap milestones with sales pipeline forecasts and executive steering cadence",
+  },
+  {
+    id: "okr-row-2",
+    objective:
+      "Reduce platform incident MTTR through observability investments, automated rollback workflows, and clearer ownership across service boundaries",
+  },
+  {
+    id: "okr-row-3",
+    objective:
+      "Ship unified portfolio reporting dashboards for stakeholders with drill-down by PI, release train, and dependency risk indicators before Q4 planning",
+  },
+  {
+    id: "okr-row-4",
+    objective:
+      "Modernize integration-layer security posture with OAuth scope reviews, audit-ready access logs, and periodic penetration-test remediation tracking",
+  },
+] as const;
+
 export default function TeamsDemoPage() {
+  /** Rows where the user clicked + and the teams multiselect should stay visible. */
+  const [teamsPickerOpenRow, setTeamsPickerOpenRow] = useState<Set<string>>(
+    () => new Set(),
+  );
+  /** Per-row: once at least one team is chosen, hide the decorative + next to the trigger. */
+  const [teamsRowHasSelection, setTeamsRowHasSelection] = useState<
+    Record<string, boolean>
+  >({});
+
+  function revealTeamsPicker(rowKey: string) {
+    setTeamsPickerOpenRow((prev) => new Set(prev).add(rowKey));
+  }
+
   return (
     <div className="min-h-dvh w-full bg-[#F7F8F9] px-4 py-8">
       <div className="mx-auto max-w-3xl">
@@ -38,6 +77,92 @@ export default function TeamsDemoPage() {
                 Empty state (no teams configured)
               </p>
               <BigPictureTeamsDropdown groups={EMPTY_TEAM_GROUPS} />
+            </div>
+
+            <div className="border-t border-[#DFE1E6] pt-10">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#44546F]">
+                In a table
+              </p>
+              <div className="overflow-x-auto rounded-lg border border-[#DFE1E6]">
+                <table className="w-full min-w-[560px] table-fixed border-collapse text-left text-sm text-[#172B4D]">
+                  <colgroup>
+                    <col className="w-[45%]" />
+                    <col className="w-[55%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-[#DFE1E6] bg-[#FAFBFC]">
+                      <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-[#626F86]">
+                        OKR
+                      </th>
+                      <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-[#626F86]">
+                        Teams
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#DFE1E6]">
+                    {OKR_DEMO_ROWS.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="group transition-colors hover:bg-[#F7F8F9]"
+                      >
+                        <td className="max-w-0 overflow-hidden px-3 py-3 align-middle">
+                          <span
+                            className="block truncate text-[#44546F]"
+                            title={row.objective}
+                          >
+                            {row.objective}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          {teamsPickerOpenRow.has(row.id) ? (
+                            <div className="flex min-h-10 w-full max-w-full min-w-0 items-center gap-2">
+                              {!teamsRowHasSelection[row.id] ? (
+                                <span
+                                  className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-[#DFE1E6] bg-white text-[#0C66E4] opacity-0 shadow-sm transition-opacity pointer-events-none group-hover:opacity-100"
+                                  aria-hidden
+                                >
+                                  <PlusIcon
+                                    className="size-4"
+                                    strokeWidth={2}
+                                  />
+                                </span>
+                              ) : null}
+                              <BigPictureTeamsDropdown
+                                className="min-w-0 flex-1"
+                                compactTriggerUntilSelection
+                                defaultMenuOpen
+                                onValueChange={(ids) => {
+                                  setTeamsRowHasSelection((prev) => ({
+                                    ...prev,
+                                    [row.id]: ids.length > 0,
+                                  }));
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex min-h-10 min-w-[120px] items-center">
+                              <button
+                                type="button"
+                                className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-[#DFE1E6] bg-white text-[#0C66E4] opacity-0 shadow-sm transition-opacity hover:bg-[#F7F8F9] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30 group-hover:opacity-100"
+                                aria-label="Add teams"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  queueMicrotask(() =>
+                                    revealTeamsPicker(row.id),
+                                  );
+                                }}
+                              >
+                                <PlusIcon className="size-4" strokeWidth={2} />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
