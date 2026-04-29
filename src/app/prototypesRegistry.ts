@@ -1,5 +1,4 @@
 import { CHATBOT_LAST_UPDATE_DISPLAY } from "./lastUpdate";
-import { INDEPENDENT_LAST_EDITED } from "../../prototypes/independent/src/prototypeLastEdited";
 import { TEAMS_DEMO_LAST_EDITED } from "./teamsPrototypeMeta";
 
 export type PrototypeEntry = {
@@ -13,15 +12,6 @@ export type PrototypeEntry = {
 };
 
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
-  {
-    id: "independent",
-    name: "Independent prototype",
-    summary:
-      "Standalone Vite + React scaffold in prototypes/independent — greenfield starter.",
-    lastEdited: INDEPENDENT_LAST_EDITED,
-    kind: "static",
-    staticPath: "prototypes/independent/",
-  },
   {
     id: "teams-dropdown",
     name: "Moving Teams from OKR to BigPicture Global Teams",
