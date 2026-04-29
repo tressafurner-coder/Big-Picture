@@ -71,6 +71,10 @@ type Props = {
   emptyMessage?: string;
   /** Open the menu as soon as this instance mounts (e.g. table “+ add teams”). */
   defaultMenuOpen?: boolean;
+  /** Controlled open state for the dropdown menu. */
+  open?: boolean;
+  /** Controlled open-state callback for the dropdown menu. */
+  onOpenChange?: (open: boolean) => void;
   /**
    * Until at least one team is selected, shrink the trigger to an invisible 8×8 hit-area so a sibling “+” can stay visible (table rows).
    */
@@ -218,6 +222,8 @@ export function BigPictureTeamsDropdown({
   className,
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
   defaultMenuOpen = false,
+  open: openProp,
+  onOpenChange,
   compactTriggerUntilSelection = false,
   triggerClassName,
   value: valueProp,
@@ -236,7 +242,14 @@ export function BigPictureTeamsDropdown({
     onValueChange?.([...next]);
   }
 
-  const [menuOpen, setMenuOpen] = useState(defaultMenuOpen);
+  const isOpenControlled = openProp !== undefined;
+  const [menuOpenInternal, setMenuOpenInternal] = useState(defaultMenuOpen);
+  const menuOpen = isOpenControlled ? openProp : menuOpenInternal;
+
+  function handleMenuOpenChange(nextOpen: boolean) {
+    if (!isOpenControlled) setMenuOpenInternal(nextOpen);
+    onOpenChange?.(nextOpen);
+  }
   const [search, setSearch] = useState("");
 
   const filteredGroups = useMemo(() => {
@@ -345,7 +358,7 @@ export function BigPictureTeamsDropdown({
       <DropdownMenu
         modal={false}
         open={menuOpen}
-        onOpenChange={setMenuOpen}
+        onOpenChange={handleMenuOpenChange}
       >
         <DropdownMenuTrigger asChild>
           <div

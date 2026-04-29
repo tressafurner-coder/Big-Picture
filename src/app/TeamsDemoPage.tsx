@@ -40,9 +40,14 @@ export default function TeamsDemoPage() {
   const [teamsRowHasSelection, setTeamsRowHasSelection] = useState<
     Record<string, boolean>
   >({});
+  /** Per-row open state for the dropdown menu (re-open on + click). */
+  const [teamsRowMenuOpen, setTeamsRowMenuOpen] = useState<
+    Record<string, boolean>
+  >({});
 
   function revealTeamsPicker(rowKey: string) {
     setTeamsPickerOpenRow((prev) => new Set(prev).add(rowKey));
+    setTeamsRowMenuOpen((prev) => ({ ...prev, [rowKey]: true }));
   }
 
   return (
@@ -83,8 +88,8 @@ export default function TeamsDemoPage() {
               <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#44546F]">
                 In a table
               </p>
-              <div className="overflow-x-auto rounded-lg border border-[#DFE1E6]">
-                <table className="w-full min-w-[560px] table-fixed border-collapse text-left text-sm text-[#172B4D]">
+              <div className="overflow-hidden rounded-lg border border-[#DFE1E6]">
+                <table className="w-full table-fixed border-collapse text-left text-sm text-[#172B4D]">
                   <colgroup>
                     <col className="w-[45%]" />
                     <col className="w-[55%]" />
@@ -117,20 +122,36 @@ export default function TeamsDemoPage() {
                           {teamsPickerOpenRow.has(row.id) ? (
                             <div className="flex min-h-10 w-full max-w-full min-w-0 items-center gap-2">
                               {!teamsRowHasSelection[row.id] ? (
-                                <span
-                                  className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-[#DFE1E6] bg-white text-[#0C66E4] opacity-0 shadow-sm transition-opacity pointer-events-none group-hover:opacity-100"
-                                  aria-hidden
+                                <button
+                                  type="button"
+                                  className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-[#DFE1E6] bg-white text-[#0C66E4] opacity-0 shadow-sm transition-opacity hover:bg-[#F7F8F9] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/30 group-hover:opacity-100"
+                                  aria-label="Open teams picker"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setTeamsRowMenuOpen((prev) => ({
+                                      ...prev,
+                                      [row.id]: true,
+                                    }));
+                                  }}
                                 >
                                   <PlusIcon
                                     className="size-4"
                                     strokeWidth={2}
                                   />
-                                </span>
+                                </button>
                               ) : null}
                               <BigPictureTeamsDropdown
                                 className="min-w-0 flex-1"
                                 compactTriggerUntilSelection
                                 defaultMenuOpen
+                                open={teamsRowMenuOpen[row.id]}
+                                onOpenChange={(open) => {
+                                  setTeamsRowMenuOpen((prev) => ({
+                                    ...prev,
+                                    [row.id]: open,
+                                  }));
+                                }}
                                 onValueChange={(ids) => {
                                   setTeamsRowHasSelection((prev) => ({
                                     ...prev,
