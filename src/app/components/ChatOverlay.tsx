@@ -10,6 +10,8 @@ import {
   ArrowLeft,
   Sparkles,
   Search,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
@@ -143,6 +145,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [newChatBadgeConvId, setNewChatBadgeConvId] = useState<string | null>(null);
   const [newChatBannerMeta, setNewChatBannerMeta] = useState<{ totalChats: number; title: string } | null>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
+  /** Assistant message ids where the inline feedback bar was dismissed or submitted. */
+  const [feedbackHiddenIds, setFeedbackHiddenIds] = useState<Set<string>>(() => new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -454,7 +458,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
 
   const handleSendMessage = async (preset?: string) => {
-    const text = (preset ?? inputValue).trim();
+    // Only treat a string preset as override — React may pass a click event if wired as onClick={handleSendMessage}.
+    const text = (typeof preset === "string" ? preset : inputValue).trim();
     if (tokenLimitExceeded || !text || !activeConversation) return;
 
     const userMessage: Message = {
@@ -1132,36 +1137,94 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
               {/* Wiadomości */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {activeConversation?.messages.map((message) => {
+                {activeConversation?.messages.map((message, msgIndex) => {
                   const isMarkdownAssistant =
                     message.role === "assistant" && message.contentType === "markdown";
 
+                  const assistantOrdinal = activeConversation.messages
+                    .slice(0, msgIndex + 1)
+                    .filter((m) => m.role === "assistant").length;
+
+                  const showHelpfulnessPrompt =
+                    message.role === "assistant" &&
+                    assistantOrdinal > 0 &&
+                    assistantOrdinal % 3 === 0 &&
+                    !feedbackHiddenIds.has(message.id);
+
                   return (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      {message.role === "assistant" && (
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
-                          <img src={aiAvatarIcon} alt="AI" className="h-6 w-6 rounded-lg" />
+                    <div key={message.id} className="flex flex-col gap-1">
+                      <div
+                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        {message.role === "assistant" && (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                            <img src={aiAvatarIcon} alt="AI" className="h-6 w-6 rounded-lg" />
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-2xl px-4 py-2.5 ${
+                            isMarkdownAssistant
+                              ? "max-w-[92%] bg-gray-100 text-gray-900"
+                              : message.role === "user"
+                                ? "max-w-[75%] text-white"
+                                : "max-w-[75%] bg-gray-100 text-gray-900"
+                          }`}
+                          style={message.role === "user" ? { backgroundColor: "#1868DB" } : {}}
+                        >
+                          {isMarkdownAssistant ? (
+                            <div className="space-y-1">{renderMarkdownContent(message.content)}</div>
+                          ) : (
+                            <p className="text-sm leading-relaxed">{message.content}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {showHelpfulnessPrompt && (
+                        <div className="flex gap-3">
+                          <div className="w-8 shrink-0" aria-hidden />
+                          <div className="flex min-w-0 flex-1 items-center justify-between gap-4 py-1.5 pr-0.5">
+                            <p className="min-w-0 text-sm leading-snug text-gray-600">
+                              Has this been helpful so far?
+                            </p>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                className="no-drag flex size-8 items-center justify-center rounded text-gray-600 transition-colors hover:bg-gray-200/80"
+                                aria-label="Yes, helpful"
+                                onClick={() =>
+                                  setFeedbackHiddenIds((prev) => new Set(prev).add(message.id))
+                                }
+                              >
+                                <ThumbsUp className="size-[18px]" strokeWidth={1.75} aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                className="no-drag flex size-8 items-center justify-center rounded text-gray-600 transition-colors hover:bg-gray-200/80"
+                                aria-label="Not helpful"
+                                onClick={() =>
+                                  setFeedbackHiddenIds((prev) => new Set(prev).add(message.id))
+                                }
+                              >
+                                <ThumbsDown className="size-[18px]" strokeWidth={1.75} aria-hidden />
+                              </button>
+                              <span
+                                className="mx-1 h-4 w-px shrink-0 bg-gray-300"
+                                aria-hidden
+                              />
+                              <button
+                                type="button"
+                                className="no-drag flex size-8 items-center justify-center rounded text-gray-600 transition-colors hover:bg-gray-200/80"
+                                aria-label="Dismiss"
+                                onClick={() =>
+                                  setFeedbackHiddenIds((prev) => new Set(prev).add(message.id))
+                                }
+                              >
+                                <X className="size-[18px]" strokeWidth={1.75} aria-hidden />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
-                      <div
-                        className={`rounded-2xl px-4 py-2.5 ${
-                          isMarkdownAssistant
-                            ? "max-w-[92%] bg-gray-100 text-gray-900"
-                            : message.role === "user"
-                              ? "max-w-[75%] text-white"
-                              : "max-w-[75%] bg-gray-100 text-gray-900"
-                        }`}
-                        style={message.role === "user" ? { backgroundColor: "#1868DB" } : {}}
-                      >
-                        {isMarkdownAssistant ? (
-                          <div className="space-y-1">{renderMarkdownContent(message.content)}</div>
-                        ) : (
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                        )}
-                      </div>
                     </div>
                   );
                 })}
@@ -1257,7 +1320,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     disabled={isThinking || tokenLimitExceeded}
                   />
                   <button
-                    onClick={handleSendMessage}
+                    type="button"
+                    onClick={() => void handleSendMessage()}
                     disabled={!inputValue.trim() || isThinking || tokenLimitExceeded}
                     className="flex items-center justify-center text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                     style={{ 
