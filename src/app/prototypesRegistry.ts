@@ -1,5 +1,6 @@
 import { CHATBOT_LAST_UPDATE_DISPLAY } from "./lastUpdate";
 import { INDEPENDENT_LAST_EDITED } from "../../prototypes/independent/src/prototypeLastEdited";
+import { TEAMS_DEMO_LAST_EDITED } from "./teamsPrototypeMeta";
 
 export type PrototypeEntry = {
   id: string;
@@ -20,6 +21,15 @@ export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
     lastEdited: INDEPENDENT_LAST_EDITED,
     kind: "static",
     staticPath: "prototypes/independent/",
+  },
+  {
+    id: "teams-dropdown",
+    name: "Moving Teams from OKR to BigPicture Global Teams",
+    summary:
+      "Global Teams multi-select, splash screens (no permission / module off), OKR → BigPicture migration.",
+    lastEdited: TEAMS_DEMO_LAST_EDITED,
+    kind: "route",
+    routeSegment: "teams-demo",
   },
   {
     id: "chatbot",

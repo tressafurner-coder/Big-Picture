@@ -8,6 +8,9 @@ dist/
 .env
 .env.*.local
 
+# Local Appfire template clone (scripts/clone-appfire-template.sh); remove line to commit it
+template-appfire-ai/
+
 # Logs & cache
 public/bigpicture-logo.png
 

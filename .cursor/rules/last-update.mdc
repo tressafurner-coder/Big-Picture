@@ -16,4 +16,8 @@ Update **`src/app/lastUpdate.ts`**: set `CHATBOT_LAST_UPDATE_DISPLAY` when those
 
 Update **`prototypes/independent/src/prototypeLastEdited.ts`**: set `INDEPENDENT_LAST_EDITED` when that app changes.
 
-Hub-only copy/layout changes on `PrototypesHub` do not require bumping the chatbot or independent dates unless you change those prototypes too.
+## Teams dropdown prototype (`TeamsDemoPage`, `BigPictureTeamsDropdown`)
+
+Update **`src/app/teamsPrototypeMeta.ts`**: set `TEAMS_DEMO_LAST_EDITED` when that flow changes.
+
+Hub-only copy/layout changes on `PrototypesHub` do not require bumping other prototypes’ dates unless you change those prototypes too.

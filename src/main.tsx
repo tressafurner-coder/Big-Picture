@@ -1,7 +1,9 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
 import ChatbotPrototype from "./app/ChatbotPrototype.tsx";
+import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
+import TeamsDemoPage from "./app/TeamsDemoPage.tsx";
 import "./styles/index.css";
 
 function routerBasename(): string | undefined {
@@ -14,6 +16,8 @@ createRoot(document.getElementById("root")!).render(
   <BrowserRouter basename={routerBasename()}>
     <Routes>
       <Route path="/" element={<PrototypesHub />} />
+      <Route path="/teams-demo" element={<TeamsDemoPage />} />
+      <Route path="/global-teams" element={<GlobalTeamsPage />} />
       <Route path="/chatbot" element={<ChatbotPrototype />} />
     </Routes>
   </BrowserRouter>,
