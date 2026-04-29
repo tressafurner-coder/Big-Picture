@@ -6,14 +6,14 @@ alwaysApply: true
 
 # Last update stamps
 
-The **prototypes hub** table reads each row’s date from that prototype’s source — keep those files in sync with real edits.
+The **prototypes hub** table reads each row’s date from that prototype’s source.
 
 ## Chatbot prototype (`ChatbotPrototype`, chat components)
 
-Update **`src/app/lastUpdate.ts`**: set `CHATBOT_LAST_UPDATE_DISPLAY` to the current date/time (e.g. run `date '+%d %b %Y, %H:%M'` and paste). Commit with the change.
+Update **`src/app/lastUpdate.ts`**: set `CHATBOT_LAST_UPDATE_DISPLAY` when those change (e.g. `date '+%d %b %Y, %H:%M'`).
 
 ## Independent prototype (`prototypes/independent/`)
 
-Update **`prototypes/independent/src/prototypeLastEdited.ts`**: set `INDEPENDENT_LAST_EDITED` when that standalone app changes meaningfully. Commit with the change.
+Update **`prototypes/independent/src/prototypeLastEdited.ts`**: set `INDEPENDENT_LAST_EDITED` when that app changes.
 
-Hub-only changes (copy/layout on `PrototypesHub` that are not a prototype edit) do not require bumping the other prototypes’ dates.
+Hub-only copy/layout changes on `PrototypesHub` do not require bumping the chatbot or independent dates unless you change those prototypes too.

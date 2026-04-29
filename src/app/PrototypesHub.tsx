@@ -33,9 +33,7 @@ export default function PrototypesHub() {
               <tr className="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3 whitespace-nowrap">
-                  Last updated
-                </th>
+                <th className="px-4 py-3 whitespace-nowrap">Last updated</th>
                 <th className="px-4 py-3">Open</th>
               </tr>
             </thead>

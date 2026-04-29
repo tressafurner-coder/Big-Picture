@@ -9,12 +9,11 @@ dist/
 .env.*.local
 
 # Logs & cache
+public/bigpicture-logo.png
+
 *.log
 .npm
 .vite
-
-# Synced from repo-root bigpicture-logo.png by scripts/ensure-public-logo.mjs
-public/bigpicture-logo.png
 
 # OS / editor
 .DS_Store

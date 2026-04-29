@@ -5,12 +5,9 @@ export type PrototypeEntry = {
   id: string;
   name: string;
   summary: string;
-  /** Must match that prototype’s edit stamp (see lastUpdate / prototypeLastEdited). */
   lastEdited: string;
   kind: "route" | "static";
-  /** In-app path segment (no base), e.g. chatbot */
   routeSegment?: string;
-  /** Directory under the Pages base URL, trailing slash */
   staticPath?: string;
 };
 
