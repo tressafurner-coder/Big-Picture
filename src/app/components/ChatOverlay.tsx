@@ -23,6 +23,7 @@ import iconMinimizeSvg from "../../imports/icon-minimize.svg?raw";
 import iconMoreOptionsSvg from "../../imports/icon-more-options.svg?raw";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Tooltip } from "./Tooltip";
+import { cn } from "./ui/utils";
 
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
@@ -204,6 +205,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   /** Assistant message ids where the inline feedback bar was dismissed or submitted. */
   const [feedbackHiddenIds, setFeedbackHiddenIds] = useState<Set<string>>(() => new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  /** Scroll target: top of the latest assistant bubble (read long replies from the beginning). */
+  const latestAssistantScrollAnchorRef = useRef<HTMLDivElement | null>(null);
+  /** Avoid re-scrolling on every streaming chunk for the same assistant message id. */
+  const lastScrolledAssistantMsgIdRef = useRef<string | null>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
@@ -231,7 +236,36 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const hasConversations = conversations.length > 0;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    lastScrolledAssistantMsgIdRef.current = null;
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    const msgs = activeConversation?.messages;
+    if (!msgs?.length) return;
+
+    const last = msgs[msgs.length - 1];
+
+    if (last.role === "assistant") {
+      if (lastScrolledAssistantMsgIdRef.current === last.id) return;
+      lastScrolledAssistantMsgIdRef.current = last.id;
+      window.requestAnimationFrame(() => {
+        latestAssistantScrollAnchorRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest",
+        });
+      });
+      return;
+    }
+
+    lastScrolledAssistantMsgIdRef.current = null;
+    window.requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
   }, [activeConversation?.messages]);
 
   useEffect(() => {
@@ -1223,8 +1257,19 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     assistantOrdinal % 3 === 0 &&
                     !feedbackHiddenIds.has(message.id);
 
+                  const isLatestAssistantBubble =
+                    message.role === "assistant" &&
+                    msgIndex === activeConversation.messages.length - 1;
+
                   return (
-                    <div key={message.id} className="flex flex-col gap-1">
+                    <div
+                      key={message.id}
+                      ref={isLatestAssistantBubble ? latestAssistantScrollAnchorRef : undefined}
+                      className={cn(
+                        "flex flex-col gap-1",
+                        isLatestAssistantBubble && "scroll-mt-3",
+                      )}
+                    >
                       <div
                         className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >

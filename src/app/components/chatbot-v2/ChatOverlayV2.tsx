@@ -22,6 +22,7 @@ import iconMinimizeSvg from "../../../imports/icon-minimize.svg?raw";
 import iconMoreOptionsSvg from "../../../imports/icon-more-options.svg?raw";
 import { ConfirmDialogV2 as ConfirmDialog } from "./ConfirmDialogV2";
 import { TooltipV2 as Tooltip } from "./TooltipV2";
+import { cn } from "../ui/utils";
 
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
@@ -186,6 +187,8 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   /** Assistant message ids where the inline feedback bar was dismissed or submitted. */
   const [feedbackHiddenIds, setFeedbackHiddenIds] = useState<Set<string>>(() => new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const latestAssistantScrollAnchorRef = useRef<HTMLDivElement | null>(null);
+  const lastScrolledAssistantMsgIdRef = useRef<string | null>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
@@ -215,7 +218,36 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   const hasConversations = conversations.length > 0;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    lastScrolledAssistantMsgIdRef.current = null;
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    const msgs = activeConversation?.messages;
+    if (!msgs?.length) return;
+
+    const last = msgs[msgs.length - 1];
+
+    if (last.role === "assistant") {
+      if (lastScrolledAssistantMsgIdRef.current === last.id) return;
+      lastScrolledAssistantMsgIdRef.current = last.id;
+      window.requestAnimationFrame(() => {
+        latestAssistantScrollAnchorRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest",
+        });
+      });
+      return;
+    }
+
+    lastScrolledAssistantMsgIdRef.current = null;
+    window.requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
   }, [activeConversation?.messages]);
 
   useEffect(() => {
@@ -1058,8 +1090,19 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     assistantOrdinal % 3 === 0 &&
                     !feedbackHiddenIds.has(message.id);
 
+                  const isLatestAssistantBubble =
+                    message.role === "assistant" &&
+                    msgIndex === activeConversation.messages.length - 1;
+
                   return (
-                    <div key={message.id} className="flex flex-col gap-1">
+                    <div
+                      key={message.id}
+                      ref={isLatestAssistantBubble ? latestAssistantScrollAnchorRef : undefined}
+                      className={cn(
+                        "flex flex-col gap-1",
+                        isLatestAssistantBubble && "scroll-mt-3",
+                      )}
+                    >
                       <div
                         className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
