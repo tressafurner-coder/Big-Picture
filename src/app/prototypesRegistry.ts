@@ -21,16 +21,6 @@ export type PrototypeEntry = {
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
   {
-    id: "chatbot-v2",
-    name: "AI Chatbot for BigPicture (Version 2)",
-    status: "Deprecated",
-    summary:
-      "Second, independent iteration track for chatbot work without impacting the original prototype route.",
-    lastEdited: CHATBOT_LAST_UPDATE_DISPLAY,
-    kind: "route",
-    routeSegment: "chatbot-v2",
-  },
-  {
     id: "risk-jira-mapping",
     name: "Jira Custom field mapping in Risk Management module",
     status: "In progress",
