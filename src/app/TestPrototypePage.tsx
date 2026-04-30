@@ -32,6 +32,10 @@ import { ads } from "./design/atlassianPageTokens";
 const JIRA_VALUE_NAME_TOOLTIP =
   "You can't edit value names here—they come from Jira.";
 
+/** Shown on a Jira custom field option disabled because the other metric already uses it. */
+const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
+  "A metric must use two different Jira custom fields.";
+
 /** Demo Jira custom fields — prototype ids; labels numbered for clarity. */
 const JIRA_CUSTOM_FIELD_OPTIONS = [
   { id: "customfield_10042", label: "Jira custom field 1" },
@@ -135,6 +139,15 @@ function seedConsequenceRows(fieldId: string, contextId: string): MetricRow[] {
   return CONSEQUENCE_ROWS_TEMPLATE.map((r) => ({ ...r }));
 }
 
+const SWATCH_CYCLE = [
+  "bg-[#006644]",
+  "bg-[#36B37E]",
+  "bg-[#FFAB00]",
+  "bg-[#FF5630]",
+  "bg-[#BF2600]",
+  "bg-[#626F86]",
+] as const;
+
 const purpleNewBadge =
   "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#EAE6FF] text-[#5E4DB2]";
 const blueNewBadge =
@@ -152,12 +165,13 @@ function ManualMetricCard({
   selectedContextId,
   onContextChange,
   peerSelectedFieldId,
-  peerMetricName,
+  onAddRow,
 }: {
   metricLabel: string;
   rows: MetricRow[];
   onLabelChange: (index: number, label: string) => void;
   onValueChange: (index: number, value: number) => void;
+  onAddRow: () => void;
   jiraMappingEnabled: boolean;
   selectedJiraFieldId: string;
   onJiraFieldChange: (fieldId: string) => void;
@@ -168,8 +182,6 @@ function ManualMetricCard({
   onContextChange: (contextId: string) => void;
   /** Other metric's field — cannot be chosen here (mutually exclusive mapping). */
   peerSelectedFieldId: string;
-  /** Display name of the other metric (for disabled-option tooltips). */
-  peerMetricName: string;
 }) {
   const slug = metricLabel.replace(/\s+/g, "-").toLowerCase();
   const fieldSelectId = `test-metric-jira-field-${slug}`;
@@ -204,19 +216,26 @@ function ManualMetricCard({
                 >
                   {JIRA_CUSTOM_FIELD_OPTIONS.map((opt) => {
                     const takenByPeer = opt.id === peerSelectedFieldId;
-                    const takenTooltip = `Nie możesz wybrać tego pola — jest już przypisane do metryki ${peerMetricName}. Jedno pole może być użyte tylko w jednej sekcji.`;
+                    if (takenByPeer) {
+                      return (
+                        <Tooltip
+                          key={opt.id}
+                          content={JIRA_FIELD_PEER_TAKEN_TOOLTIP}
+                          className="block w-full min-w-0 cursor-default"
+                        >
+                          <SelectItem
+                            value={opt.id}
+                            disabled
+                            allowPointerEventsWhenDisabled
+                            title={JIRA_FIELD_PEER_TAKEN_TOOLTIP}
+                          >
+                            {opt.label}
+                          </SelectItem>
+                        </Tooltip>
+                      );
+                    }
                     return (
-                      <SelectItem
-                        key={opt.id}
-                        value={opt.id}
-                        disabled={takenByPeer}
-                        title={takenByPeer ? takenTooltip : undefined}
-                        className={
-                          takenByPeer
-                            ? "data-[disabled]:pointer-events-auto data-[disabled]:cursor-not-allowed"
-                            : undefined
-                        }
-                      >
+                      <SelectItem key={opt.id} value={opt.id}>
                         {opt.label}
                       </SelectItem>
                     );
@@ -283,7 +302,7 @@ function ManualMetricCard({
               <td className="px-4 py-2.5">
                 <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className={`inline-block size-3 shrink-0 rounded-sm ${row.swatch}`}
+                    className={`inline-block size-6 shrink-0 rounded-sm ${row.swatch}`}
                     aria-hidden
                   />
                   {jiraMappingEnabled ? (
@@ -335,6 +354,13 @@ function ManualMetricCard({
           ))}
         </tbody>
       </table>
+      {!jiraMappingEnabled && (
+        <div className={cn("border-t px-4 py-3", ads.border)}>
+          <button type="button" onClick={onAddRow} className={cn(ads.linkUi, "inline")}>
+            + Add Value
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -461,6 +487,27 @@ export default function TestPrototypePage() {
         prev.map((r, j) => (j === i ? { ...r, value } : r)),
       );
     }
+  }
+
+  function addLikelihoodRow() {
+    setLikelihoodRows((prev) => [
+      ...prev,
+      {
+        label: `Value ${prev.length + 1}`,
+        value: prev.length + 1,
+        swatch: SWATCH_CYCLE[prev.length % SWATCH_CYCLE.length],
+      },
+    ]);
+  }
+  function addConsequenceRow() {
+    setConsequenceRows((prev) => [
+      ...prev,
+      {
+        label: `Value ${prev.length + 1}`,
+        value: prev.length + 1,
+        swatch: SWATCH_CYCLE[prev.length % SWATCH_CYCLE.length],
+      },
+    ]);
   }
 
   return (
@@ -751,6 +798,7 @@ export default function TestPrototypePage() {
                   rows={likelihoodDisplayRows}
                   onLabelChange={patchLikelihoodLabel}
                   onValueChange={patchLikelihoodValue}
+                  onAddRow={addLikelihoodRow}
                   jiraMappingEnabled={mapMetricsToJiraFields}
                   selectedJiraFieldId={likelihoodJiraFieldId}
                   onJiraFieldChange={setLikelihoodJiraFieldId}
@@ -758,13 +806,13 @@ export default function TestPrototypePage() {
                   selectedContextId={likelihoodContextId}
                   onContextChange={setLikelihoodContextId}
                   peerSelectedFieldId={consequenceJiraFieldId}
-                  peerMetricName="Consequence"
                 />
                 <ManualMetricCard
                   metricLabel="Consequence"
                   rows={consequenceDisplayRows}
                   onLabelChange={patchConsequenceLabel}
                   onValueChange={patchConsequenceValue}
+                  onAddRow={addConsequenceRow}
                   jiraMappingEnabled={mapMetricsToJiraFields}
                   selectedJiraFieldId={consequenceJiraFieldId}
                   onJiraFieldChange={setConsequenceJiraFieldId}
@@ -772,7 +820,6 @@ export default function TestPrototypePage() {
                   selectedContextId={consequenceContextId}
                   onContextChange={setConsequenceContextId}
                   peerSelectedFieldId={likelihoodJiraFieldId}
-                  peerMetricName="Likelihood"
                 />
               </div>
             </div>
