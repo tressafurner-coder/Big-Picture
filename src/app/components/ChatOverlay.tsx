@@ -71,6 +71,20 @@ const STARTER_PROMPTS = [
   "Summarize the main product releases from the recent cycle, highlighting key features and improvements.",
 ] as const;
 
+/** Fade + slight upward drift when prompts hide as the user types — avoids a hard cut. */
+const starterPromptListVariants = {
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.28, ease: [0.25, 0.1, 0.25, 1] },
+  },
+  hide: {
+    opacity: 0,
+    y: -12,
+    transition: { duration: 0.52, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
 const STYLE_GUIDE_DEMO_MARKDOWN = `# 1) Heading level 1 (H1)
 ## 2) Heading level 2 (H2)
 ### 3) Heading level 3 (H3)
@@ -224,9 +238,9 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     if (!showHistory) setHistorySearchQuery("");
   }, [showHistory]);
 
-  // Keep focus on the chat input whenever the conversation view is visible
+  // Keep focus on the chat input whenever the conversation view is visible (skip while thinking — input is disabled)
   useEffect(() => {
-    if (!isOpen || showHistory || confirmDelete || tokenLimitExceeded) return;
+    if (!isOpen || showHistory || confirmDelete || tokenLimitExceeded || isThinking) return;
     const id = window.requestAnimationFrame(() => {
       chatInputRef.current?.focus({ preventScroll: true });
     });
@@ -1284,30 +1298,39 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                   );
                 })}
 
-                {showStarterPrompts && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 shrink-0" aria-hidden />
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      {STARTER_PROMPTS.map((prompt) => (
-                        <button
-                          key={prompt}
-                          type="button"
-                          onClick={() => void handleSendMessage(prompt)}
-                          className="no-drag flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left font-normal transition-colors hover:bg-gray-50"
-                          aria-label={prompt}
-                        >
-                          <Sparkles
-                            className="mt-0.5 size-5 shrink-0"
-                            style={{ color: "#6554C0" }}
-                            strokeWidth={2}
-                            aria-hidden
-                          />
-                          <span className="text-sm font-normal leading-snug text-gray-900">{prompt}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence initial={false}>
+                  {showStarterPrompts && (
+                    <motion.div
+                      key="starter-prompts"
+                      variants={starterPromptListVariants}
+                      initial={false}
+                      animate="show"
+                      exit="hide"
+                      className="pointer-events-none flex gap-3 justify-start overflow-hidden"
+                    >
+                      <div className="w-8 shrink-0" aria-hidden />
+                      <div className="flex min-w-0 flex-1 flex-col gap-2 [&_button]:pointer-events-auto">
+                        {STARTER_PROMPTS.map((prompt) => (
+                          <button
+                            key={prompt}
+                            type="button"
+                            onClick={() => void handleSendMessage(prompt)}
+                            className="no-drag flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left font-normal transition-colors hover:bg-gray-50"
+                            aria-label={prompt}
+                          >
+                            <Sparkles
+                              className="mt-0.5 size-5 shrink-0"
+                              style={{ color: "#6554C0" }}
+                              strokeWidth={2}
+                              aria-hidden
+                            />
+                            <span className="text-sm font-normal leading-snug text-gray-900">{prompt}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {isThinking && (
                   <div className="flex gap-3 justify-start">
@@ -1360,13 +1383,15 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleSendMessage();
+                    }}
                     placeholder={
                       tokenLimitExceeded
                         ? "Token limit reached"
                         : "Chat with Appfire AI"
                     }
-                    className="flex-1 cursor-text rounded-lg px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="no-drag flex-1 cursor-text select-text rounded-lg px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
                     style={{ 
                       '--tw-ring-color': '#1868DB',
                       border: '1px solid #DFE1E6',
@@ -1378,7 +1403,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     type="button"
                     onClick={() => void handleSendMessage()}
                     disabled={!inputValue.trim() || isThinking || tokenLimitExceeded}
-                    className="flex items-center justify-center text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    className="no-drag flex items-center justify-center text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                     style={{ 
                       backgroundColor: '#1868DB',
                       width: '40px',
