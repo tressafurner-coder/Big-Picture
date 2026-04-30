@@ -7,7 +7,6 @@ import {
   Coins,
   MessageSquarePlus,
   X,
-  ArrowLeft,
   Sparkles,
   Search,
   ThumbsUp,
@@ -15,18 +14,19 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
-import aiAvatarIcon from "../../imports/Appfire_AI_Logo.png";
-import iconPlusSvg from "../../imports/icon-plus.svg?raw";
-import iconChatHistorySvg from "../../imports/icon-chat-history.svg?raw";
-import iconOpenInNewTabSvg from "../../imports/icon-open-in-new-tab.svg?raw";
-import iconMinimizeSvg from "../../imports/icon-minimize.svg?raw";
-import iconMoreOptionsSvg from "../../imports/icon-more-options.svg?raw";
-import { ConfirmDialog } from "./ConfirmDialog";
-import { Tooltip } from "./Tooltip";
+import aiAvatarIcon from "../../../imports/Appfire_AI_Logo.png";
+import iconPlusSvg from "../../../imports/icon-plus.svg?raw";
+import iconChatHistorySvg from "../../../imports/icon-chat-history.svg?raw";
+import iconOpenInNewTabSvg from "../../../imports/icon-open-in-new-tab.svg?raw";
+import iconMinimizeSvg from "../../../imports/icon-minimize.svg?raw";
+import iconMoreOptionsSvg from "../../../imports/icon-more-options.svg?raw";
+import { ConfirmDialogV2 as ConfirmDialog } from "./ConfirmDialogV2";
+import { TooltipV2 as Tooltip } from "./TooltipV2";
 
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
 
+/** Stroke icons (e.g. history clock): never use fill-current on paths or strokes collapse / fill wrongly. */
 const headerToolbarStrokeIconClass =
   "inline-flex size-8 shrink-0 items-center justify-center [&>svg]:block [&>svg]:size-[18px] [&>svg]:origin-center [&_path]:fill-none [&_path]:stroke-current";
 
@@ -38,6 +38,36 @@ const STARTER_PROMPTS = [
   "Learn how BigPicture is easy as 1-2-3",
   "Summarize the main product releases from the recent cycle, highlighting key features and improvements.",
 ] as const;
+
+const TITLE_STOP_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "have",
+  "your",
+  "about",
+  "what",
+  "when",
+  "where",
+  "how",
+  "why",
+  "you",
+  "are",
+  "czy",
+  "jak",
+  "co",
+  "się",
+  "oraz",
+  "dla",
+  "który",
+  "która",
+  "chat",
+  "chatbot",
+]);
 
 const STYLE_GUIDE_DEMO_MARKDOWN = `# 1) Heading level 1 (H1)
 ## 2) Heading level 2 (H2)
@@ -112,6 +142,28 @@ interface Conversation {
   createdAt: Date;
 }
 
+function summarizeConversationTitle(messages: Message[], fallback: string): string {
+  const source = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ");
+
+  const significant = source
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !TITLE_STOP_WORDS.has(word))
+    .slice(0, 5);
+
+  if (significant.length === 0) return fallback;
+
+  const title = significant
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+  return title.length > 56 ? `${title.slice(0, 53)}...` : title;
+}
+
 interface ChatOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -119,23 +171,9 @@ interface ChatOverlayProps {
   onNewResponse: () => void;
 }
 
-export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }: ChatOverlayProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: "1",
-      title: "Conversation 1",
-      messages: [
-        {
-          id: "1",
-          role: "assistant",
-          content: "Hi! I'm Appfire AI. How can I help you?",
-        },
-      ],
-      totalTokens: 12,
-      createdAt: new Date(),
-    },
-  ]);
-  const [activeConversationId, setActiveConversationId] = useState("1");
+export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse }: ChatOverlayProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -144,9 +182,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [editingConvId, setEditingConvId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
-  const [newChatBannerVisible, setNewChatBannerVisible] = useState(false);
-  const [newChatBadgeConvId, setNewChatBadgeConvId] = useState<string | null>(null);
-  const [newChatBannerMeta, setNewChatBannerMeta] = useState<{ totalChats: number; title: string } | null>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   /** Assistant message ids where the inline feedback bar was dismissed or submitted. */
   const [feedbackHiddenIds, setFeedbackHiddenIds] = useState<Set<string>>(() => new Set());
@@ -156,6 +191,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const menuButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const newChatTimersRef = useRef<number[]>([]);
 
+  const [newChatBannerVisible, setNewChatBannerVisible] = useState(false);
+
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
   const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
   const tokenLimitExceeded = totalTokensUsed >= TOKEN_LIMIT;
@@ -163,9 +200,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const showStarterPrompts =
     !tokenLimitExceeded &&
     !isThinking &&
-    !!activeConversation &&
-    activeConversation.messages.length === 1 &&
-    activeConversation.messages[0].role === "assistant";
+    !activeConversation &&
+    inputValue.trim().length === 0;
 
   const filteredConversations = useMemo(() => {
     const q = historySearchQuery.trim().toLowerCase();
@@ -184,6 +220,13 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
   useEffect(() => {
     if (!showHistory) setHistorySearchQuery("");
+  }, [showHistory]);
+
+  useEffect(() => {
+    if (!showHistory) return;
+    setNewChatBannerVisible(false);
+    newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
+    newChatTimersRef.current = [];
   }, [showHistory]);
 
   // Keep focus on the chat input whenever the conversation view is visible
@@ -463,7 +506,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const handleSendMessage = async (preset?: string) => {
     // Only treat a string preset as override — React may pass a click event if wired as onClick={handleSendMessage}.
     const text = (typeof preset === "string" ? preset : inputValue).trim();
-    if (tokenLimitExceeded || !text || !activeConversation) return;
+    if (tokenLimitExceeded || !text) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -472,17 +515,36 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       tokens: Math.ceil(text.split(" ").length * 1.3),
     };
 
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversationId
-          ? {
-              ...conv,
-              messages: [...conv.messages, userMessage],
-              totalTokens: conv.totalTokens + (userMessage.tokens || 0),
-            }
-          : conv
-      )
-    );
+    const conversationId = activeConversationId || `${Date.now()}-conv`;
+    const isNewConversation = !activeConversation;
+    const nextConversationIndex = conversations.length + 1;
+    const fallbackTitle = `Conversation ${nextConversationIndex}`;
+    const draftTitle = summarizeConversationTitle([userMessage], fallbackTitle);
+
+    if (isNewConversation) {
+      const newConv: Conversation = {
+        id: conversationId,
+        title: draftTitle,
+        messages: [userMessage],
+        totalTokens: userMessage.tokens || 0,
+        createdAt: new Date(),
+      };
+      setConversations((prev) => [...prev, newConv]);
+      setActiveConversationId(conversationId);
+      setShowHistory(false);
+    } else {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === conversationId
+            ? {
+                ...conv,
+                messages: [...conv.messages, userMessage],
+                totalTokens: conv.totalTokens + (userMessage.tokens || 0),
+              }
+            : conv
+        )
+      );
+    }
 
     setInputValue("");
     setIsThinking(true);
@@ -500,11 +562,15 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
       setConversations((prev) =>
         prev.map((conv) =>
-          conv.id === activeConversationId
+          conv.id === conversationId
             ? {
                 ...conv,
                 messages: [...conv.messages, assistantMessage],
                 totalTokens: conv.totalTokens + (assistantMessage.tokens || 0),
+                title: summarizeConversationTitle(
+                  [...conv.messages, assistantMessage],
+                  conv.title || fallbackTitle,
+                ),
               }
             : conv
         )
@@ -518,36 +584,17 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   };
 
   const handleNewConversation = () => {
-    const nextIndex = conversations.length + 1;
-    const newConv: Conversation = {
-      id: Date.now().toString(),
-      title: `Conversation ${nextIndex}`,
-      messages: [
-        {
-          id: Date.now().toString(),
-          role: "assistant",
-          content: "Hi! I'm Appfire AI. How can I help you?",
-        },
-      ],
-      totalTokens: 12,
-      createdAt: new Date(),
-    };
     newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
     newChatTimersRef.current = [];
 
-    setConversations((prev) => [...prev, newConv]);
-    setActiveConversationId(newConv.id);
+    setActiveConversationId("");
     setShowHistory(false);
     setInputValue("");
-    setNewChatBannerMeta({ totalChats: nextIndex, title: newConv.title });
+    setEditingConvId(null);
+    setEditingTitle("");
     setNewChatBannerVisible(true);
-    setNewChatBadgeConvId(newConv.id);
-
     newChatTimersRef.current.push(
-      window.setTimeout(() => setNewChatBannerVisible(false), 6500)
-    );
-    newChatTimersRef.current.push(
-      window.setTimeout(() => setNewChatBadgeConvId(null), 14000)
+      window.setTimeout(() => setNewChatBannerVisible(false), 6500),
     );
   };
 
@@ -610,13 +657,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   };
 
   const handleHistoryToggle = () => {
-    // On an empty-history screen, clicking the history icon should start a new chat
-    // and display the same "new conversation" banner as other creation paths.
-    if (showHistory && conversations.length === 0) {
-      handleNewConversation();
-      return;
-    }
-    setShowHistory(!showHistory);
+    setShowHistory((prev) => !prev);
   };
 
   if (!isOpen) return null;
@@ -678,9 +719,43 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               </Tooltip>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <Tooltip content="New chat">
+                <button
+                  type="button"
+                  onClick={handleNewConversation}
+                  className="flex items-center justify-center rounded transition-colors"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0)",
+                    color: "#505258",
+                    width: "32px",
+                    height: "32px",
+                  }}
+                  aria-label="Start a new conversation"
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#EBECF0")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0)")
+                  }
+                  onMouseDown={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                  }
+                  onMouseUp={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#EBECF0")
+                  }
+                >
+                  <span
+                    className={headerToolbarIconClass}
+                    aria-hidden
+                    dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
+                  />
+                </button>
+              </Tooltip>
               <Tooltip content="Chat history">
                 <button
+                  type="button"
                   onClick={handleHistoryToggle}
+                  aria-label="Chat history"
                   className="flex items-center justify-center rounded transition-colors"
                   style={{ 
                     backgroundColor: showHistory ? '#E3F2FD' : 'rgba(255,255,255,0)',
@@ -757,7 +832,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           </div>
 
           <AnimatePresence>
-            {newChatBannerVisible && newChatBannerMeta && (
+            {newChatBannerVisible && (
               <motion.div
                 role="status"
                 aria-live="polite"
@@ -768,32 +843,16 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                 className="no-drag overflow-hidden border-b"
                 style={{ borderColor: "#90CAF9", backgroundColor: "#E8F4FD" }}
               >
-                <div className="flex items-start gap-3 px-4 py-3">
+                <div className="flex items-center gap-3 px-4 py-3">
                   <MessageSquarePlus
-                    className="size-5 shrink-0 mt-0.5"
+                    className="size-5 shrink-0"
                     style={{ color: "#1868DB" }}
                     strokeWidth={2.25}
                     aria-hidden
                   />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-sm font-semibold" style={{ color: "#0747A6" }}>
-                      New conversation started
-                    </p>
-                    <p className="text-xs leading-snug" style={{ color: "#292A2E" }}>
-                      {newChatBannerMeta.totalChats <= 1 ? (
-                        <>
-                          You’re now in your first chat ({newChatBannerMeta.title}). Ask a
-                          question to get started.
-                        </>
-                      ) : (
-                        <>
-                          You’re now in a fresh chat ({newChatBannerMeta.title}). You have{" "}
-                          <strong>{newChatBannerMeta.totalChats}</strong> conversations —
-                          open <strong>Chat history</strong> to switch or delete.
-                        </>
-                      )}
-                    </p>
-                  </div>
+                  <p className="min-w-0 flex-1 text-[13px] leading-snug" style={{ color: "#292A2E" }}>
+                    Send a message below when you're ready. Older threads stay in Chat history.
+                  </p>
                   <button
                     type="button"
                     onClick={dismissNewChatBanner}
@@ -816,38 +875,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
 
           {showHistory ? (
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
-              {/* Ta sama wysokość co pasek rozmowy; ikona „+” w tym samym miejscu co w czacie */}
               <div className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-100 px-4">
                 <span className="min-w-0 flex-1 truncate text-base font-semibold text-gray-700">
                   Chat history
                 </span>
-                <Tooltip content="New chat">
-                  <button
-                    type="button"
-                    onClick={handleNewConversation}
-                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
-                    aria-label="Start a new conversation"
-                    style={{ color: "#505258" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                  >
-                    <span
-                      className={headerToolbarIconClass}
-                      aria-hidden
-                      dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
-                    />
-                  </button>
-                </Tooltip>
               </div>
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
                 {hasConversations && (
@@ -861,41 +892,27 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                       type="search"
                       value={historySearchQuery}
                       onChange={(e) => setHistorySearchQuery(e.target.value)}
-                      placeholder="Search conversations…"
+                      placeholder="Search chats…"
                       className="no-drag w-full cursor-text rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2"
                       style={
                         { "--tw-ring-color": "#1868DB" } as React.CSSProperties
                       }
-                      aria-label="Search conversations"
+                      aria-label="Search chats"
                     />
                   </div>
                 )}
                 {!hasConversations ? (
                   <div className="flex h-full min-h-[260px] w-full flex-col items-center justify-center rounded-xl bg-white px-4 py-8 text-center sm:min-h-[320px] sm:px-6 sm:py-10">
                     <p className="text-[20px] font-semibold leading-[1.2] text-gray-900">
-                      No conversation yet
+                      No saved chats yet
                     </p>
                     <p className="mt-3 max-w-[320px] text-[14px] leading-[1.4] text-gray-800">
-                      Start a new chat to begin your conversation history
+                      Choose New chat above and send your first message — it'll appear here.
                     </p>
-                    <button
-                      type="button"
-                      onClick={handleNewConversation}
-                      className="no-drag mt-8 inline-flex h-8 items-center justify-center rounded-lg px-5 text-[14px] font-semibold leading-none text-white transition-colors"
-                      style={{ backgroundColor: "#1868DB" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#0D47A1")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#1868DB")
-                      }
-                    >
-                      <span>Create a new chat</span>
-                    </button>
                   </div>
                 ) : filteredConversations.length === 0 ? (
                   <p className="py-8 text-center text-sm text-gray-500">
-                    No conversations match your search.
+                    No chats match that search.
                   </p>
                 ) : (
                   filteredConversations.map((conv) => (
@@ -1025,119 +1042,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             </div>
           ) : ( 
             <>
-              {/* Active conversation title — ta sama wysokość co pasek „Chat history” */}
-              <div className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-100 px-4">
-                <Tooltip content="Chat history">
-                  <button
-                    type="button"
-                    onClick={() => setShowHistory(true)}
-                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
-                    style={{ color: "#505258" }}
-                    aria-label="Back to chat history"
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                  >
-                    <ArrowLeft className="size-4" strokeWidth={2} aria-hidden />
-                  </button>
-                </Tooltip>
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {newChatBadgeConvId === activeConversationId && (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-                      style={{ backgroundColor: "#1868DB" }}
-                    >
-                      New
-                    </span>
-                  )}
-                  {activeConversationId &&
-                  editingConvId === activeConversationId ? (
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleSaveEdit();
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          handleCancelEdit();
-                        }
-                      }}
-                      onBlur={() => {
-                        if (editingTitle.trim()) handleSaveEdit();
-                        else handleCancelEdit();
-                      }}
-                      className="no-drag h-8 min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 text-sm font-normal text-gray-900 focus:border-transparent focus:outline-none focus:ring-2"
-                      style={
-                        { "--tw-ring-color": "#1868DB" } as React.CSSProperties
-                      }
-                      autoFocus
-                      aria-label="Conversation title"
-                    />
-                  ) : (
-                    <Tooltip
-                      content={
-                        activeConversation?.title?.trim() || "New Chat"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center overflow-hidden rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
-                        style={{ color: "#292A2E" }}
-                        aria-label={`Rename: ${activeConversation?.title || "New Chat"}`}
-                        onClick={() =>
-                          activeConversationId &&
-                          handleEditConversation(activeConversationId)
-                        }
-                      >
-                        <span className="min-w-0 flex-1 truncate">
-                          {activeConversation?.title || "New Chat"}
-                        </span>
-                      </button>
-                    </Tooltip>
-                  )}
-                </div>
-                <Tooltip content="New chat">
-                  <button
-                    type="button"
-                    onClick={handleNewConversation}
-                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
-                    aria-label="Start a new conversation"
-                    style={{ color: "#505258" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                  >
-                    <span
-                      className={headerToolbarIconClass}
-                      aria-hidden
-                      dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
-                    />
-                  </button>
-                </Tooltip>
-              </div>
-
               {/* Wiadomości */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {activeConversation?.messages.map((message, msgIndex) => {

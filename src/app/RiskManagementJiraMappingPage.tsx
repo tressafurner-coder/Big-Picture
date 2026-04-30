@@ -3,7 +3,6 @@ import {
   ChevronDown,
   Flag,
   Info,
-  Plus,
   ShieldAlert,
   Trash2,
   Users,
@@ -243,7 +242,12 @@ function MetricsCard({
   ) => void;
 }) {
   const slug = metricLabel.replace(/\s+/g, "-").toLowerCase();
-  const [pendingCatalogId, setPendingCatalogId] = useState("");
+  const [pendingCatalogId, setPendingCatalogId] = useState<string | undefined>(
+    undefined,
+  );
+  const [activeContextId, setActiveContextId] = useState(
+    jiraContexts[0]?.id ?? "",
+  );
 
   const availableCatalogEntries = useMemo(
     () =>
@@ -254,13 +258,21 @@ function MetricsCard({
   );
 
   useEffect(() => {
+    if (!jiraContexts.some((c) => c.id === activeContextId)) {
+      setActiveContextId(jiraContexts[0]?.id ?? "");
+    }
+  }, [activeContextId, jiraContexts]);
+
+  useEffect(() => {
     if (
       pendingCatalogId &&
       !availableCatalogEntries.some((e) => e.id === pendingCatalogId)
     ) {
-      setPendingCatalogId("");
+      setPendingCatalogId(undefined);
     }
   }, [pendingCatalogId, availableCatalogEntries]);
+
+  const activeContext = jiraContexts.find((c) => c.id === activeContextId);
 
   const manualTableRows = manualRows.map((r, i) => ({
     id: `manual-${slug}-${i}`,
@@ -319,114 +331,142 @@ function MetricsCard({
       </div>
       {useJiraMode ? (
         <div className={cn("space-y-3 px-4 pb-4 pt-3", ads.border, "border-t")}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <FieldLabelWithHint
-              htmlFor={`risk-jira-context-pick-${slug}`}
-              hint="Contexts are defined in Jira for this field. Choose one you want to map here; you can add several and adjust value weights per context."
-            >
-              Field contexts
-            </FieldLabelWithHint>
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Select
-                value={pendingCatalogId || undefined}
-                onValueChange={setPendingCatalogId}
-                disabled={availableCatalogEntries.length === 0}
-              >
-                <SelectTrigger
-                  id={`risk-jira-context-pick-${slug}`}
-                  className={cn(
-                    "flex h-9 min-w-[12rem] max-w-[20rem] shrink items-center justify-between gap-2 text-left data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
-                    ads.fieldControl,
-                  )}
-                >
-                  <SelectValue placeholder="Select context from Jira…" />
-                </SelectTrigger>
-                <SelectContent
-                  className={cn("rounded-[3px] shadow-md", ads.border, ads.surface)}
-                >
-                  {availableCatalogEntries.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <button
-                type="button"
-                disabled={!pendingCatalogId || availableCatalogEntries.length === 0}
-                onClick={() => {
-                  if (!pendingCatalogId) return;
-                  onAddJiraContext(pendingCatalogId);
-                  setPendingCatalogId("");
-                }}
-                className={cn(
-                  "inline-flex h-9 shrink-0 items-center gap-1 rounded-[3px] border px-2.5 font-sans text-sm font-medium leading-5 hover:bg-[#EBECF0] disabled:cursor-not-allowed disabled:opacity-40",
-                  ads.border,
-                  ads.surface,
-                  ads.bodyMedium,
-                )}
-              >
-                <Plus className="size-4" />
-                Add
-              </button>
-            </div>
-          </div>
-          {availableCatalogEntries.length === 0 && jiraContextCatalog.length > 0 ? (
-            <p className={cn("text-sm", ads.caption)}>
-              All contexts from Jira for this field are already in the mapping.
-            </p>
-          ) : null}
           <Accordion
             type="multiple"
-            defaultValue={jiraContexts.map((c) => c.id)}
+            defaultValue={[`add-context-${slug}`, `values-${slug}`]}
             className="space-y-2"
           >
-            {jiraContexts.map((ctx) => (
-              <AccordionItem
-                key={ctx.id}
-                value={ctx.id}
-                className={cn(
-                  "overflow-hidden rounded-[3px] border last:border-b",
-                  ads.border,
-                )}
-              >
-                <AccordionTrigger className="border-b px-3 py-2.5 text-left hover:no-underline [&[data-state=open]>svg:last-child]:rotate-180">
-                  <span className="flex min-w-0 flex-1 items-center gap-2 pr-2">
-                    <span className={cn("truncate font-medium", ads.bodyMedium)}>
-                      {ctx.name}
-                    </span>
-                    <span className={cn("shrink-0 tabular-nums", ads.caption)}>
-                      {ctx.rows.length} values
-                    </span>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="pb-0 pt-0">
-                  <div className="flex flex-wrap items-start justify-between gap-3 border-b px-3 py-3">
-                    <div className="min-w-0 space-y-0.5">
-                      <p className={cn(ads.labelField)}>Jira context</p>
-                      <p className={cn(ads.bodyMedium)}>{ctx.name}</p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={jiraContexts.length <= 1}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onRemoveJiraContext(ctx.id);
-                      }}
+            <AccordionItem
+              value={`add-context-${slug}`}
+              className={cn(
+                "overflow-hidden rounded-[3px] border last:border-b",
+                ads.border,
+              )}
+            >
+              <AccordionTrigger className="border-b px-3 py-2.5 text-left hover:no-underline [&[data-state=open]>svg:last-child]:rotate-180">
+                <span className={cn("font-medium", ads.bodyMedium)}>
+                  Field contexts
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pb-3 pt-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <Select
+                    value={pendingCatalogId}
+                    onValueChange={(contextId) => {
+                      setPendingCatalogId(contextId);
+                      onAddJiraContext(contextId);
+                      setActiveContextId(contextId);
+                      setPendingCatalogId(undefined);
+                    }}
+                    disabled={availableCatalogEntries.length === 0}
+                  >
+                    <SelectTrigger
+                      id={`risk-jira-context-pick-${slug}`}
                       className={cn(
-                        "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[3px] border px-2.5 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40",
+                        "flex h-9 min-w-[12rem] max-w-[20rem] shrink items-center justify-between gap-2 text-left data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
+                        ads.fieldControl,
+                      )}
+                    >
+                      <SelectValue placeholder="Select context from Jira…" />
+                    </SelectTrigger>
+                    <SelectContent
+                      className={cn(
+                        "rounded-[3px] shadow-md",
                         ads.border,
                         ads.surface,
-                        ads.danger,
-                        ads.surfaceHover,
                       )}
-                      aria-label={`Remove context ${ctx.name} from mapping`}
                     >
-                      <Trash2 className="size-4 shrink-0" />
-                      Remove
-                    </button>
+                      {availableCatalogEntries.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {availableCatalogEntries.length === 0 &&
+                jiraContextCatalog.length > 0 ? (
+                  <p className={cn("pt-2 text-sm", ads.caption)}>
+                    All contexts from Jira for this field are already in the mapping.
+                  </p>
+                ) : null}
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem
+              value={`values-${slug}`}
+              className={cn(
+                "overflow-hidden rounded-[3px] border last:border-b",
+                ads.border,
+              )}
+            >
+              <AccordionTrigger className="border-b px-3 py-2.5 text-left hover:no-underline [&[data-state=open]>svg:last-child]:rotate-180">
+                <span className={cn("font-medium", ads.bodyMedium)}>Values</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-0 pt-0">
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b px-3 py-3">
+                  <div className="min-w-[12rem] space-y-1">
+                    <Label
+                      htmlFor={`risk-jira-context-active-${slug}`}
+                      className={cn(ads.labelField)}
+                    >
+                      Context
+                    </Label>
+                    <Select
+                      value={activeContextId}
+                      onValueChange={setActiveContextId}
+                      disabled={jiraContexts.length === 0}
+                    >
+                      <SelectTrigger
+                        id={`risk-jira-context-active-${slug}`}
+                        className={cn(
+                          "flex h-9 min-w-[12rem] max-w-[20rem] items-center justify-between gap-2 text-left data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
+                          ads.fieldControl,
+                        )}
+                      >
+                        <SelectValue placeholder="Select context" />
+                      </SelectTrigger>
+                      <SelectContent
+                        className={cn(
+                          "rounded-[3px] shadow-md",
+                          ads.border,
+                          ads.surface,
+                        )}
+                      >
+                        {jiraContexts.map((ctx) => (
+                          <SelectItem key={ctx.id} value={ctx.id}>
+                            {ctx.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <button
+                    type="button"
+                    disabled={jiraContexts.length <= 1 || !activeContext}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!activeContext) return;
+                      onRemoveJiraContext(activeContext.id);
+                    }}
+                    className={cn(
+                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[3px] border px-2.5 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40",
+                      ads.border,
+                      ads.surface,
+                      ads.danger,
+                      ads.surfaceHover,
+                    )}
+                    aria-label={
+                      activeContext
+                        ? `Remove context ${activeContext.name} from mapping`
+                        : "Remove context from mapping"
+                    }
+                  >
+                    <Trash2 className="size-4 shrink-0" />
+                    Remove
+                  </button>
+                </div>
+                {activeContext ? (
                   <table className="w-full border-collapse font-sans text-sm">
                     <thead>
                       <tr
@@ -442,8 +482,8 @@ function MetricsCard({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#DFE1E6]">
-                      {ctx.rows.map((row, i) => (
-                        <tr key={`${ctx.id}-${row.id}`}>
+                      {activeContext.rows.map((row, i) => (
+                        <tr key={`${activeContext.id}-${row.id}`}>
                           <td className="px-4 py-2.5">
                             <div className="flex min-w-0 items-center gap-2">
                               <span
@@ -455,7 +495,7 @@ function MetricsCard({
                                 value={row.label}
                                 onChange={(e) =>
                                   onJiraContextRowLabelChange(
-                                    ctx.id,
+                                    activeContext.id,
                                     i,
                                     e.target.value,
                                   )
@@ -477,7 +517,7 @@ function MetricsCard({
                                 if (raw === "") return;
                                 const n = Number(raw);
                                 if (!Number.isNaN(n))
-                                  onJiraContextRowValueChange(ctx.id, i, n);
+                                  onJiraContextRowValueChange(activeContext.id, i, n);
                               }}
                               className={cn(
                                 "min-h-9 w-full min-w-[4rem] max-w-[7rem] tabular-nums",
@@ -490,9 +530,13 @@ function MetricsCard({
                       ))}
                     </tbody>
                   </table>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+                ) : (
+                  <p className={cn("px-3 py-3 text-sm", ads.caption)}>
+                    Add at least one Jira context to edit mapped values.
+                  </p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </div>
       ) : (
