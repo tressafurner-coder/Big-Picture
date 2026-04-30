@@ -1,10 +1,14 @@
 import {
   CHATBOT_LAST_UPDATE_DISPLAY,
-  RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
+  TEST_PROTOTYPE_LAST_UPDATE_DISPLAY,
 } from "./generated/prototypeHubDates";
 
-export type PrototypeStatus = "Deprecated" | "In progress" | "Done";
+export type PrototypeStatus =
+  | "Deprecated"
+  | "In progress"
+  | "In Development"
+  | "Done";
 
 export type PrototypeEntry = {
   id: string;
@@ -21,14 +25,14 @@ export type PrototypeEntry = {
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
   {
-    id: "risk-jira-mapping",
-    name: "Jira Custom field mapping in Risk Management module",
+    id: "test",
+    name: "TEST",
     status: "In progress",
     summary:
-      "Risk register frameworks UI: framework name, Risk Score formula (metrics), Likelihood and Consequence scales.",
-    lastEdited: RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY,
+      "New prototype — placeholder route to iterate on the next project listed here.",
+    lastEdited: TEST_PROTOTYPE_LAST_UPDATE_DISPLAY,
     kind: "route",
-    routeSegment: "risk-jira-mapping",
+    routeSegment: "test",
   },
   {
     id: "teams-dropdown",
@@ -43,7 +47,7 @@ export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
   {
     id: "chatbot",
     name: "AI Chatbot for BigPicture",
-    status: "In progress",
+    status: "In Development",
     summary:
       "Chat page with a corner launcher and conversation overlay (earlier prototype).",
     lastEdited: CHATBOT_LAST_UPDATE_DISPLAY,

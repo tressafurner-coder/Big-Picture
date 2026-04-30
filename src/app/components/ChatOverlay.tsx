@@ -1072,9 +1072,12 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     role="region"
                     aria-label="Active conversation"
                     initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
+                    animate={{ opacity: 1, height: 48 }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                    transition={{
+                      duration: 0.4,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
                     className="no-drag shrink-0 overflow-hidden border-b border-gray-200 bg-gray-100"
                   >
                     <div className="flex h-12 items-center gap-2 px-4">

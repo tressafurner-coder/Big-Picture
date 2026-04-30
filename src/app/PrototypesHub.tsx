@@ -15,6 +15,8 @@ function statusClass(status: PrototypeStatus): string {
       return "bg-green-50 text-green-800 ring-1 ring-inset ring-green-200";
     case "In progress":
       return "bg-blue-50 text-blue-800 ring-1 ring-inset ring-blue-200";
+    case "In Development":
+      return "bg-violet-50 text-violet-800 ring-1 ring-inset ring-violet-200";
     default:
       return "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200";
   }

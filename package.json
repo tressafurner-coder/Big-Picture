@@ -14,7 +14,7 @@
     "build:independent": "npm install --prefix prototypes/independent && GITHUB_PAGES=true npm run build --prefix prototypes/independent",
     "build:pages": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs",
     "dev": "vite",
-    "preview:pages": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs && vite preview --base /BigPicture/"
+    "preview:pages": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs && node scripts/vite-pages-preview.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
