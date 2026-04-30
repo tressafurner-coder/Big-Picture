@@ -26,13 +26,13 @@ export type PrototypeEntry = {
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
   {
     id: "test",
-    name: "TEST",
+    name: "Risk matrix with Jira custom fields",
     status: "In progress",
     summary:
-      "New prototype — placeholder route to iterate on the next project listed here.",
+      "Risk Registers configuration (BigPicture in Jira): frameworks, Risk Score formula, Likelihood / Consequence metrics.",
     lastEdited: TEST_PROTOTYPE_LAST_UPDATE_DISPLAY,
     kind: "route",
-    routeSegment: "test",
+    routeSegment: "risk-matrix-jira-custom-fields",
   },
   {
     id: "teams-dropdown",

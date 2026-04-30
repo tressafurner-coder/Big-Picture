@@ -1,15 +1,16 @@
 import {
   BarChart3,
-  Bell,
+  Boxes,
   ChevronDown,
   ChevronRight,
+  DollarSign,
   Flag,
-  HelpCircle,
+  LayoutGrid,
+  ListOrdered,
   Plus,
-  Search,
-  Settings,
   ShieldAlert,
-  User,
+  Target,
+  Trophy,
   Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -44,6 +45,11 @@ const SWATCH_CYCLE = [
 ] as const;
 
 type MetricRow = { label: string; value: number; swatch: string };
+
+const purpleNewBadge =
+  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#EAE6FF] text-[#5E4DB2]";
+const blueNewBadge =
+  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#DEEBFF] text-[#0747A6]";
 
 function ManualMetricCard({
   metricLabel,
@@ -185,158 +191,128 @@ export default function TestPrototypePage() {
 
   return (
     <div className={cn("flex min-h-dvh w-full font-sans antialiased", ads.canvas)}>
-      {/* Product sidebar — ink navigation */}
+      {/* BigPicture module sidebar — light rail like Jira project apps */}
       <aside
         className={cn(
-          "flex w-[220px] shrink-0 flex-col font-sans",
-          ads.sidebarBg,
-          ads.sidebarMuted,
+          "flex w-[248px] shrink-0 flex-col border-r bg-[#F4F5F7] font-sans",
+          ads.border,
         )}
       >
-        <div className="flex h-14 items-center border-b border-white/10 px-4 text-sm font-semibold tracking-tight text-white">
-          BigPicture
+        <div
+          className={cn(
+            "flex h-[52px] items-center gap-2 border-b px-3",
+            ads.border,
+          )}
+        >
+          <span
+            className="flex size-8 shrink-0 items-center justify-center rounded-[3px] bg-[#F5CD47] text-[11px] font-bold text-[#172B4D]"
+            aria-hidden
+          >
+            BP
+          </span>
+          <span className={cn("truncate text-sm font-semibold", ads.ink800)}>
+            BigPicture Enterprise
+          </span>
         </div>
-        <nav className="flex flex-1 flex-col gap-0.5 p-2 text-sm leading-5">
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 text-sm leading-5 text-[#172B4D]">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-[3px] px-3 py-2 text-left font-medium hover:bg-white/10"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
           >
-            <Flag className="size-4 shrink-0 opacity-80" />
-            Strategic Areas
+            <Flag className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate">Strategic Areas</span>
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-white/10"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
           >
-            <BarChart3 className="size-4 shrink-0 opacity-80" />
-            Gantt
+            <BarChart3 className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate">Gantt</span>
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-white/10"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
           >
-            <Users className="size-4 shrink-0 opacity-80" />
-            Teams
+            <Users className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate">Teams</span>
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
+          >
+            <Target className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate">OKR</span>
+            <span className={purpleNewBadge}>New</span>
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
+          >
+            <ListOrdered className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate">Priorities</span>
+            <span className={purpleNewBadge}>New</span>
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
+          >
+            <DollarSign className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate">Financials</span>
+            <span className={purpleNewBadge}>New</span>
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
+          >
+            <LayoutGrid className="size-4 shrink-0 text-[#44546F]" />
+            <span className="min-w-0 flex-1 truncate text-left">Board</span>
+            <ChevronRight className="size-4 shrink-0 text-[#626F86]" aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left hover:bg-[#EBECF0]"
+          >
+            <Trophy className="size-4 shrink-0 text-[#44546F]" />
+            <span className="min-w-0 flex-1 truncate text-left">Goals</span>
+            <ChevronRight className="size-4 shrink-0 text-[#626F86]" aria-hidden />
           </button>
           <button
             type="button"
             className={cn(
-              "flex items-center gap-2 rounded-[3px] px-3 py-2 text-left font-medium text-white",
-              ads.primaryInteractive,
+              "flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left font-medium",
+              "bg-[#E9F2FF] text-[#0C66E4]",
             )}
           >
             <ShieldAlert className="size-4 shrink-0" />
-            <span className="min-w-0 truncate">Risk Management</span>
-            <span className="ml-auto rounded bg-[#579DFF] px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-[#1C2B41]">
-              New
-            </span>
+            <span className="min-w-0 flex-1 truncate">Risk Management</span>
+            <span className={blueNewBadge}>New</span>
           </button>
         </nav>
+        <div className={cn("border-t p-2", ads.border)}>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left text-[#172B4D] hover:bg-[#EBECF0]"
+          >
+            <Boxes className="size-4 shrink-0 text-[#44546F]" />
+            <span className="truncate text-sm">Box Configuration</span>
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Global header strip — Jira chrome */}
-        <header
+        <div
           className={cn(
-            "flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2",
-            ads.border,
-            ads.surface,
+            "shrink-0 px-10 pb-5 pt-12 md:px-14 md:pb-6 md:pt-14",
+            ads.canvas,
           )}
         >
-          <nav
-            aria-label="Breadcrumbs"
-            className={cn(
-              "flex min-w-0 flex-wrap items-center gap-1 text-sm",
-              ads.bodySubtle,
-            )}
-          >
-            <span className="shrink-0">⋯</span>
-            <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
-            <span className="shrink-0">AGILE + HYBRID</span>
-            <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
-            <span className={cn("min-w-0 truncate font-medium", ads.ink800)}>
-              HYBR-1 New Hybrid Project
-            </span>
-            <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
-            <span
-              className={cn(
-                "shrink-0 rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide",
-                "bg-[#DEEBFF] text-[#0747A6]",
-              )}
-            >
-              In progress
-            </span>
-          </nav>
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              className={cn(
-                "flex h-8 max-w-[240px] min-w-[160px] items-center gap-2 rounded-[3px] border px-2",
-                ads.border,
-                ads.surfaceSubtle,
-              )}
-            >
-              <Search className="size-4 shrink-0 opacity-50" aria-hidden />
-              <span className={cn("truncate text-sm", ads.caption)}>Search</span>
-            </div>
-            <button
-              type="button"
-              className={cn(
-                "rounded-[3px] px-3 py-1.5 font-sans text-sm font-medium text-white",
-                ads.primaryInteractive,
-                ads.primaryInteractiveHover,
-              )}
-            >
-              Create
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex size-8 items-center justify-center rounded-[3px] hover:bg-[#F1F2F4]",
-                ads.ink300,
-              )}
-              aria-label="Notifications"
-            >
-              <Bell className="size-4" />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex size-8 items-center justify-center rounded-[3px] hover:bg-[#F1F2F4]",
-                ads.ink300,
-              )}
-              aria-label="Help"
-            >
-              <HelpCircle className="size-4" />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex size-8 items-center justify-center rounded-[3px] hover:bg-[#F1F2F4]",
-                ads.ink300,
-              )}
-              aria-label="Settings"
-            >
-              <Settings className="size-4" />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex size-8 items-center justify-center rounded-full hover:bg-[#F1F2F4]",
-                ads.ink300,
-              )}
-              aria-label="Profile"
-            >
-              <User className="size-4" />
-            </button>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto px-6 py-6">
-          <Link to="/" className={ads.linkUi}>
+          <Link to="/" className={cn(ads.linkUi, "inline-block text-[15px] font-semibold")}>
             ← All prototypes
           </Link>
+        </div>
 
-          <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+        <main className="flex-1 overflow-auto px-6 pb-10 pt-2 md:px-10">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className={ads.titlePage}>Risk Registers / TEST</h1>
@@ -389,7 +365,7 @@ export default function TestPrototypePage() {
 
           <div
             className={cn(
-              "mt-8 space-y-8 rounded-lg border p-6 shadow-sm",
+              "mt-8 space-y-8 rounded-lg border p-6 shadow-sm md:p-8",
               ads.border,
               ads.surface,
             )}

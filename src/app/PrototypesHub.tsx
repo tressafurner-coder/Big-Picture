@@ -2,6 +2,14 @@ import { Link } from "react-router";
 import { BigPictureLogo } from "./components/BigPictureLogo";
 import { PROTOTYPE_ENTRIES, type PrototypeStatus } from "./prototypesRegistry";
 
+/** Must match `main.tsx` — HashRouter on GH Pages so pathname links miss `/#/route`. */
+const USE_HASH_ROUTER = import.meta.env.BASE_URL !== "/";
+
+function hubHashHref(routeSegment: string): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return base === "" ? `#/${routeSegment}` : `${base}/#/${routeSegment}`;
+}
+
 function joinBase(path: string): string {
   const base = import.meta.env.BASE_URL;
   return `${base}${path.replace(/^\//, "")}`;
@@ -72,12 +80,21 @@ export default function PrototypesHub() {
                   </td>
                   <td className="px-4 py-3">
                     {p.kind === "route" && p.routeSegment ? (
-                      <Link
-                        to={`/${p.routeSegment}`}
-                        className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
-                      >
-                        Open
-                      </Link>
+                      USE_HASH_ROUTER ? (
+                        <a
+                          href={hubHashHref(p.routeSegment)}
+                          className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
+                        >
+                          Open
+                        </a>
+                      ) : (
+                        <Link
+                          to={`/${p.routeSegment}`}
+                          className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
+                        >
+                          Open
+                        </Link>
+                      )
                     ) : p.kind === "static" && p.staticPath ? (
                       <a
                         href={joinBase(p.staticPath)}

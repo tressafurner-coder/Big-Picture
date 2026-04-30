@@ -3,6 +3,7 @@ import {
   BrowserRouter,
   HashRouter,
   Link,
+  Navigate,
   Route,
   Routes,
 } from "react-router";
@@ -73,7 +74,23 @@ const hubRoutes = (
     <Route path="/global-teams" element={<GlobalTeamsPage />} />
     <Route path="/chatbot" element={<ChatbotPrototype />} />
     <Route path="/chatbot-v2" element={<ChatbotPrototypeV2 />} />
-    <Route path="/test" element={<TestPrototypePage />} />
+    <Route
+      path="/risk-matrix-jira-custom-fields"
+      element={<TestPrototypePage />}
+    />
+    <Route
+      path="/risk-matrix-jira-custom-fields/"
+      element={<TestPrototypePage />}
+    />
+    {/* Legacy URL — keep bookmarks / shared links working */}
+    <Route
+      path="/test"
+      element={<Navigate to="/risk-matrix-jira-custom-fields" replace />}
+    />
+    <Route
+      path="/test/"
+      element={<Navigate to="/risk-matrix-jira-custom-fields" replace />}
+    />
     <Route path="*" element={<UnknownPrototypeRoute />} />
   </Routes>
 );
