@@ -3,7 +3,7 @@
  * Hub “Last updated” values — regenerated on predev/prebuild from git history (or file mtimes).
  * Do not edit by hand; change prototype files and run dev/build.
  */
-export const TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY = "29 Apr 2026, 17:03";
-export const CHATBOT_LAST_UPDATE_DISPLAY = "30 Apr 2026, 14:11";
+export const TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY = "30 Apr 2026, 16:11";
+export const CHATBOT_LAST_UPDATE_DISPLAY = "30 Apr 2026, 16:11";
 export const RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY = "30 Apr 2026, 12:25";
 export const TEST_PROTOTYPE_LAST_UPDATE_DISPLAY = "30 Apr 2026, 15:21";
