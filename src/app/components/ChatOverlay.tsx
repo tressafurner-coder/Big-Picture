@@ -33,6 +33,38 @@ const headerToolbarStrokeIconClass =
 /** Shared token budget across all conversations (UI + mock usage). */
 const TOKEN_LIMIT = 1500;
 
+const ASSISTANT_GREETING = "Hi! I'm Appfire AI. How can I help you?";
+
+const TITLE_STOP_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "have",
+  "your",
+  "about",
+  "what",
+  "when",
+  "where",
+  "how",
+  "why",
+  "you",
+  "are",
+  "czy",
+  "jak",
+  "co",
+  "się",
+  "oraz",
+  "dla",
+  "który",
+  "która",
+  "chat",
+  "chatbot",
+]);
+
 const STARTER_PROMPTS = [
   "How to implement SAFe® in BigPicture",
   "Learn how BigPicture is easy as 1-2-3",
@@ -112,6 +144,28 @@ interface Conversation {
   createdAt: Date;
 }
 
+function summarizeConversationTitle(messages: Message[], fallback: string): string {
+  const source = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ");
+
+  const significant = source
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !TITLE_STOP_WORDS.has(word))
+    .slice(0, 5);
+
+  if (significant.length === 0) return fallback;
+
+  const title = significant
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+  return title.length > 56 ? `${title.slice(0, 53)}...` : title;
+}
+
 interface ChatOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -120,22 +174,8 @@ interface ChatOverlayProps {
 }
 
 export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }: ChatOverlayProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: "1",
-      title: "Conversation 1",
-      messages: [
-        {
-          id: "1",
-          role: "assistant",
-          content: "Hi! I'm Appfire AI. How can I help you?",
-        },
-      ],
-      totalTokens: 12,
-      createdAt: new Date(),
-    },
-  ]);
-  const [activeConversationId, setActiveConversationId] = useState("1");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -146,7 +186,6 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
   const [newChatBannerVisible, setNewChatBannerVisible] = useState(false);
   const [newChatBadgeConvId, setNewChatBadgeConvId] = useState<string | null>(null);
-  const [newChatBannerMeta, setNewChatBannerMeta] = useState<{ totalChats: number; title: string } | null>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   /** Assistant message ids where the inline feedback bar was dismissed or submitted. */
   const [feedbackHiddenIds, setFeedbackHiddenIds] = useState<Set<string>>(() => new Set());
@@ -160,12 +199,11 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
   const tokenLimitExceeded = totalTokensUsed >= TOKEN_LIMIT;
 
+  const showConversationTitleBar =
+    !!activeConversation && activeConversation.messages.some((m) => m.role === "user");
+
   const showStarterPrompts =
-    !tokenLimitExceeded &&
-    !isThinking &&
-    !!activeConversation &&
-    activeConversation.messages.length === 1 &&
-    activeConversation.messages[0].role === "assistant";
+    !tokenLimitExceeded && !isThinking && !activeConversation && inputValue.trim().length === 0;
 
   const filteredConversations = useMemo(() => {
     const q = historySearchQuery.trim().toLowerCase();
@@ -463,7 +501,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const handleSendMessage = async (preset?: string) => {
     // Only treat a string preset as override — React may pass a click event if wired as onClick={handleSendMessage}.
     const text = (typeof preset === "string" ? preset : inputValue).trim();
-    if (tokenLimitExceeded || !text || !activeConversation) return;
+    if (tokenLimitExceeded || !text) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -472,17 +510,35 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       tokens: Math.ceil(text.split(" ").length * 1.3),
     };
 
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversationId
-          ? {
-              ...conv,
-              messages: [...conv.messages, userMessage],
-              totalTokens: conv.totalTokens + (userMessage.tokens || 0),
-            }
-          : conv
-      )
-    );
+    const conversationId = activeConversation?.id ?? `${Date.now()}-conv`;
+    const isNewConversation = !activeConversation;
+
+    if (isNewConversation) {
+      const nextIndex = conversations.length + 1;
+      const fallbackTitle = `Conversation ${nextIndex}`;
+      const newConv: Conversation = {
+        id: conversationId,
+        title: summarizeConversationTitle([userMessage], fallbackTitle),
+        messages: [userMessage],
+        totalTokens: userMessage.tokens || 0,
+        createdAt: new Date(),
+      };
+      setConversations((prev) => [...prev, newConv]);
+      setActiveConversationId(conversationId);
+    } else {
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id !== conversationId) return conv;
+          const nextMessages = [...conv.messages, userMessage];
+          return {
+            ...conv,
+            messages: nextMessages,
+            totalTokens: conv.totalTokens + (userMessage.tokens || 0),
+            title: summarizeConversationTitle(nextMessages, conv.title),
+          };
+        })
+      );
+    }
 
     setInputValue("");
     setIsThinking(true);
@@ -499,15 +555,16 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
       };
 
       setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === activeConversationId
-            ? {
-                ...conv,
-                messages: [...conv.messages, assistantMessage],
-                totalTokens: conv.totalTokens + (assistantMessage.tokens || 0),
-              }
-            : conv
-        )
+        prev.map((conv) => {
+          if (conv.id !== conversationId) return conv;
+          const nextMessages = [...conv.messages, assistantMessage];
+          return {
+            ...conv,
+            messages: nextMessages,
+            totalTokens: conv.totalTokens + (assistantMessage.tokens || 0),
+            title: summarizeConversationTitle(nextMessages, conv.title),
+          };
+        })
       );
 
       setIsThinking(false);
@@ -518,36 +575,19 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   };
 
   const handleNewConversation = () => {
-    const nextIndex = conversations.length + 1;
-    const newConv: Conversation = {
-      id: Date.now().toString(),
-      title: `Conversation ${nextIndex}`,
-      messages: [
-        {
-          id: Date.now().toString(),
-          role: "assistant",
-          content: "Hi! I'm Appfire AI. How can I help you?",
-        },
-      ],
-      totalTokens: 12,
-      createdAt: new Date(),
-    };
     newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
     newChatTimersRef.current = [];
 
-    setConversations((prev) => [...prev, newConv]);
-    setActiveConversationId(newConv.id);
+    setActiveConversationId("");
     setShowHistory(false);
     setInputValue("");
-    setNewChatBannerMeta({ totalChats: nextIndex, title: newConv.title });
+    setEditingConvId(null);
+    setEditingTitle("");
     setNewChatBannerVisible(true);
-    setNewChatBadgeConvId(newConv.id);
+    setNewChatBadgeConvId(null);
 
     newChatTimersRef.current.push(
       window.setTimeout(() => setNewChatBannerVisible(false), 6500)
-    );
-    newChatTimersRef.current.push(
-      window.setTimeout(() => setNewChatBadgeConvId(null), 14000)
     );
   };
 
@@ -610,10 +650,9 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   };
 
   const handleHistoryToggle = () => {
-    // On an empty-history screen, clicking the history icon should start a new chat
-    // and display the same "new conversation" banner as other creation paths.
     if (showHistory && conversations.length === 0) {
-      handleNewConversation();
+      setShowHistory(false);
+      setActiveConversationId("");
       return;
     }
     setShowHistory(!showHistory);
@@ -757,7 +796,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           </div>
 
           <AnimatePresence>
-            {newChatBannerVisible && newChatBannerMeta && (
+            {newChatBannerVisible && (
               <motion.div
                 role="status"
                 aria-live="polite"
@@ -775,23 +814,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     strokeWidth={2.25}
                     aria-hidden
                   />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-sm font-semibold" style={{ color: "#0747A6" }}>
-                      New conversation started
-                    </p>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs leading-snug" style={{ color: "#292A2E" }}>
-                      {newChatBannerMeta.totalChats <= 1 ? (
-                        <>
-                          You’re now in your first chat ({newChatBannerMeta.title}). Ask a
-                          question to get started.
-                        </>
-                      ) : (
-                        <>
-                          You’re now in a fresh chat ({newChatBannerMeta.title}). You have{" "}
-                          <strong>{newChatBannerMeta.totalChats}</strong> conversations —
-                          open <strong>Chat history</strong> to switch or delete.
-                        </>
-                      )}
+                      You&apos;ve started a new conversation with the chatbot — you&apos;ll find all your chats in{" "}
+                      <strong>Chat history</strong>.
                     </p>
                   </div>
                   <button
@@ -873,10 +899,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                 {!hasConversations ? (
                   <div className="flex h-full min-h-[260px] w-full flex-col items-center justify-center rounded-xl bg-white px-4 py-8 text-center sm:min-h-[320px] sm:px-6 sm:py-10">
                     <p className="text-[20px] font-semibold leading-[1.2] text-gray-900">
-                      No conversation yet
+                      No saved chats yet
                     </p>
                     <p className="mt-3 max-w-[320px] text-[14px] leading-[1.4] text-gray-800">
-                      Start a new chat to begin your conversation history
+                      Write something in the chat — your first message saves the conversation here.
                     </p>
                     <button
                       type="button"
@@ -890,7 +916,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                         (e.currentTarget.style.backgroundColor = "#1868DB")
                       }
                     >
-                      <span>Create a new chat</span>
+                      <span>Start a new chat</span>
                     </button>
                   </div>
                 ) : filteredConversations.length === 0 ? (
@@ -1025,121 +1051,147 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             </div>
           ) : ( 
             <>
-              {/* Active conversation title — ta sama wysokość co pasek „Chat history” */}
-              <div className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-100 px-4">
-                <Tooltip content="Chat history">
-                  <button
-                    type="button"
-                    onClick={() => setShowHistory(true)}
-                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
-                    style={{ color: "#505258" }}
-                    aria-label="Back to chat history"
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
+              <AnimatePresence initial={false}>
+                {showConversationTitleBar && (
+                  <motion.div
+                    key="conversation-title-bar"
+                    role="region"
+                    aria-label="Active conversation"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="no-drag shrink-0 overflow-hidden border-b border-gray-200 bg-gray-100"
                   >
-                    <ArrowLeft className="size-4" strokeWidth={2} aria-hidden />
-                  </button>
-                </Tooltip>
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {newChatBadgeConvId === activeConversationId && (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-                      style={{ backgroundColor: "#1868DB" }}
-                    >
-                      New
-                    </span>
-                  )}
-                  {activeConversationId &&
-                  editingConvId === activeConversationId ? (
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleSaveEdit();
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          handleCancelEdit();
-                        }
-                      }}
-                      onBlur={() => {
-                        if (editingTitle.trim()) handleSaveEdit();
-                        else handleCancelEdit();
-                      }}
-                      className="no-drag h-8 min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 text-sm font-normal text-gray-900 focus:border-transparent focus:outline-none focus:ring-2"
-                      style={
-                        { "--tw-ring-color": "#1868DB" } as React.CSSProperties
-                      }
-                      autoFocus
-                      aria-label="Conversation title"
-                    />
-                  ) : (
-                    <Tooltip
-                      content={
-                        activeConversation?.title?.trim() || "New Chat"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center overflow-hidden rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
-                        style={{ color: "#292A2E" }}
-                        aria-label={`Rename: ${activeConversation?.title || "New Chat"}`}
-                        onClick={() =>
-                          activeConversationId &&
-                          handleEditConversation(activeConversationId)
-                        }
-                      >
-                        <span className="min-w-0 flex-1 truncate">
-                          {activeConversation?.title || "New Chat"}
-                        </span>
-                      </button>
-                    </Tooltip>
-                  )}
-                </div>
-                <Tooltip content="New chat">
-                  <button
-                    type="button"
-                    onClick={handleNewConversation}
-                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
-                    aria-label="Start a new conversation"
-                    style={{ color: "#505258" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                  >
-                    <span
-                      className={headerToolbarIconClass}
-                      aria-hidden
-                      dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
-                    />
-                  </button>
-                </Tooltip>
-              </div>
+                    <div className="flex h-12 items-center gap-2 px-4">
+                      <Tooltip content="Chat history">
+                        <button
+                          type="button"
+                          onClick={() => setShowHistory(true)}
+                          className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                          style={{ color: "#505258" }}
+                          aria-label="Back to chat history"
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#EBECF0")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "transparent")
+                          }
+                          onMouseDown={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                          }
+                          onMouseUp={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#EBECF0")
+                          }
+                        >
+                          <ArrowLeft className="size-4" strokeWidth={2} aria-hidden />
+                        </button>
+                      </Tooltip>
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        {newChatBadgeConvId === activeConversationId && (
+                          <span
+                            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                            style={{ backgroundColor: "#1868DB" }}
+                          >
+                            New
+                          </span>
+                        )}
+                        {activeConversationId &&
+                        editingConvId === activeConversationId ? (
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleSaveEdit();
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                handleCancelEdit();
+                              }
+                            }}
+                            onBlur={() => {
+                              if (editingTitle.trim()) handleSaveEdit();
+                              else handleCancelEdit();
+                            }}
+                            className="no-drag h-8 min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 text-sm font-normal text-gray-900 focus:border-transparent focus:outline-none focus:ring-2"
+                            style={
+                              { "--tw-ring-color": "#1868DB" } as React.CSSProperties
+                            }
+                            autoFocus
+                            aria-label="Conversation title"
+                          />
+                        ) : (
+                          <Tooltip
+                            content={
+                              activeConversation?.title?.trim() || "New Chat"
+                            }
+                          >
+                            <button
+                              type="button"
+                              className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center overflow-hidden rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
+                              style={{ color: "#292A2E" }}
+                              aria-label={`Rename: ${activeConversation?.title || "New Chat"}`}
+                              onClick={() =>
+                                activeConversationId &&
+                                handleEditConversation(activeConversationId)
+                              }
+                            >
+                              <span className="min-w-0 flex-1 truncate">
+                                {activeConversation?.title || "New Chat"}
+                              </span>
+                            </button>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <Tooltip content="New chat">
+                        <button
+                          type="button"
+                          onClick={handleNewConversation}
+                          className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                          aria-label="Start a new conversation"
+                          style={{ color: "#505258" }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#EBECF0")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "transparent")
+                          }
+                          onMouseDown={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#DFE1E6")
+                          }
+                          onMouseUp={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#EBECF0")
+                          }
+                        >
+                          <span
+                            className={headerToolbarIconClass}
+                            aria-hidden
+                            dangerouslySetInnerHTML={{ __html: iconPlusSvg }}
+                          />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Wiadomości */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {!activeConversation && (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-3 justify-start">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                        <img src={aiAvatarIcon} alt="AI" className="h-6 w-6 rounded-lg" />
+                      </div>
+                      <div className="max-w-[75%] rounded-2xl bg-gray-100 px-4 py-2.5 text-gray-900">
+                        <p className="text-sm leading-relaxed">{ASSISTANT_GREETING}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {activeConversation?.messages.map((message, msgIndex) => {
                   const isMarkdownAssistant =
                     message.role === "assistant" && message.contentType === "markdown";
