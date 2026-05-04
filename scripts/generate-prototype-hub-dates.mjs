@@ -43,6 +43,7 @@ const PROTOTYPES = {
     "src/app/RiskManagementJiraMappingPage.tsx",
   ],
   TEST_PROTOTYPE_LAST_UPDATE_DISPLAY: ["src/app/TestPrototypePage.tsx"],
+  MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY: ["src/app/MergingBoardGoalsPage.tsx"],
 };
 
 function formatHubStamp(isoOrDate) {
@@ -105,10 +106,11 @@ export const TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY = ${JSON.stringify(stamps.TEAMS
 export const CHATBOT_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.CHATBOT_LAST_UPDATE_DISPLAY)};
 export const RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY)};
 export const TEST_PROTOTYPE_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.TEST_PROTOTYPE_LAST_UPDATE_DISPLAY)};
+export const MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY)};
 `;
 
 mkdirSync(outDir, { recursive: true });
 writeFileSync(outFile, body, "utf8");
 console.log(
-  `generate-prototype-hub-dates: wrote ${stamps.TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY} (teams), ${stamps.CHATBOT_LAST_UPDATE_DISPLAY} (chatbot), ${stamps.RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY} (risk jira), ${stamps.TEST_PROTOTYPE_LAST_UPDATE_DISPLAY} (test) → src/app/generated/prototypeHubDates.ts`,
+  `generate-prototype-hub-dates: wrote ${stamps.TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY} (teams), ${stamps.CHATBOT_LAST_UPDATE_DISPLAY} (chatbot), ${stamps.RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY} (risk jira), ${stamps.TEST_PROTOTYPE_LAST_UPDATE_DISPLAY} (test), ${stamps.MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY} (merging board goals) → src/app/generated/prototypeHubDates.ts`,
 );

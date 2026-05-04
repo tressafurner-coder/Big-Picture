@@ -10,6 +10,7 @@ import {
 import ChatbotPrototype from "./app/ChatbotPrototype.tsx";
 import ChatbotPrototypeV2 from "./app/ChatbotPrototypeV2.tsx";
 import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
+import MergingBoardGoalsPage from "./app/MergingBoardGoalsPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
 import TeamsDemoPage from "./app/TeamsDemoPage.tsx";
 import TestPrototypePage from "./app/TestPrototypePage.tsx";
@@ -81,6 +82,14 @@ const hubRoutes = (
     <Route
       path="/risk-matrix-jira-custom-fields/"
       element={<TestPrototypePage />}
+    />
+    <Route
+      path="/merging-board-goals"
+      element={<MergingBoardGoalsPage />}
+    />
+    <Route
+      path="/merging-board-goals/"
+      element={<MergingBoardGoalsPage />}
     />
     {/* Legacy URL — keep bookmarks / shared links working */}
     <Route

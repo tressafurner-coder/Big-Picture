@@ -1,5 +1,6 @@
 import {
   CHATBOT_LAST_UPDATE_DISPLAY,
+  MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
   TEST_PROTOTYPE_LAST_UPDATE_DISPLAY,
 } from "./generated/prototypeHubDates";
@@ -24,6 +25,16 @@ export type PrototypeEntry = {
 
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
+  {
+    id: "merging-board-goals",
+    name: "Merging Board and Goals modules",
+    status: "In progress",
+    summary:
+      "Standalone exploration of combining Board and Goals in BigPicture — separate codebase path from other prototypes.",
+    lastEdited: MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "merging-board-goals",
+  },
   {
     id: "test",
     name: "Risk matrix with Jira custom fields",
