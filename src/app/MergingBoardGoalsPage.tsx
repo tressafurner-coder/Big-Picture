@@ -2,6 +2,8 @@ import {
   Battery,
   ChartColumnIncreasing,
   ChartGantt,
+  ArrowLeft,
+  Bookmark,
   ChartNetwork,
   Check,
   ChevronDown,
@@ -13,10 +15,12 @@ import {
   Columns2,
   Compass,
   Cog,
+  Equal,
   Eye,
   Filter,
   Flame,
   Gauge,
+  HelpCircle,
   List,
   MoreHorizontal,
   Plus,
@@ -60,6 +64,104 @@ const SWIMLANES_VIEW_OPTIONS = [
 
 const ESSENTIALS_CARD_VIEWS = ["Essentials", "Hybrid", "Teams"] as const;
 
+/** Teams toggled in Team → All — each visible row renders a swimlane + sprint columns. */
+const ALL_MENU_TEAMS = [
+  { id: "unassigned", label: "Team unassigned" },
+  { id: "north", label: "Squad North" },
+  { id: "south", label: "Squad South" },
+  { id: "design", label: "Design" },
+] as const;
+
+type TeamFilterId = (typeof ALL_MENU_TEAMS)[number]["id"];
+
+function initialTeamFilter(): Record<TeamFilterId, boolean> {
+  return {
+    unassigned: true,
+    north: true,
+    south: true,
+    design: true,
+  };
+}
+
+function initialSwimlaneExpanded(): Record<TeamFilterId, boolean> {
+  return {
+    unassigned: true,
+    north: true,
+    south: true,
+    design: true,
+  };
+}
+
+/** Deterministic sprint column index 0–2 so demo cards do not jump on re-render. */
+function sprintColumnForTeam(teamId: TeamFilterId): number {
+  let h = 0;
+  for (let i = 0; i < teamId.length; i++) {
+    h = (h * 31 + teamId.charCodeAt(i)) >>> 0;
+  }
+  return h % 3;
+}
+
+function issueKeyForTeam(teamId: TeamFilterId): string {
+  const n = sprintColumnForTeam(teamId) * 11 + teamId.length * 7;
+  return `APP-${27 + (n % 60)}`;
+}
+
+const SWIMLANE_CARD_TITLE: Record<TeamFilterId, string> = {
+  unassigned: "TEST 1",
+  north: "API rollout",
+  south: "QA checklist",
+  design: "UX review",
+};
+
+function SwimlaneIssueCard({
+  issueKey,
+  title,
+}: {
+  issueKey: string;
+  title: string;
+}) {
+  return (
+    <div className="w-full rounded-md border border-[#DFE1E6] bg-white p-2.5 shadow-[0_1px_2px_rgba(9,30,66,0.15)]">
+      <div className="flex items-center justify-between gap-2 pb-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <Bookmark
+            className="size-4 shrink-0 fill-emerald-600 text-emerald-600"
+            aria-hidden
+          />
+          <span className="truncate text-sm font-semibold text-[#0C66E4]">
+            {issueKey}
+          </span>
+        </div>
+        <span className="shrink-0 rounded-md bg-[#F1F2F4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#44546F]">
+          To do
+        </span>
+        <button
+          type="button"
+          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#EBECF0] text-[#626F86]"
+          aria-label="More options"
+        >
+          <HelpCircle className="size-3.5" strokeWidth={2} aria-hidden />
+        </button>
+      </div>
+      <div className="flex items-start gap-2 pt-0.5">
+        <div
+          className="flex size-6 shrink-0 items-center justify-center text-orange-500"
+          aria-hidden
+        >
+          <Equal className="size-4" strokeWidth={2.5} />
+        </div>
+        <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#172B4D]">
+          {title}
+        </span>
+        <div
+          className="size-8 shrink-0 rounded-full bg-gradient-to-br from-amber-100 to-orange-200 ring-1 ring-[#DFE1E6]"
+          aria-hidden
+        />
+      </div>
+    </div>
+  );
+}
+
 /** Layout shell matching Goals / Swimlanes — base for Board + Goals merge work. */
 export default function MergingBoardGoalsPage() {
   const [swimlanesMenuOpen, setSwimlanesMenuOpen] = useState(false);
@@ -87,7 +189,11 @@ export default function MergingBoardGoalsPage() {
   } | null>(null);
 
   const [allMenuOpen, setAllMenuOpen] = useState(false);
-  const [allTeamUnassigned, setAllTeamUnassigned] = useState(true);
+  const [allTeamFilter, setAllTeamFilter] =
+    useState<Record<TeamFilterId, boolean>>(initialTeamFilter);
+  const [swimlaneExpanded, setSwimlaneExpanded] = useState<
+    Record<TeamFilterId, boolean>
+  >(initialSwimlaneExpanded);
   const allTriggerRef = useRef<HTMLButtonElement>(null);
   const allMenuRef = useRef<HTMLDivElement>(null);
   const [allMenuBox, setAllMenuBox] = useState<{
@@ -127,6 +233,71 @@ export default function MergingBoardGoalsPage() {
     left: number;
     minWidth: number;
   } | null>(null);
+
+  const boardAnchorRef = useRef<HTMLDivElement>(null);
+  const boardFlyoutCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const [boardFlyoutOpen, setBoardFlyoutOpen] = useState(false);
+  const [boardFlyoutPos, setBoardFlyoutPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const clearBoardFlyoutCloseTimer = () => {
+    if (boardFlyoutCloseTimer.current) {
+      clearTimeout(boardFlyoutCloseTimer.current);
+      boardFlyoutCloseTimer.current = null;
+    }
+  };
+
+  const openBoardFlyout = () => {
+    clearBoardFlyoutCloseTimer();
+    const el = boardAnchorRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setBoardFlyoutPos({ top: r.top, left: r.right + 4 });
+    }
+    setBoardFlyoutOpen(true);
+  };
+
+  const scheduleCloseBoardFlyout = () => {
+    clearBoardFlyoutCloseTimer();
+    boardFlyoutCloseTimer.current = setTimeout(() => {
+      setBoardFlyoutOpen(false);
+      setBoardFlyoutPos(null);
+      boardFlyoutCloseTimer.current = null;
+    }, 120);
+  };
+
+  const closeBoardFlyoutNow = () => {
+    clearBoardFlyoutCloseTimer();
+    setBoardFlyoutOpen(false);
+    setBoardFlyoutPos(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearBoardFlyoutCloseTimer();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!boardFlyoutOpen) return;
+    const update = () => {
+      const el = boardAnchorRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setBoardFlyoutPos({ top: r.top, left: r.right + 4 });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [boardFlyoutOpen]);
 
   useEffect(() => {
     if (!swimlanesMenuOpen) {
@@ -322,7 +493,7 @@ export default function MergingBoardGoalsPage() {
       )}
     >
       <JiraGlobalChromeBar />
-      <div className="flex min-h-0 min-w-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1 pr-4">
       <aside className="flex w-[188px] shrink-0 flex-col bg-[#F4F5F7]">
         <div className="flex h-[52px] w-full min-w-0 shrink-0 flex-col">
           <div className="flex min-h-0 flex-1 items-center gap-2 px-3">
@@ -389,11 +560,49 @@ export default function MergingBoardGoalsPage() {
             <List className="size-4 shrink-0 text-[#44546F]" strokeWidth={2} />
             <span className="truncate">Scope</span>
           </button>
-          <button type="button" className={cn(sidebarNavButton, sidebarActive)}>
-            <Columns2 className="size-4 shrink-0" strokeWidth={2} />
-            <span className="min-w-0 flex-1 truncate text-left">Board</span>
-            <ChevronRight className="size-4 shrink-0 opacity-90" aria-hidden />
-          </button>
+          <div
+            ref={boardAnchorRef}
+            className="relative w-full"
+            onMouseEnter={openBoardFlyout}
+            onMouseLeave={scheduleCloseBoardFlyout}
+          >
+            <button type="button" className={cn(sidebarNavButton, sidebarActive)}>
+              <Columns2 className="size-4 shrink-0" strokeWidth={2} />
+              <span className="min-w-0 flex-1 truncate text-left">Board</span>
+              <ChevronRight className="size-4 shrink-0 opacity-90" aria-hidden />
+            </button>
+          </div>
+          {boardFlyoutOpen &&
+            boardFlyoutPos &&
+            createPortal(
+              <div
+                className="fixed z-[500] min-w-[220px] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                style={{ top: boardFlyoutPos.top, left: boardFlyoutPos.left }}
+                role="menu"
+                aria-label="Board views"
+                onMouseEnter={openBoardFlyout}
+                onMouseLeave={scheduleCloseBoardFlyout}
+              >
+                <div className="px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-wide text-[#44546F]">
+                  Board
+                </div>
+                {SWIMLANES_VIEW_OPTIONS.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full px-3 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                    onClick={() => {
+                      setSwimlanesSelection(label);
+                      closeBoardFlyoutNow();
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>,
+              document.body,
+            )}
           <button type="button" className={sidebarNavButton}>
             <Battery className="size-4 shrink-0 text-[#44546F]" strokeWidth={2} />
             <span className="truncate">Resources</span>
@@ -444,8 +653,16 @@ export default function MergingBoardGoalsPage() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#F4F5F7]">
         {/* Module header — same row height as sidebar BigPicture bar (52px) */}
-        <header className="flex h-[52px] shrink-0 items-center bg-[#F4F5F7] px-4">
-          <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
+        <header className="flex h-[52px] shrink-0 items-center gap-2 bg-[#F4F5F7] px-4">
+          <Link
+            to="/"
+            className="flex size-8 shrink-0 items-center justify-center rounded-[3px] text-[#44546F] transition-colors hover:bg-[#EBECF0]"
+            aria-label="All prototypes – back to hub"
+            title="All prototypes"
+          >
+            <ArrowLeft className="size-4" strokeWidth={2} />
+          </Link>
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
             <span className={cn("truncate text-sm text-[#626F86]", ads.bodySubtle)}>
               … / AGILE + HYBRID /{" "}
             </span>
@@ -687,29 +904,47 @@ export default function MergingBoardGoalsPage() {
                       strokeWidth={2}
                     />
                   </div>
-                  <p className="mb-1 mt-3 text-xs font-bold uppercase tracking-wide text-[#626F86]">
-                    Deselect all
-                  </p>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-[3px] px-1 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                    onClick={() => setAllTeamUnassigned((v) => !v)}
+                    className="mb-1 mt-3 w-full px-1 py-1 text-left text-xs font-bold uppercase tracking-wide text-[#626F86] hover:bg-[#F1F2F4]"
+                    onClick={() =>
+                      setAllTeamFilter(() => {
+                        const next = {} as Record<TeamFilterId, boolean>;
+                        for (const t of ALL_MENU_TEAMS) next[t.id] = false;
+                        return next;
+                      })
+                    }
                   >
-                    <span
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
-                        allTeamUnassigned
-                          ? "border-[#0C66E4] bg-[#0C66E4]"
-                          : "border-[#DFE1E6] bg-white",
-                      )}
-                      aria-hidden
-                    >
-                      {allTeamUnassigned && (
-                        <Check className="size-3 text-white" strokeWidth={3} />
-                      )}
-                    </span>
-                    Team unassigned
+                    Deselect all
                   </button>
+                  {ALL_MENU_TEAMS.map((team) => (
+                    <button
+                      key={team.id}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-[3px] px-1 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                      onClick={() =>
+                        setAllTeamFilter((prev) => ({
+                          ...prev,
+                          [team.id]: !prev[team.id],
+                        }))
+                      }
+                    >
+                      <span
+                        className={cn(
+                          "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+                          allTeamFilter[team.id]
+                            ? "border-[#0C66E4] bg-[#0C66E4]"
+                            : "border-[#DFE1E6] bg-white",
+                        )}
+                        aria-hidden
+                      >
+                        {allTeamFilter[team.id] && (
+                          <Check className="size-3 text-white" strokeWidth={3} />
+                        )}
+                      </span>
+                      {team.label}
+                    </button>
+                  ))}
                 </div>,
                 document.body,
               )}
@@ -1032,8 +1267,7 @@ export default function MergingBoardGoalsPage() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
             <div
               className={cn(
-                "flex min-h-[min(520px,70vh)] flex-1 flex-col border-b",
-                ads.border,
+                "flex min-h-[min(520px,70vh)] flex-1 flex-col",
                 ads.surface,
               )}
             >
@@ -1129,31 +1363,67 @@ export default function MergingBoardGoalsPage() {
                 ))}
               </div>
 
-              {/* Swimlane: Team unassigned */}
-              <div className="border-b border-[#DFE1E6] bg-white px-4 py-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-md text-sm font-semibold text-[#172B4D] hover:text-[#0C66E4]"
-                >
-                  <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
-                  Team unassigned
-                </button>
-              </div>
+              {/* Swimlanes — one block per team selected in Team → All */}
+              {ALL_MENU_TEAMS.filter((t) => allTeamFilter[t.id]).map((team) => (
+                <section key={team.id} className="border-b border-[#DFE1E6]">
+                  <div className="bg-white px-4 py-2">
+                    <button
+                      type="button"
+                      aria-expanded={swimlaneExpanded[team.id]}
+                      onClick={() =>
+                        setSwimlaneExpanded((prev) => ({
+                          ...prev,
+                          [team.id]: !prev[team.id],
+                        }))
+                      }
+                      className="inline-flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
+                    >
+                      {swimlaneExpanded[team.id] ? (
+                        <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
+                      ) : (
+                        <ChevronRight className="size-4 shrink-0 text-[#626F86]" />
+                      )}
+                      {team.label}
+                    </button>
+                  </div>
+                  {swimlaneExpanded[team.id] ? (
+                    <div className="grid grid-cols-3 gap-2 bg-white p-4">
+                      {(() => {
+                        const cardCol = sprintColumnForTeam(team.id);
+                        return [1, 2, 3].map((col) => {
+                          const showCard = col - 1 === cardCol;
+                          return (
+                            <div
+                              key={col}
+                              className="flex min-h-[160px] flex-col justify-start"
+                            >
+                              {showCard ? (
+                                <SwimlaneIssueCard
+                                  issueKey={issueKeyForTeam(team.id)}
+                                  title={SWIMLANE_CARD_TITLE[team.id]}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="flex min-h-[160px] flex-1 cursor-pointer items-center justify-center rounded-md border border-dashed border-[#DFE1E6] bg-white transition-colors hover:border-[#0C66E4]/40 hover:bg-[#F7F8F9]"
+                                  aria-label={`${team.label}: add card in Sprint column ${col}`}
+                                >
+                                  <Plus
+                                    className="size-10 text-[#B3B9C4]"
+                                    strokeWidth={1.25}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  ) : null}
+                </section>
+              ))}
 
-              <div className="grid flex-1 grid-cols-3 gap-2 bg-white p-4">
-                {[1, 2, 3].map((i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="flex min-h-[160px] cursor-pointer items-center justify-center rounded-md border border-dashed border-[#DFE1E6] bg-white transition-colors hover:border-[#0C66E4]/40 hover:bg-[#F7F8F9]"
-                    aria-label={`Add item in Sprint column ${i}`}
-                  >
-                    <Plus className="size-10 text-[#B3B9C4]" strokeWidth={1.25} />
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-auto border-t border-[#DFE1E6] px-4 py-3">
+              <div className="mt-auto px-4 py-3">
                 <button
                   type="button"
                   className={cn(
@@ -1170,35 +1440,19 @@ export default function MergingBoardGoalsPage() {
             </div>
           </div>
 
-          {/* Infobar rail */}
+          {/* Infobar rail — flush with canvas (white); left edge only + hover */}
           <aside
-            className="flex w-8 shrink-0 flex-col items-center border-l border-[#DFE1E6] bg-[#EBECF0] py-3"
-            aria-hidden
+            className="flex w-8 shrink-0 flex-col items-center justify-center border-l border-[#DFE1E6] bg-white transition-colors hover:bg-[#EBECF0]"
+            aria-label="Infobar"
           >
             <span
-              className="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#626F86]"
+              className="flex items-center justify-center text-[10px] font-semibold uppercase tracking-normal text-[#626F86]"
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
             >
               INFOBAR
             </span>
           </aside>
         </main>
-        </div>
-
-        {/* Prototypes hub — outside app chrome; footer escape hatch */}
-        <div
-          className={cn(
-            "mt-auto shrink-0 border-t border-dashed px-4 py-3",
-            ads.border,
-            "bg-[#F7F8F9]",
-          )}
-        >
-          <Link
-            to="/"
-            className={cn(ads.linkUi, "text-xs font-semibold")}
-          >
-            ← All prototypes
-          </Link>
         </div>
       </div>
       </div>
