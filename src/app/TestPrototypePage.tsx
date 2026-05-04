@@ -30,7 +30,7 @@ import { ads } from "./design/atlassianPageTokens";
 
 /** Shown when value names are read-only because metrics are mapped to Jira fields. */
 const JIRA_VALUE_NAME_TOOLTIP =
-  "You can't edit value names here—they come from Jira.";
+  "These names are managed in Jira. To update them, please edit the values directly in your Jira project.";
 
 /** Shown on a Jira custom field option disabled because the other metric already uses it. */
 const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
@@ -357,7 +357,7 @@ function ManualMetricCard({
                         className={cn(
                           "flex min-h-9 min-w-0 flex-1 items-center rounded-[3px] border border-transparent bg-[#F7F8F9] px-3 py-2 text-sm font-normal leading-5 text-[#626F86]",
                         )}
-                        aria-label={`${row.label}, from Jira (value names not editable here)`}
+                        aria-label={`${row.label}, managed in Jira — edit values in your Jira project`}
                       >
                         {row.label}
                       </div>
