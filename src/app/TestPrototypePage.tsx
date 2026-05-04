@@ -36,9 +36,9 @@ const JIRA_VALUE_NAME_TOOLTIP =
 const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
   "A metric must use two different Jira custom fields.";
 
-/** Context selector is fixed to default; multi-context choice comes later. */
+/** Context selector is fixed to default. */
 const JIRA_CONTEXT_FIXED_TOOLTIP =
-  "Default context is selected for this field. Choosing other Jira contexts will be available later.";
+  "Only the default Jira field context is supported.";
 
 /** Demo Jira custom fields — prototype ids; labels numbered for clarity. */
 const JIRA_CUSTOM_FIELD_OPTIONS = [
