@@ -13,7 +13,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Label } from "./components/ui/label";
 import {
@@ -36,6 +36,10 @@ const JIRA_VALUE_NAME_TOOLTIP =
 const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
   "A metric must use two different Jira custom fields.";
 
+/** Context selector is fixed to default; multi-context choice comes later. */
+const JIRA_CONTEXT_FIXED_TOOLTIP =
+  "Default context is selected for this field. Choosing other Jira contexts will be available later.";
+
 /** Demo Jira custom fields — prototype ids; labels numbered for clarity. */
 const JIRA_CUSTOM_FIELD_OPTIONS = [
   { id: "customfield_10042", label: "Jira custom field 1" },
@@ -43,6 +47,11 @@ const JIRA_CUSTOM_FIELD_OPTIONS = [
   { id: "customfield_10102", label: "Jira custom field 3" },
   { id: "customfield_10117", label: "Jira custom field 4" },
 ] as const;
+
+function getJiraCustomFieldLabel(fieldId: string): string {
+  const opt = JIRA_CUSTOM_FIELD_OPTIONS.find((o) => o.id === fieldId);
+  return opt?.label ?? fieldId;
+}
 
 /** Prototype: contexts per field (as returned from Jira for that custom field). */
 type JiraFieldContext = { id: string; label: string };
@@ -154,36 +163,40 @@ const blueNewBadge =
   "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#DEEBFF] text-[#0747A6]";
 
 function ManualMetricCard({
-  metricLabel,
+  cardSlug,
+  metricDisplayName,
+  onMetricDisplayNameChange,
+  mapToJira,
+  onMapToJiraChange,
   rows,
   onLabelChange,
   onValueChange,
-  jiraMappingEnabled,
   selectedJiraFieldId,
   onJiraFieldChange,
-  contextOptions,
-  selectedContextId,
-  onContextChange,
+  /** First (default) context id for the selected Jira field — used for table row keys. */
+  defaultContextId,
   peerSelectedFieldId,
   onAddRow,
 }: {
-  metricLabel: string;
+  cardSlug: "likelihood" | "consequence";
+  /** Editable label for this metric (shown in manual mode; in Jira mode via input). */
+  metricDisplayName: string;
+  onMetricDisplayNameChange: (name: string) => void;
+  mapToJira: boolean;
+  onMapToJiraChange: (value: boolean) => void;
   rows: MetricRow[];
   onLabelChange: (index: number, label: string) => void;
   onValueChange: (index: number, value: number) => void;
   onAddRow: () => void;
-  jiraMappingEnabled: boolean;
   selectedJiraFieldId: string;
   onJiraFieldChange: (fieldId: string) => void;
-  /** Contexts for the selected Jira field (from Jira). */
-  contextOptions: JiraFieldContext[];
-  /** When Jira mapping is on, identifies the active context for row keys. */
-  selectedContextId: string;
-  onContextChange: (contextId: string) => void;
-  /** Other metric's field — cannot be chosen here (mutually exclusive mapping). */
-  peerSelectedFieldId: string;
+  defaultContextId: string;
+  /** Other metric's Jira field id when that metric also maps to Jira; otherwise null (no overlap rule). */
+  peerSelectedFieldId: string | null;
 }) {
-  const slug = metricLabel.replace(/\s+/g, "-").toLowerCase();
+  const slug = cardSlug;
+  const mapSwitchId = `map-metric-jira-${cardSlug}`;
+  const metricNameInputId = `metric-display-name-${cardSlug}`;
   const fieldSelectId = `test-metric-jira-field-${slug}`;
   const contextSelectId = `test-metric-jira-context-${slug}`;
   return (
@@ -195,9 +208,44 @@ function ManualMetricCard({
       )}
     >
       <div className={cn("border-b px-4 py-3", ads.border)}>
-        {jiraMappingEnabled ? (
-          <div className="w-full min-w-0 space-y-3">
-            <div className="space-y-1">
+        <div className="w-full min-w-0 space-y-4">
+          <div
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-4 rounded-[3px] border px-4 py-3",
+              ads.border,
+              ads.surfaceSubtle,
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <Label htmlFor={mapSwitchId} className={cn(ads.bodyMedium, "cursor-pointer")}>
+                Map metric to Jira custom field
+              </Label>
+            </div>
+            <Switch
+              id={mapSwitchId}
+              checked={mapToJira}
+              onCheckedChange={onMapToJiraChange}
+              className="shrink-0 data-[state=checked]:bg-[#0C66E4]"
+              aria-label="Map metric to Jira custom field"
+            />
+          </div>
+          {mapToJira ? (
+            <div className="w-full min-w-0 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor={metricNameInputId} className={ads.labelField}>
+                  Metric name
+                </Label>
+                <input
+                  id={metricNameInputId}
+                  type="text"
+                  value={metricDisplayName}
+                  onChange={(e) => onMetricDisplayNameChange(e.target.value)}
+                  className={cn("h-9 w-full", ads.fieldControl)}
+                  placeholder={getJiraCustomFieldLabel(selectedJiraFieldId)}
+                  aria-label="Metric display name"
+                />
+              </div>
+              <div className="space-y-1">
               <Label htmlFor={fieldSelectId} className={ads.labelField}>
                 Jira custom field
               </Label>
@@ -215,7 +263,8 @@ function ManualMetricCard({
                   className={cn("rounded-[3px] shadow-md", ads.border, ads.surface)}
                 >
                   {JIRA_CUSTOM_FIELD_OPTIONS.map((opt) => {
-                    const takenByPeer = opt.id === peerSelectedFieldId;
+                    const takenByPeer =
+                      peerSelectedFieldId != null && opt.id === peerSelectedFieldId;
                     if (takenByPeer) {
                       return (
                         <Tooltip
@@ -247,34 +296,28 @@ function ManualMetricCard({
               <Label htmlFor={contextSelectId} className={ads.labelField}>
                 Context
               </Label>
-              <Select value={selectedContextId} onValueChange={onContextChange}>
-                <SelectTrigger
+              <Tooltip
+                content={JIRA_CONTEXT_FIXED_TOOLTIP}
+                className="block w-full min-w-0 cursor-default"
+              >
+                <div
                   id={contextSelectId}
                   className={cn(
-                    "flex h-9 w-full min-w-0 items-center justify-between gap-2 text-left hover:bg-[#FAFBFC] data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
-                    ads.fieldControl,
+                    "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
                   )}
+                  aria-disabled="true"
+                  aria-label="Context (default only)"
                 >
-                  <SelectValue placeholder="Select context" />
-                </SelectTrigger>
-                <SelectContent
-                  className={cn("rounded-[3px] shadow-md", ads.border, ads.surface)}
-                >
-                  {contextOptions.map((ctx) => (
-                    <SelectItem key={ctx.id} value={ctx.id}>
-                      {ctx.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className={cn(ads.caption)}>
-                Value names and weights below apply to this field context (from Jira).
-              </p>
+                  <span className="min-w-0 truncate">Default context</span>
+                  <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
+                </div>
+              </Tooltip>
             </div>
-          </div>
-        ) : (
-          <h3 className={cn(ads.bodyMedium)}>{metricLabel}</h3>
-        )}
+            </div>
+          ) : (
+            <h3 className={cn(ads.bodyMedium)}>{metricDisplayName}</h3>
+          )}
+        </div>
       </div>
       <table className="w-full border-collapse font-sans text-sm">
         <thead>
@@ -294,8 +337,8 @@ function ManualMetricCard({
           {rows.map((row, i) => (
             <tr
               key={
-                jiraMappingEnabled
-                  ? `${slug}-${selectedContextId}-${i}`
+                mapToJira
+                  ? `${slug}-${defaultContextId}-${i}`
                   : `${slug}-${i}`
               }
             >
@@ -305,7 +348,7 @@ function ManualMetricCard({
                     className={`inline-block size-6 shrink-0 rounded-sm ${row.swatch}`}
                     aria-hidden
                   />
-                  {jiraMappingEnabled ? (
+                  {mapToJira ? (
                     <Tooltip
                       content={JIRA_VALUE_NAME_TOOLTIP}
                       className="w-full min-w-0 flex-1 cursor-default"
@@ -328,7 +371,7 @@ function ManualMetricCard({
                         "min-w-0 flex-1 py-1 text-sm font-normal",
                         ads.fieldControl,
                       )}
-                      aria-label={`Value name for ${metricLabel}`}
+                      aria-label={`Value name for ${metricDisplayName}`}
                     />
                   )}
                 </div>
@@ -347,14 +390,14 @@ function ManualMetricCard({
                     "min-h-9 w-full min-w-[4rem] max-w-[7rem] tabular-nums",
                     ads.fieldControl,
                   )}
-                  aria-label={`${metricLabel} numeric value for ${row.label}`}
+                  aria-label={`${metricDisplayName} numeric value for ${row.label}`}
                 />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {!jiraMappingEnabled && (
+      {!mapToJira && (
         <div className={cn("border-t px-4 py-3", ads.border)}>
           <button type="button" onClick={onAddRow} className={cn(ads.linkUi, "inline")}>
             + Add Value
@@ -384,34 +427,40 @@ export default function TestPrototypePage() {
   const [consequenceRowsByContext, setConsequenceRowsByContext] = useState<
     Record<string, MetricRow[]>
   >({});
-  const [mapMetricsToJiraFields, setMapMetricsToJiraFields] = useState(false);
+  const [mapLikelihoodToJira, setMapLikelihoodToJira] = useState(false);
+  const [mapConsequenceToJira, setMapConsequenceToJira] = useState(false);
+  const [likelihoodMetricName, setLikelihoodMetricName] = useState("Likelihood");
+  const [consequenceMetricName, setConsequenceMetricName] = useState("Consequence");
   const [likelihoodJiraFieldId, setLikelihoodJiraFieldId] = useState(
     initialLikelihoodFieldId,
   );
   const [consequenceJiraFieldId, setConsequenceJiraFieldId] = useState(
     initialConsequenceFieldId,
   );
-  const [likelihoodContextId, setLikelihoodContextId] = useState(
-    () => getContextsForJiraField(initialLikelihoodFieldId)[0].id,
+
+  const likelihoodContextId = useMemo(
+    () => getContextsForJiraField(likelihoodJiraFieldId)[0].id,
+    [likelihoodJiraFieldId],
   );
-  const [consequenceContextId, setConsequenceContextId] = useState(
-    () => getContextsForJiraField(initialConsequenceFieldId)[0].id,
+  const consequenceContextId = useMemo(
+    () => getContextsForJiraField(consequenceJiraFieldId)[0].id,
+    [consequenceJiraFieldId],
   );
 
-  const likelihoodDisplayRows = mapMetricsToJiraFields
+  const likelihoodDisplayRows = mapLikelihoodToJira
     ? (likelihoodRowsByContext[
         likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId)
       ] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId))
     : likelihoodRows;
 
-  const consequenceDisplayRows = mapMetricsToJiraFields
+  const consequenceDisplayRows = mapConsequenceToJira
     ? (consequenceRowsByContext[
         consequenceRowsStorageKey(consequenceJiraFieldId, consequenceContextId)
       ] ?? seedConsequenceRows(consequenceJiraFieldId, consequenceContextId))
     : consequenceRows;
 
   useEffect(() => {
-    if (!mapMetricsToJiraFields) return;
+    if (!mapLikelihoodToJira || !mapConsequenceToJira) return;
     if (likelihoodJiraFieldId !== consequenceJiraFieldId) return;
     const alternative = JIRA_CUSTOM_FIELD_OPTIONS.find(
       (o) => o.id !== likelihoodJiraFieldId,
@@ -422,29 +471,32 @@ export default function TestPrototypePage() {
   }, [
     likelihoodJiraFieldId,
     consequenceJiraFieldId,
-    mapMetricsToJiraFields,
+    mapLikelihoodToJira,
+    mapConsequenceToJira,
   ]);
 
   useEffect(() => {
-    const list = getContextsForJiraField(likelihoodJiraFieldId);
-    if (!list.some((c) => c.id === likelihoodContextId)) {
-      setLikelihoodContextId(list[0].id);
+    if (!mapLikelihoodToJira) {
+      setLikelihoodMetricName("Likelihood");
+      return;
     }
-  }, [likelihoodJiraFieldId, likelihoodContextId]);
+    setLikelihoodMetricName(getJiraCustomFieldLabel(likelihoodJiraFieldId));
+  }, [mapLikelihoodToJira, likelihoodJiraFieldId]);
 
   useEffect(() => {
-    const list = getContextsForJiraField(consequenceJiraFieldId);
-    if (!list.some((c) => c.id === consequenceContextId)) {
-      setConsequenceContextId(list[0].id);
+    if (!mapConsequenceToJira) {
+      setConsequenceMetricName("Consequence");
+      return;
     }
-  }, [consequenceJiraFieldId, consequenceContextId]);
+    setConsequenceMetricName(getJiraCustomFieldLabel(consequenceJiraFieldId));
+  }, [mapConsequenceToJira, consequenceJiraFieldId]);
 
   function patchLikelihoodLabel(i: number, label: string) {
-    if (mapMetricsToJiraFields) return;
+    if (mapLikelihoodToJira) return;
     setLikelihoodRows((prev) => prev.map((r, j) => (j === i ? { ...r, label } : r)));
   }
   function patchLikelihoodValue(i: number, value: number) {
-    if (mapMetricsToJiraFields) {
+    if (mapLikelihoodToJira) {
       setLikelihoodRowsByContext((prev) => {
         const k = likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId);
         const rows = prev[k] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId);
@@ -461,13 +513,13 @@ export default function TestPrototypePage() {
   }
 
   function patchConsequenceLabel(i: number, label: string) {
-    if (mapMetricsToJiraFields) return;
+    if (mapConsequenceToJira) return;
     setConsequenceRows((prev) =>
       prev.map((r, j) => (j === i ? { ...r, label } : r)),
     );
   }
   function patchConsequenceValue(i: number, value: number) {
-    if (mapMetricsToJiraFields) {
+    if (mapConsequenceToJira) {
       setConsequenceRowsByContext((prev) => {
         const k = consequenceRowsStorageKey(
           consequenceJiraFieldId,
@@ -741,7 +793,7 @@ export default function TestPrototypePage() {
                       ads.ink300,
                     )}
                   >
-                    LIKELIHOOD
+                    {likelihoodMetricName.toUpperCase()}
                   </span>
                   <span className={ads.ink200} aria-hidden>
                     *
@@ -754,7 +806,7 @@ export default function TestPrototypePage() {
                       ads.ink300,
                     )}
                   >
-                    CONSEQUENCE
+                    {consequenceMetricName.toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -765,61 +817,40 @@ export default function TestPrototypePage() {
 
             <div className="space-y-4">
               <p className={cn(ads.bodyMedium)}>Metrics</p>
-              <div
-                className={cn(
-                  "flex flex-wrap items-center justify-between gap-4 rounded-[3px] border px-4 py-3",
-                  ads.border,
-                  ads.surfaceSubtle,
-                )}
-              >
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <Label
-                    htmlFor="map-metrics-jira-fields"
-                    className={cn(ads.bodyMedium, "cursor-pointer")}
-                  >
-                    Map metrics to Jira custom fields
-                  </Label>
-                  <p className={cn(ads.caption)}>
-                    When on, each metric uses its own Jira field mapping; scales stay editable
-                    below.
-                  </p>
-                </div>
-                <Switch
-                  id="map-metrics-jira-fields"
-                  checked={mapMetricsToJiraFields}
-                  onCheckedChange={setMapMetricsToJiraFields}
-                  className="shrink-0 data-[state=checked]:bg-[#0C66E4]"
-                  aria-label="Map metrics to Jira custom fields"
-                />
-              </div>
               <div className="grid gap-6 md:grid-cols-2">
                 <ManualMetricCard
-                  metricLabel="Likelihood"
+                  cardSlug="likelihood"
+                  metricDisplayName={likelihoodMetricName}
+                  onMetricDisplayNameChange={setLikelihoodMetricName}
+                  mapToJira={mapLikelihoodToJira}
+                  onMapToJiraChange={setMapLikelihoodToJira}
                   rows={likelihoodDisplayRows}
                   onLabelChange={patchLikelihoodLabel}
                   onValueChange={patchLikelihoodValue}
                   onAddRow={addLikelihoodRow}
-                  jiraMappingEnabled={mapMetricsToJiraFields}
                   selectedJiraFieldId={likelihoodJiraFieldId}
                   onJiraFieldChange={setLikelihoodJiraFieldId}
-                  contextOptions={getContextsForJiraField(likelihoodJiraFieldId)}
-                  selectedContextId={likelihoodContextId}
-                  onContextChange={setLikelihoodContextId}
-                  peerSelectedFieldId={consequenceJiraFieldId}
+                  defaultContextId={likelihoodContextId}
+                  peerSelectedFieldId={
+                    mapConsequenceToJira ? consequenceJiraFieldId : null
+                  }
                 />
                 <ManualMetricCard
-                  metricLabel="Consequence"
+                  cardSlug="consequence"
+                  metricDisplayName={consequenceMetricName}
+                  onMetricDisplayNameChange={setConsequenceMetricName}
+                  mapToJira={mapConsequenceToJira}
+                  onMapToJiraChange={setMapConsequenceToJira}
                   rows={consequenceDisplayRows}
                   onLabelChange={patchConsequenceLabel}
                   onValueChange={patchConsequenceValue}
                   onAddRow={addConsequenceRow}
-                  jiraMappingEnabled={mapMetricsToJiraFields}
                   selectedJiraFieldId={consequenceJiraFieldId}
                   onJiraFieldChange={setConsequenceJiraFieldId}
-                  contextOptions={getContextsForJiraField(consequenceJiraFieldId)}
-                  selectedContextId={consequenceContextId}
-                  onContextChange={setConsequenceContextId}
-                  peerSelectedFieldId={likelihoodJiraFieldId}
+                  defaultContextId={consequenceContextId}
+                  peerSelectedFieldId={
+                    mapLikelihoodToJira ? likelihoodJiraFieldId : null
+                  }
                 />
               </div>
             </div>
