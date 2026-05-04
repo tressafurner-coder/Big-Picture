@@ -34,7 +34,7 @@ const JIRA_VALUE_NAME_TOOLTIP =
 
 /** Shown on a Jira custom field option disabled because the other metric already uses it. */
 const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
-  "A metric must use two different Jira custom fields.";
+  "You can't use the same Jira custom field for more than one metric in a single framework";
 
 /** Context selector is fixed to default. */
 const JIRA_CONTEXT_FIXED_TOOLTIP =
