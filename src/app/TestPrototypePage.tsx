@@ -229,94 +229,102 @@ function ManualMetricCard({
               aria-label="Map metric to Jira custom field"
             />
           </div>
-          {mapToJira ? (
-            <div className="w-full min-w-0 space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor={metricNameInputId} className={ads.labelField}>
-                  Metric name
-                </Label>
-                <input
-                  id={metricNameInputId}
-                  type="text"
-                  value={metricDisplayName}
-                  onChange={(e) => onMetricDisplayNameChange(e.target.value)}
-                  className={cn("h-9 w-full", ads.fieldControl)}
-                  placeholder={getJiraCustomFieldLabel(selectedJiraFieldId)}
-                  aria-label="Metric display name"
-                />
-              </div>
-              <div className="space-y-1">
-              <Label htmlFor={fieldSelectId} className={ads.labelField}>
-                Jira custom field
+          <div className="w-full min-w-0 space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor={metricNameInputId} className={ads.labelField}>
+                Metric name
               </Label>
-              <Select value={selectedJiraFieldId} onValueChange={onJiraFieldChange}>
-                <SelectTrigger
-                  id={fieldSelectId}
-                  className={cn(
-                    "flex h-9 w-full min-w-0 items-center justify-between gap-2 text-left hover:bg-[#FAFBFC] data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
-                    ads.fieldControl,
-                  )}
-                >
-                  <SelectValue placeholder="Select custom field" />
-                </SelectTrigger>
-                <SelectContent
-                  className={cn("rounded-[3px] shadow-md", ads.border, ads.surface)}
-                >
-                  {JIRA_CUSTOM_FIELD_OPTIONS.map((opt) => {
-                    const takenByPeer =
-                      peerSelectedFieldId != null && opt.id === peerSelectedFieldId;
-                    if (takenByPeer) {
-                      return (
-                        <Tooltip
-                          key={opt.id}
-                          content={JIRA_FIELD_PEER_TAKEN_TOOLTIP}
-                          className="block w-full min-w-0 cursor-default"
-                        >
-                          <SelectItem
-                            value={opt.id}
-                            disabled
-                            allowPointerEventsWhenDisabled
-                            title={JIRA_FIELD_PEER_TAKEN_TOOLTIP}
-                          >
+              <input
+                id={metricNameInputId}
+                type="text"
+                value={metricDisplayName}
+                onChange={(e) => onMetricDisplayNameChange(e.target.value)}
+                className={cn("h-9 w-full", ads.fieldControl)}
+                placeholder={
+                  mapToJira
+                    ? getJiraCustomFieldLabel(selectedJiraFieldId)
+                    : undefined
+                }
+                aria-label="Metric display name"
+              />
+            </div>
+            {mapToJira ? (
+              <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor={fieldSelectId} className={ads.labelField}>
+                    Jira custom field
+                  </Label>
+                  <Select value={selectedJiraFieldId} onValueChange={onJiraFieldChange}>
+                    <SelectTrigger
+                      id={fieldSelectId}
+                      className={cn(
+                        "flex h-9 w-full min-w-0 items-center justify-between gap-2 text-left hover:bg-[#FAFBFC] data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
+                        ads.fieldControl,
+                      )}
+                    >
+                      <SelectValue placeholder="Select custom field" />
+                    </SelectTrigger>
+                    <SelectContent
+                      className={cn("rounded-[3px] shadow-md", ads.border, ads.surface)}
+                    >
+                      {JIRA_CUSTOM_FIELD_OPTIONS.map((opt) => {
+                        const takenByPeer =
+                          peerSelectedFieldId != null &&
+                          opt.id === peerSelectedFieldId;
+                        if (takenByPeer) {
+                          return (
+                            <Tooltip
+                              key={opt.id}
+                              content={JIRA_FIELD_PEER_TAKEN_TOOLTIP}
+                              className="block w-full min-w-0 cursor-default"
+                            >
+                              <SelectItem
+                                value={opt.id}
+                                disabled
+                                allowPointerEventsWhenDisabled
+                                title={JIRA_FIELD_PEER_TAKEN_TOOLTIP}
+                              >
+                                {opt.label}
+                              </SelectItem>
+                            </Tooltip>
+                          );
+                        }
+                        return (
+                          <SelectItem key={opt.id} value={opt.id}>
                             {opt.label}
                           </SelectItem>
-                        </Tooltip>
-                      );
-                    }
-                    return (
-                      <SelectItem key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor={contextSelectId} className={ads.labelField}>
-                Context
-              </Label>
-              <Tooltip
-                content={JIRA_CONTEXT_FIXED_TOOLTIP}
-                className="block w-full min-w-0 cursor-default"
-              >
-                <div
-                  id={contextSelectId}
-                  className={cn(
-                    "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
-                  )}
-                  aria-disabled="true"
-                  aria-label="Context (default only)"
-                >
-                  <span className="min-w-0 truncate">Default context</span>
-                  <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </Tooltip>
-            </div>
-            </div>
-          ) : (
-            <h3 className={cn(ads.bodyMedium)}>{metricDisplayName}</h3>
-          )}
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor={contextSelectId} className={ads.labelField}>
+                    Context
+                  </Label>
+                  <Tooltip
+                    content={JIRA_CONTEXT_FIXED_TOOLTIP}
+                    className="block w-full min-w-0 cursor-default"
+                  >
+                    <div
+                      id={contextSelectId}
+                      className={cn(
+                        "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
+                      )}
+                      aria-disabled="true"
+                      aria-label="Context (default only)"
+                    >
+                      <span className="min-w-0 truncate">Default context</span>
+                      <ChevronDown
+                        className="size-4 shrink-0 opacity-50"
+                        aria-hidden
+                      />
+                    </div>
+                  </Tooltip>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
       <table className="w-full border-collapse font-sans text-sm">

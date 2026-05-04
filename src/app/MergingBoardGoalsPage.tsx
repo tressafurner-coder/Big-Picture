@@ -113,6 +113,12 @@ const SWIMLANE_CARD_TITLE: Record<TeamFilterId, string> = {
   design: "UX review",
 };
 
+function boardScopeLabel(scope: { tasks: boolean; goals: boolean }): string {
+  if (scope.tasks && scope.goals) return "Tasks & Goals";
+  if (scope.tasks) return "Tasks";
+  return "Goals";
+}
+
 function SwimlaneIssueCard({
   issueKey,
   title,
@@ -153,9 +159,128 @@ function SwimlaneIssueCard({
         <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#172B4D]">
           {title}
         </span>
+      </div>
+    </div>
+  );
+}
+
+const SWIMLANE_GOAL_TITLES = [
+  "Q2 product delivery",
+  "Reduce cycle time 20%",
+  "OKR: customer satisfaction",
+  "Stabilize sprint throughput",
+  "Zero critical blockers",
+  "Time-to-market −15%",
+  "Flow predictability",
+  "NPS & quality target",
+] as const;
+
+/** One goal per sprint column; stable hash per team + sprint index (1–3). */
+function swimlaneGoalForSprint(
+  teamId: TeamFilterId,
+  sprintIndex: 0 | 1 | 2,
+): {
+  title: string;
+  percent: number;
+} {
+  const seed = `${teamId}:sprint${sprintIndex + 1}`;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i) + 17) >>> 0;
+  }
+  const title = SWIMLANE_GOAL_TITLES[h % SWIMLANE_GOAL_TITLES.length];
+  const percent = 28 + (h % 63);
+  return { title, percent };
+}
+
+type SwimlaneStackItem =
+  | { id: string; type: "task"; issueKey: string; title: string }
+  | { id: string; type: "goal"; title: string; percent: number };
+
+type SwimlaneCellStacks = Record<
+  TeamFilterId,
+  [SwimlaneStackItem[], SwimlaneStackItem[], SwimlaneStackItem[]]
+>;
+
+/** Extra goal rows in a cell (salt = occurrence index). */
+function extraGoalFromSalt(
+  teamId: TeamFilterId,
+  sprintIndex: 0 | 1 | 2,
+  salt: number,
+): { title: string; percent: number } {
+  const seed = `${teamId}:sprint${sprintIndex + 1}:extra:${salt}`;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i) + 23) >>> 0;
+  }
+  return {
+    title: SWIMLANE_GOAL_TITLES[h % SWIMLANE_GOAL_TITLES.length],
+    percent: 12 + (h % 86),
+  };
+}
+
+function createInitialSwimlaneStacks(): SwimlaneCellStacks {
+  const out = {} as SwimlaneCellStacks;
+  for (const t of ALL_MENU_TEAMS) {
+    const c = sprintColumnForTeam(t.id);
+    const cols: [
+      SwimlaneStackItem[],
+      SwimlaneStackItem[],
+      SwimlaneStackItem[],
+    ] = [[], [], []];
+    cols[c] = [
+      {
+        id: `seed-task-${t.id}`,
+        type: "task",
+        issueKey: issueKeyForTeam(t.id),
+        title: SWIMLANE_CARD_TITLE[t.id],
+      },
+    ];
+    out[t.id] = cols;
+  }
+  return out;
+}
+
+function SwimlaneGoalBar({
+  title,
+  percent,
+  sprintLabel,
+}: {
+  title: string;
+  percent: number;
+  /** Shown above the goal title (per-column sprint). */
+  sprintLabel?: string;
+}) {
+  return (
+    <div className="rounded-md border border-[#DFE1E6] bg-[#F7F8F9] px-2 py-2 shadow-[0_1px_2px_rgba(9,30,66,0.06)]">
+      {sprintLabel ? (
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
+          {sprintLabel}
+        </div>
+      ) : null}
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-xs font-semibold leading-snug text-[#172B4D]">
+          Goal: {title}
+        </span>
+        <span className="shrink-0 tabular-nums text-[11px] font-semibold text-[#626F86]">
+          {percent}%
+        </span>
+      </div>
+      <div
+        className="h-1.5 w-full overflow-hidden rounded-full bg-[#DFE1E6]"
+        role="progressbar"
+        aria-label={
+          sprintLabel
+            ? `${sprintLabel}: ${title}, ${percent}%`
+            : `${title}, ${percent}%`
+        }
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
-          className="size-8 shrink-0 rounded-full bg-gradient-to-br from-amber-100 to-orange-200 ring-1 ring-[#DFE1E6]"
-          aria-hidden
+          className="h-full rounded-full bg-[#0C66E4]"
+          style={{ width: `${percent}%` }}
         />
       </div>
     </div>
@@ -226,6 +351,7 @@ export default function MergingBoardGoalsPage() {
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [viewTaskWarnings, setViewTaskWarnings] = useState(false);
   const [viewGoals, setViewGoals] = useState(false);
+  const [viewGoalsCompactMode, setViewGoalsCompactMode] = useState(false);
   const viewTriggerRef = useRef<HTMLButtonElement>(null);
   const viewMenuRef = useRef<HTMLDivElement>(null);
   const [viewMenuBox, setViewMenuBox] = useState<{
@@ -233,6 +359,28 @@ export default function MergingBoardGoalsPage() {
     left: number;
     minWidth: number;
   } | null>(null);
+
+  const [boardScopeMenuOpen, setBoardScopeMenuOpen] = useState(false);
+  const [boardScope, setBoardScope] = useState<{
+    tasks: boolean;
+    goals: boolean;
+  }>({ tasks: true, goals: false });
+  const boardScopeTriggerRef = useRef<HTMLButtonElement>(null);
+  const boardScopeMenuRef = useRef<HTMLDivElement>(null);
+  const [boardScopeMenuBox, setBoardScopeMenuBox] = useState<{
+    top: number;
+    left: number;
+    minWidth: number;
+  } | null>(null);
+
+  const [swimlaneStacks, setSwimlaneStacks] = useState<SwimlaneCellStacks>(
+    createInitialSwimlaneStacks,
+  );
+  const [sprintMixPicker, setSprintMixPicker] = useState<{
+    teamId: TeamFilterId;
+    sprintIdx: 0 | 1 | 2;
+  } | null>(null);
+  const sprintMixWrapRef = useRef<HTMLDivElement | null>(null);
 
   const boardAnchorRef = useRef<HTMLDivElement>(null);
   const boardFlyoutCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(
@@ -322,6 +470,30 @@ export default function MergingBoardGoalsPage() {
       window.removeEventListener("scroll", update, true);
     };
   }, [swimlanesMenuOpen]);
+
+  useEffect(() => {
+    if (!boardScopeMenuOpen) {
+      setBoardScopeMenuBox(null);
+      return;
+    }
+    const update = () => {
+      const el = boardScopeTriggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setBoardScopeMenuBox({
+        top: r.bottom + 4,
+        left: r.left,
+        minWidth: Math.max(r.width, 260),
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [boardScopeMenuOpen]);
 
   useEffect(() => {
     if (!teamMenuOpen) {
@@ -450,13 +622,16 @@ export default function MergingBoardGoalsPage() {
       !allMenuOpen &&
       !essentialsMenuOpen &&
       !tasksMenuOpen &&
-      !viewMenuOpen
+      !viewMenuOpen &&
+      !boardScopeMenuOpen
     )
       return;
     const onPointerDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (swimlanesTriggerRef.current?.contains(t)) return;
       if (swimlanesMenuRef.current?.contains(t)) return;
+      if (boardScopeTriggerRef.current?.contains(t)) return;
+      if (boardScopeMenuRef.current?.contains(t)) return;
       if (teamTriggerRef.current?.contains(t)) return;
       if (teamMenuRef.current?.contains(t)) return;
       if (allTriggerRef.current?.contains(t)) return;
@@ -473,6 +648,7 @@ export default function MergingBoardGoalsPage() {
       setEssentialsMenuOpen(false);
       setTasksMenuOpen(false);
       setViewMenuOpen(false);
+      setBoardScopeMenuOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -483,7 +659,73 @@ export default function MergingBoardGoalsPage() {
     essentialsMenuOpen,
     tasksMenuOpen,
     viewMenuOpen,
+    boardScopeMenuOpen,
   ]);
+
+  const goalsOnlyBoardScope = !boardScope.tasks && boardScope.goals;
+
+  useEffect(() => {
+    if (goalsOnlyBoardScope) {
+      setTeamMenuOpen(false);
+      setTasksMenuOpen(false);
+    }
+  }, [goalsOnlyBoardScope]);
+
+  useEffect(() => {
+    if (!(boardScope.tasks && boardScope.goals)) {
+      setSprintMixPicker(null);
+    }
+  }, [boardScope.tasks, boardScope.goals]);
+
+  useEffect(() => {
+    if (!sprintMixPicker) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (sprintMixWrapRef.current?.contains(t)) return;
+      setSprintMixPicker(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [sprintMixPicker]);
+
+  const appendJiraTask = (teamId: TeamFilterId, sprintIdx: 0 | 1 | 2) => {
+    setSwimlaneStacks((prev) => {
+      const row = prev[teamId];
+      const next: [
+        SwimlaneStackItem[],
+        SwimlaneStackItem[],
+        SwimlaneStackItem[],
+      ] = [[...row[0]], [...row[1]], [...row[2]]];
+      const n = next[sprintIdx].filter((x) => x.type === "task").length;
+      next[sprintIdx].push({
+        id: `task-${teamId}-${sprintIdx}-${Date.now()}-${n}`,
+        type: "task",
+        issueKey: `APP-${200 + ((n + teamId.length * 3 + sprintIdx * 11) % 700)}`,
+        title: "New Jira task",
+      });
+      return { ...prev, [teamId]: next };
+    });
+  };
+
+  const appendGoalItem = (teamId: TeamFilterId, sprintIdx: 0 | 1 | 2) => {
+    setSwimlaneStacks((prev) => {
+      const row = prev[teamId];
+      const next: [
+        SwimlaneStackItem[],
+        SwimlaneStackItem[],
+        SwimlaneStackItem[],
+      ] = [[...row[0]], [...row[1]], [...row[2]]];
+      const salt = next[sprintIdx].filter((x) => x.type === "goal").length;
+      const meta = extraGoalFromSalt(teamId, sprintIdx, salt);
+      next[sprintIdx].push({
+        id: `goal-${teamId}-${sprintIdx}-${Date.now()}`,
+        type: "goal",
+        title: meta.title,
+        percent: meta.percent,
+      });
+      return { ...prev, [teamId]: next };
+    });
+  };
 
   return (
     <div
@@ -638,17 +880,13 @@ export default function MergingBoardGoalsPage() {
             <span className="min-w-0 flex-1 truncate text-left">Financials</span>
             <span className={purpleNewBadge}>New</span>
           </button>
-          <div className="my-1.5 shrink-0 px-2" aria-hidden role="separator">
-            <div className="h-px w-full bg-[#DFE1E6]" />
+          <div className={cn("border-t p-2", ads.border)}>
+            <button type="button" className={sidebarNavButton}>
+              <Cog className="size-4 shrink-0 text-[#44546F]" strokeWidth={2} />
+              <span className="truncate text-sm">Box Configuration</span>
+            </button>
           </div>
         </nav>
-
-        <div className={cn("border-t p-2", ads.border)}>
-          <button type="button" className={sidebarNavButton}>
-            <Cog className="size-4 shrink-0 text-[#44546F]" strokeWidth={2} />
-            <span className="truncate text-sm">Box Configuration</span>
-          </button>
-        </div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#F4F5F7]">
@@ -690,6 +928,7 @@ export default function MergingBoardGoalsPage() {
                 aria-expanded={swimlanesMenuOpen}
                 aria-haspopup="listbox"
                 onClick={() => {
+                  setBoardScopeMenuOpen(false);
                   setTeamMenuOpen(false);
                   setAllMenuOpen(false);
                   setEssentialsMenuOpen(false);
@@ -748,42 +987,142 @@ export default function MergingBoardGoalsPage() {
                   document.body,
                 )}
             </div>
-            <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-[#DFE1E6] bg-white">
+            <div className="relative">
               <button
-                ref={teamTriggerRef}
+                ref={boardScopeTriggerRef}
                 type="button"
-                aria-expanded={teamMenuOpen}
-                aria-haspopup="listbox"
+                aria-expanded={boardScopeMenuOpen}
+                aria-haspopup="menu"
                 onClick={() => {
                   setSwimlanesMenuOpen(false);
+                  setTeamMenuOpen(false);
                   setAllMenuOpen(false);
                   setEssentialsMenuOpen(false);
                   setTasksMenuOpen(false);
                   setViewMenuOpen(false);
-                  setTeamMenuOpen((open) => !open);
+                  setBoardScopeMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 border-0 border-r border-[#DFE1E6] px-2 py-1.5 text-sm font-medium outline-none transition-colors",
-                  teamMenuOpen
+                  "flex items-center gap-1.5 rounded-md border border-[#DFE1E6] bg-white px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                  boardScopeMenuOpen
                     ? "bg-[#E9F2FF] text-[#0C66E4]"
-                    : "bg-white text-[#172B4D] hover:bg-[#F7F8F9]",
+                    : "text-[#172B4D] hover:bg-[#F7F8F9]",
                 )}
               >
-                <Waves
-                  className={cn(
-                    "size-4 shrink-0",
-                    teamMenuOpen ? "text-[#0C66E4]" : "text-[#44546F]",
-                  )}
-                  strokeWidth={2}
-                />
-                Team
+                {boardScopeLabel(boardScope)}
                 <ChevronDown
                   className={cn(
                     "size-4 shrink-0",
-                    teamMenuOpen ? "text-[#0C66E4]" : "opacity-70",
+                    boardScopeMenuOpen ? "text-[#0C66E4]" : "opacity-70",
                   )}
                 />
               </button>
+              {boardScopeMenuOpen &&
+                boardScopeMenuBox &&
+                createPortal(
+                  <div
+                    ref={boardScopeMenuRef}
+                    className="fixed z-[200] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                    style={{
+                      top: boardScopeMenuBox.top,
+                      left: boardScopeMenuBox.left,
+                      minWidth: boardScopeMenuBox.minWidth,
+                    }}
+                    role="menu"
+                    aria-label="Board content scope"
+                  >
+                    <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#44546F]">
+                      Show on board
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
+                      <input
+                        type="checkbox"
+                        className="size-4 shrink-0 rounded border-[#DFE1E6] text-[#0C66E4] accent-[#0C66E4]"
+                        checked={boardScope.tasks}
+                        onChange={() => {
+                          setBoardScope((prev) => {
+                            if (prev.tasks && !prev.goals) return prev;
+                            return { ...prev, tasks: !prev.tasks };
+                          });
+                        }}
+                      />
+                      <span className="text-sm text-[#172B4D]">Tasks</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
+                      <input
+                        type="checkbox"
+                        className="size-4 shrink-0 rounded border-[#DFE1E6] text-[#0C66E4] accent-[#0C66E4]"
+                        checked={boardScope.goals}
+                        onChange={() => {
+                          setBoardScope((prev) => {
+                            if (!prev.tasks && prev.goals) return prev;
+                            return { ...prev, goals: !prev.goals };
+                          });
+                        }}
+                      />
+                      <span className="text-sm text-[#172B4D]">Goals</span>
+                    </label>
+                  </div>,
+                  document.body,
+                )}
+            </div>
+            <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-[#DFE1E6] bg-white">
+              {goalsOnlyBoardScope ? (
+                <Tooltip
+                  content="Goals are set per team"
+                  className="inline-flex shrink-0 cursor-default"
+                >
+                  <div
+                    ref={teamTriggerRef}
+                    className="flex cursor-default select-none items-center gap-1.5 border-0 border-r border-[#DFE1E6] bg-white px-2 py-1.5 text-sm font-medium text-[#626F86]"
+                    aria-label="Team swimlane (fixed in Goals mode)"
+                  >
+                    <Waves
+                      className="size-4 shrink-0 text-[#44546F]"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    Team
+                  </div>
+                </Tooltip>
+              ) : (
+                <button
+                  ref={teamTriggerRef}
+                  type="button"
+                  aria-expanded={teamMenuOpen}
+                  aria-haspopup="listbox"
+                  onClick={() => {
+                    setSwimlanesMenuOpen(false);
+                    setBoardScopeMenuOpen(false);
+                    setAllMenuOpen(false);
+                    setEssentialsMenuOpen(false);
+                    setTasksMenuOpen(false);
+                    setViewMenuOpen(false);
+                    setTeamMenuOpen((open) => !open);
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 border-0 border-r border-[#DFE1E6] px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                    teamMenuOpen
+                      ? "bg-[#E9F2FF] text-[#0C66E4]"
+                      : "bg-white text-[#172B4D] hover:bg-[#F7F8F9]",
+                  )}
+                >
+                  <Waves
+                    className={cn(
+                      "size-4 shrink-0",
+                      teamMenuOpen ? "text-[#0C66E4]" : "text-[#44546F]",
+                    )}
+                    strokeWidth={2}
+                  />
+                  Team
+                  <ChevronDown
+                    className={cn(
+                      "size-4 shrink-0",
+                      teamMenuOpen ? "text-[#0C66E4]" : "opacity-70",
+                    )}
+                  />
+                </button>
+              )}
               <button
                 ref={allTriggerRef}
                 type="button"
@@ -791,6 +1130,7 @@ export default function MergingBoardGoalsPage() {
                 aria-haspopup="listbox"
                 onClick={() => {
                   setSwimlanesMenuOpen(false);
+                  setBoardScopeMenuOpen(false);
                   setTeamMenuOpen(false);
                   setEssentialsMenuOpen(false);
                   setTasksMenuOpen(false);
@@ -815,6 +1155,7 @@ export default function MergingBoardGoalsPage() {
             </div>
             {teamMenuOpen &&
               teamMenuBox &&
+              !goalsOnlyBoardScope &&
               createPortal(
                 <div
                   ref={teamMenuRef}
@@ -956,6 +1297,7 @@ export default function MergingBoardGoalsPage() {
                 aria-haspopup="listbox"
                 onClick={() => {
                   setSwimlanesMenuOpen(false);
+                  setBoardScopeMenuOpen(false);
                   setTeamMenuOpen(false);
                   setAllMenuOpen(false);
                   setTasksMenuOpen(false);
@@ -1040,86 +1382,89 @@ export default function MergingBoardGoalsPage() {
                 )}
             </div>
             <div className="inline-flex items-center gap-1">
-              <div className="relative">
-                <button
-                  ref={tasksTriggerRef}
-                  type="button"
-                  aria-expanded={tasksMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => {
-                    setSwimlanesMenuOpen(false);
-                    setTeamMenuOpen(false);
-                    setAllMenuOpen(false);
-                    setEssentialsMenuOpen(false);
-                    setViewMenuOpen(false);
-                    setTasksMenuOpen((open) => !open);
-                  }}
-                  className={cn(
-                    "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
-                    tasksMenuOpen
-                      ? "bg-[#E9F2FF] text-[#0C66E4]"
-                      : "bg-transparent text-[#172B4D] hover:bg-[#EBECF0]",
-                  )}
-                >
-                  Tasks
-                </button>
-                {tasksMenuOpen &&
-                  tasksMenuBox &&
-                  createPortal(
-                    <div
-                      ref={tasksMenuRef}
-                      className="fixed z-[200] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
-                      style={{
-                        top: tasksMenuBox.top,
-                        left: tasksMenuBox.left,
-                        minWidth: tasksMenuBox.minWidth,
-                      }}
-                      role="menu"
-                      aria-label="Create task"
-                    >
-                      <div className="px-3 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
-                        Create new
-                      </div>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                        onClick={() => setTasksMenuOpen(false)}
-                      >
-                        <Ticket
-                          className="size-4 shrink-0 text-[#0052CC]"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                        Jira issue
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                        onClick={() => setTasksMenuOpen(false)}
-                      >
-                        <span className="relative block size-4 shrink-0 overflow-hidden rounded-[3px]">
-                          <BigPictureAppTile className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 scale-[0.5]" />
-                        </span>
-                        BigPicture task
-                      </button>
+              {!goalsOnlyBoardScope && (
+                <div className="relative">
+                  <button
+                    ref={tasksTriggerRef}
+                    type="button"
+                    aria-expanded={tasksMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => {
+                      setSwimlanesMenuOpen(false);
+                      setBoardScopeMenuOpen(false);
+                      setTeamMenuOpen(false);
+                      setAllMenuOpen(false);
+                      setEssentialsMenuOpen(false);
+                      setViewMenuOpen(false);
+                      setTasksMenuOpen((open) => !open);
+                    }}
+                    className={cn(
+                      "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                      tasksMenuOpen
+                        ? "bg-[#E9F2FF] text-[#0C66E4]"
+                        : "bg-transparent text-[#172B4D] hover:bg-[#EBECF0]",
+                    )}
+                  >
+                    Tasks
+                  </button>
+                  {tasksMenuOpen &&
+                    tasksMenuBox &&
+                    createPortal(
                       <div
-                        className="my-1.5 border-t border-[#DFE1E6]"
-                        role="separator"
-                      />
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="w-full px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                        onClick={() => setTasksMenuOpen(false)}
+                        ref={tasksMenuRef}
+                        className="fixed z-[200] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                        style={{
+                          top: tasksMenuBox.top,
+                          left: tasksMenuBox.left,
+                          minWidth: tasksMenuBox.minWidth,
+                        }}
+                        role="menu"
+                        aria-label="Create task"
                       >
-                        Add work items from Jira
-                      </button>
-                    </div>,
-                    document.body,
-                  )}
-              </div>
+                        <div className="px-3 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
+                          Create new
+                        </div>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                          onClick={() => setTasksMenuOpen(false)}
+                        >
+                          <Ticket
+                            className="size-4 shrink-0 text-[#0052CC]"
+                            strokeWidth={2}
+                            aria-hidden
+                          />
+                          Jira issue
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                          onClick={() => setTasksMenuOpen(false)}
+                        >
+                          <span className="relative block size-4 shrink-0 overflow-hidden rounded-[3px]">
+                            <BigPictureAppTile className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 scale-[0.5]" />
+                          </span>
+                          BigPicture task
+                        </button>
+                        <div
+                          className="my-1.5 border-t border-[#DFE1E6]"
+                          role="separator"
+                        />
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="w-full px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                          onClick={() => setTasksMenuOpen(false)}
+                        >
+                          Add work items from Jira
+                        </button>
+                      </div>,
+                      document.body,
+                    )}
+                </div>
+              )}
               <div className="relative">
                 <button
                   ref={viewTriggerRef}
@@ -1128,6 +1473,7 @@ export default function MergingBoardGoalsPage() {
                   aria-haspopup="menu"
                   onClick={() => {
                     setSwimlanesMenuOpen(false);
+                    setBoardScopeMenuOpen(false);
                     setTeamMenuOpen(false);
                     setAllMenuOpen(false);
                     setEssentialsMenuOpen(false);
@@ -1155,75 +1501,134 @@ export default function MergingBoardGoalsPage() {
                         minWidth: viewMenuBox.minWidth,
                       }}
                       role="menu"
-                      aria-label="View options"
+                      aria-label={
+                        goalsOnlyBoardScope
+                          ? "View options (Goals mode)"
+                          : "View options"
+                      }
                     >
-                      {(
-                        [
-                          "Dependencies",
-                          "Sort",
-                          "Layout",
-                          "Aggregation",
-                        ] as const
-                      ).map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          role="menuitem"
-                          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                          onClick={() => setViewMenuOpen(false)}
-                        >
-                          <span>{item}</span>
-                          <ChevronRight
-                            className="size-4 shrink-0 text-[#626F86]"
-                            strokeWidth={2}
-                            aria-hidden
-                          />
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                        onClick={() =>
-                          setViewTaskWarnings((v) => !v)
-                        }
-                      >
-                        <span
-                          className={cn(
-                            "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
-                            viewTaskWarnings
-                              ? "border-[#0C66E4] bg-[#0C66E4]"
-                              : "border-[#DFE1E6] bg-white",
-                          )}
-                          aria-hidden
-                        >
-                          {viewTaskWarnings && (
-                            <Check className="size-3 text-white" strokeWidth={3} />
-                          )}
-                        </span>
-                        Task warnings
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                        onClick={() => setViewGoals((v) => !v)}
-                      >
-                        <span
-                          className={cn(
-                            "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
-                            viewGoals
-                              ? "border-[#0C66E4] bg-[#0C66E4]"
-                              : "border-[#DFE1E6] bg-white",
-                          )}
-                          aria-hidden
-                        >
-                          {viewGoals && (
-                            <Check className="size-3 text-white" strokeWidth={3} />
-                          )}
-                        </span>
-                        Goals
-                      </button>
+                      {goalsOnlyBoardScope ? (
+                        <>
+                          {(
+                            [
+                              "Sort",
+                              "Achievement",
+                              "Heatmap mode",
+                            ] as const
+                          ).map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                              onClick={() => setViewMenuOpen(false)}
+                            >
+                              <span>{item}</span>
+                              <ChevronRight
+                                className="size-4 shrink-0 text-[#626F86]"
+                                strokeWidth={2}
+                                aria-hidden
+                              />
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                            onClick={() =>
+                              setViewGoalsCompactMode((v) => !v)
+                            }
+                          >
+                            <span
+                              className={cn(
+                                "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+                                viewGoalsCompactMode
+                                  ? "border-[#0C66E4] bg-[#0C66E4]"
+                                  : "border-[#DFE1E6] bg-white",
+                              )}
+                              aria-hidden
+                            >
+                              {viewGoalsCompactMode && (
+                                <Check
+                                  className="size-3 text-white"
+                                  strokeWidth={3}
+                                />
+                              )}
+                            </span>
+                            Compact mode
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {(
+                            [
+                              "Dependencies",
+                              "Sort",
+                              "Layout",
+                              "Aggregation",
+                            ] as const
+                          ).map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                              onClick={() => setViewMenuOpen(false)}
+                            >
+                              <span>{item}</span>
+                              <ChevronRight
+                                className="size-4 shrink-0 text-[#626F86]"
+                                strokeWidth={2}
+                                aria-hidden
+                              />
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                            onClick={() =>
+                              setViewTaskWarnings((v) => !v)
+                            }
+                          >
+                            <span
+                              className={cn(
+                                "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+                                viewTaskWarnings
+                                  ? "border-[#0C66E4] bg-[#0C66E4]"
+                                  : "border-[#DFE1E6] bg-white",
+                              )}
+                              aria-hidden
+                            >
+                              {viewTaskWarnings && (
+                                <Check className="size-3 text-white" strokeWidth={3} />
+                              )}
+                            </span>
+                            Task warnings
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                            onClick={() => setViewGoals((v) => !v)}
+                          >
+                            <span
+                              className={cn(
+                                "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+                                viewGoals
+                                  ? "border-[#0C66E4] bg-[#0C66E4]"
+                                  : "border-[#DFE1E6] bg-white",
+                              )}
+                              aria-hidden
+                            >
+                              {viewGoals && (
+                                <Check className="size-3 text-white" strokeWidth={3} />
+                              )}
+                            </span>
+                            Goals
+                          </button>
+                        </>
+                      )}
                     </div>,
                     document.body,
                   )}
@@ -1387,33 +1792,136 @@ export default function MergingBoardGoalsPage() {
                     </button>
                   </div>
                   {swimlaneExpanded[team.id] ? (
-                    <div className="grid grid-cols-3 gap-2 bg-white p-4">
+                    <div className="grid grid-cols-3 gap-2 bg-white p-4 pt-3">
                       {(() => {
-                        const cardCol = sprintColumnForTeam(team.id);
+                        const tasksGoalsMix =
+                          boardScope.tasks && boardScope.goals;
                         return [1, 2, 3].map((col) => {
-                          const showCard = col - 1 === cardCol;
+                          const sprintIdx = (col - 1) as 0 | 1 | 2;
+                          const rawStack = swimlaneStacks[team.id][sprintIdx];
+                          const visibleStack = rawStack.filter((item) => {
+                            if (boardScope.tasks && boardScope.goals)
+                              return true;
+                            if (boardScope.tasks) return item.type === "task";
+                            return item.type === "goal";
+                          });
+                          const showMixPicker =
+                            tasksGoalsMix &&
+                            sprintMixPicker?.teamId === team.id &&
+                            sprintMixPicker.sprintIdx === sprintIdx;
+                          const addLabel = tasksGoalsMix
+                            ? `${team.label}, Sprint ${col}: add Task or Goal`
+                            : boardScope.tasks
+                              ? `${team.label}, Sprint ${col}: add Jira task`
+                              : `${team.label}, Sprint ${col}: add goal`;
+
+                          const onAddClick = () => {
+                            if (tasksGoalsMix) {
+                              setSprintMixPicker((prev) =>
+                                prev?.teamId === team.id &&
+                                prev.sprintIdx === sprintIdx
+                                  ? null
+                                  : {
+                                      teamId: team.id,
+                                      sprintIdx,
+                                    },
+                              );
+                              return;
+                            }
+                            if (boardScope.tasks) {
+                              appendJiraTask(team.id, sprintIdx);
+                            } else {
+                              appendGoalItem(team.id, sprintIdx);
+                            }
+                          };
+
                           return (
                             <div
                               key={col}
-                              className="flex min-h-[160px] flex-col justify-start"
+                              className="flex min-h-0 flex-col gap-2"
                             >
-                              {showCard ? (
-                                <SwimlaneIssueCard
-                                  issueKey={issueKeyForTeam(team.id)}
-                                  title={SWIMLANE_CARD_TITLE[team.id]}
-                                />
-                              ) : (
+                              <SwimlaneGoalBar
+                                sprintLabel={`Sprint ${col}`}
+                                {...swimlaneGoalForSprint(
+                                  team.id,
+                                  sprintIdx,
+                                )}
+                              />
+                              {visibleStack.map((item) =>
+                                item.type === "task" ? (
+                                  <SwimlaneIssueCard
+                                    key={item.id}
+                                    issueKey={item.issueKey}
+                                    title={item.title}
+                                  />
+                                ) : (
+                                  <SwimlaneGoalBar
+                                    key={item.id}
+                                    title={item.title}
+                                    percent={item.percent}
+                                  />
+                                ),
+                              )}
+                              <div
+                                className="relative shrink-0"
+                                ref={
+                                  showMixPicker
+                                    ? sprintMixWrapRef
+                                    : undefined
+                                }
+                              >
+                                {showMixPicker ? (
+                                  <div
+                                    className="absolute bottom-full left-0 right-0 z-30 mb-1 rounded-md border border-[#DFE1E6] bg-white py-1 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                                    role="menu"
+                                    aria-label="Add to sprint"
+                                  >
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                                      onClick={() => {
+                                        appendJiraTask(team.id, sprintIdx);
+                                        setSprintMixPicker(null);
+                                      }}
+                                    >
+                                      <Ticket
+                                        className="size-4 shrink-0 text-[#0052CC]"
+                                        strokeWidth={2}
+                                        aria-hidden
+                                      />
+                                      Jira task
+                                    </button>
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                                      onClick={() => {
+                                        appendGoalItem(team.id, sprintIdx);
+                                        setSprintMixPicker(null);
+                                      }}
+                                    >
+                                      <Target
+                                        className="size-4 shrink-0 text-[#44546F]"
+                                        strokeWidth={2}
+                                        aria-hidden
+                                      />
+                                      Goal
+                                    </button>
+                                  </div>
+                                ) : null}
                                 <button
                                   type="button"
-                                  className="flex min-h-[160px] flex-1 cursor-pointer items-center justify-center rounded-md border border-dashed border-[#DFE1E6] bg-white transition-colors hover:border-[#0C66E4]/40 hover:bg-[#F7F8F9]"
-                                  aria-label={`${team.label}: add card in Sprint column ${col}`}
+                                  onClick={onAddClick}
+                                  className="flex min-h-[72px] w-full cursor-pointer items-center justify-center rounded-md border border-dashed border-[#DFE1E6] bg-white transition-colors hover:border-[#0C66E4]/40 hover:bg-[#F7F8F9]"
+                                  aria-label={addLabel}
                                 >
                                   <Plus
                                     className="size-10 text-[#B3B9C4]"
                                     strokeWidth={1.25}
                                   />
                                 </button>
-                              )}
+                              </div>
                             </div>
                           );
                         });
