@@ -1815,13 +1815,15 @@ export default function MergingBoardGoalsPage() {
                               key={col}
                               className="flex min-h-0 flex-col gap-2"
                             >
-                              <SwimlaneGoalBar
-                                sprintLabel={`Sprint ${col}`}
-                                {...swimlaneGoalForSprint(
-                                  team.id,
-                                  sprintIdx,
-                                )}
-                              />
+                              {boardScope.goals ? (
+                                <SwimlaneGoalBar
+                                  sprintLabel={`Sprint ${col}`}
+                                  {...swimlaneGoalForSprint(
+                                    team.id,
+                                    sprintIdx,
+                                  )}
+                                />
+                              ) : null}
                               {visibleStack.map((item) =>
                                 item.type === "task" ? (
                                   <SwimlaneIssueCard
