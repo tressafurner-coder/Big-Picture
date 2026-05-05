@@ -290,19 +290,19 @@ export default function ShowOnlyValidApiTokensPage() {
                   <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Name
                   </th>
-                  <th className={cn("px-4 py-2.5 font-semibold", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Status
                   </th>
-                  <th className={cn("px-4 py-2.5 font-semibold", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Creation date
                   </th>
-                  <th className={cn("px-4 py-2.5 font-semibold", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Expiration date
                   </th>
-                  <th className={cn("px-4 py-2.5 font-semibold", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Last access
                   </th>
-                  <th className="w-12 px-2 py-2.5" aria-hidden />
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)} aria-hidden />
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DFE1E6]">
@@ -323,7 +323,7 @@ export default function ShowOnlyValidApiTokensPage() {
                   return (
                     <Fragment key={group.id}>
                       <tr className={cn(ads.surfaceSubtle)}>
-                        <td colSpan={5} className="px-4 py-2">
+                        <td colSpan={5} className="px-6 py-2">
                           <button
                             type="button"
                             onClick={() => toggleGroup(group.id)}
@@ -343,7 +343,7 @@ export default function ShowOnlyValidApiTokensPage() {
                             {group.userName}
                           </button>
                         </td>
-                        <td className="px-2 py-2 text-right">
+                        <td className="px-6 py-2 text-right">
                           <button
                             type="button"
                             className="rounded p-1.5 text-[#626F86] hover:bg-[#EBECF0] hover:text-[#44546F]"
@@ -359,22 +359,22 @@ export default function ShowOnlyValidApiTokensPage() {
                               key={token.id}
                               className="bg-white hover:bg-[#FAFBFC]"
                             >
-                              <td className={cn("px-10 py-3 pl-14 font-medium", ads.body)}>
+                              <td className={cn("py-3 pl-14 pr-6 font-medium", ads.body)}>
                                 {token.name}
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-6 py-3">
                                 <TokenStatusBadge status={token.status} />
                               </td>
-                              <td className={cn("px-4 py-3 tabular-nums", ads.bodySubtle)}>
+                              <td className={cn("px-6 py-3 tabular-nums", ads.bodySubtle)}>
                                 {token.creationDate}
                               </td>
-                              <td className={cn("px-4 py-3 tabular-nums", ads.bodySubtle)}>
+                              <td className={cn("px-6 py-3 tabular-nums", ads.bodySubtle)}>
                                 {token.expirationDate}
                               </td>
-                              <td className={cn("px-4 py-3 tabular-nums", ads.bodySubtle)}>
+                              <td className={cn("px-6 py-3 tabular-nums", ads.bodySubtle)}>
                                 {token.lastAccess}
                               </td>
-                              <td className="px-2 py-3 text-right">
+                              <td className="px-6 py-3 text-right">
                                 <button
                                   type="button"
                                   className="rounded p-1.5 text-[#626F86] hover:bg-[#EBECF0] hover:text-[#44546F]"
