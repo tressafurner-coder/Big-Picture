@@ -233,9 +233,31 @@ export default function ShowOnlyValidApiTokensPage() {
           </div>
 
           <div
-            className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3"
+            className="flex flex-wrap items-center justify-end gap-5 border-b px-6 py-3"
             style={{ borderColor: "#DFE1E6" }}
           >
+            <div className="flex shrink-0 items-center gap-3">
+              <Tooltip content="Revoke all tokens on this instance">
+                <button
+                  type="button"
+                  disabled={!hasAnyTokens}
+                  onClick={handleRevokeAllTokens}
+                  className={cn(
+                    "rounded-[3px] border bg-white p-2 text-[#626F86] outline-none transition-colors",
+                    ads.border,
+                    "hover:bg-[#EBECF0] hover:text-[#44546F]",
+                    "disabled:pointer-events-none disabled:opacity-40",
+                  )}
+                  aria-label="Revoke all tokens"
+                >
+                  <Trash2 className="size-4" strokeWidth={2} aria-hidden />
+                </button>
+              </Tooltip>
+              <span
+                aria-hidden
+                className="h-5 w-px shrink-0 rounded-full bg-[#DFE1E6]"
+              />
+            </div>
             <label
               htmlFor="hide-invalid-tokens"
               className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#172B4D]"
@@ -248,34 +270,17 @@ export default function ShowOnlyValidApiTokensPage() {
                 aria-label="Hide all tokens with Invalid status"
               />
             </label>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleAddNewToken}
-                className={cn(
-                  "rounded-[3px] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white",
-                  ads.primaryInteractive,
-                  ads.primaryInteractiveHover,
-                )}
-              >
-                Add new token
-              </button>
-              <Tooltip content="Revoke all tokens on this instance">
-                <button
-                  type="button"
-                  disabled={!hasAnyTokens}
-                  onClick={handleRevokeAllTokens}
-                  className={cn(
-                    "rounded-[3px] p-2 text-[#626F86] outline-none transition-colors",
-                    "hover:bg-[#EBECF0] hover:text-[#44546F]",
-                    "disabled:pointer-events-none disabled:opacity-40",
-                  )}
-                  aria-label="Revoke all tokens"
-                >
-                  <Trash2 className="size-4" strokeWidth={2} aria-hidden />
-                </button>
-              </Tooltip>
-            </div>
+            <button
+              type="button"
+              onClick={handleAddNewToken}
+              className={cn(
+                "rounded-[3px] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white",
+                ads.primaryInteractive,
+                ads.primaryInteractiveHover,
+              )}
+            >
+              Add new token
+            </button>
           </div>
 
           <div className="overflow-x-auto px-0 pb-6 pt-2">
