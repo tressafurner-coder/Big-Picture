@@ -118,15 +118,11 @@ function cloneTokenGroups(source: UserTokenGroup[]): UserTokenGroup[] {
 function TokenStatusBadge({ status }: { status: TokenStatus }) {
   if (status === "invalid") {
     return (
-      <span className="inline-flex rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[#AE2E24] bg-[#FFECEB] ring-1 ring-inset ring-[#FFD5D2]">
-        Invalid
-      </span>
+      <span className={cn(ads.lozengeBase, ads.lozengeRemoved)}>Invalid</span>
     );
   }
   return (
-    <span className="inline-flex rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[#216E4E] bg-[#DCFFF1] ring-1 ring-inset ring-[#7EE2C1]">
-      Valid
-    </span>
+    <span className={cn(ads.lozengeBase, ads.lozengeSuccess)}>Valid</span>
   );
 }
 
@@ -211,14 +207,14 @@ export default function ShowOnlyValidApiTokensPage() {
           All prototypes
         </Link>
 
-        <div className={cn("overflow-hidden rounded-lg border shadow-sm", ads.border, ads.surface)}>
-          <div className="border-b px-6 py-6" style={{ borderColor: "#DFE1E6" }}>
+        <div className={ads.shellElevated}>
+          <div className={cn("border-b px-6 py-6", ads.border)}>
             <div className="flex items-center gap-2">
               <h1 className={cn(ads.titlePage, "text-2xl")}>API tokens</h1>
               <Tooltip content="Tokens authenticate BigPicture with other applications. Treat them like passwords.">
                 <button
                   type="button"
-                  className="rounded p-0.5 text-[#626F86] hover:bg-[#EBECF0] hover:text-[#44546F]"
+                  className={ads.iconButtonNeutral}
                   aria-label="About API tokens"
                 >
                   <HelpCircle className="size-4" strokeWidth={2} aria-hidden />
@@ -233,8 +229,10 @@ export default function ShowOnlyValidApiTokensPage() {
           </div>
 
           <div
-            className="flex flex-wrap items-center justify-end gap-5 border-b px-6 py-3"
-            style={{ borderColor: "#DFE1E6" }}
+            className={cn(
+              "flex flex-wrap items-center justify-end gap-5 border-b px-6 py-3",
+              ads.border,
+            )}
           >
             <div className="flex shrink-0 items-center gap-3">
               <Tooltip content="Revoke all tokens on this instance">
@@ -242,25 +240,20 @@ export default function ShowOnlyValidApiTokensPage() {
                   type="button"
                   disabled={!hasAnyTokens}
                   onClick={handleRevokeAllTokens}
-                  className={cn(
-                    "rounded-[3px] border bg-white p-2 text-[#626F86] outline-none transition-colors",
-                    ads.border,
-                    "hover:bg-[#EBECF0] hover:text-[#44546F]",
-                    "disabled:pointer-events-none disabled:opacity-40",
-                  )}
+                  className={ads.iconButtonBordered}
                   aria-label="Revoke all tokens"
                 >
                   <Trash2 className="size-4" strokeWidth={2} aria-hidden />
                 </button>
               </Tooltip>
-              <span
-                aria-hidden
-                className="h-5 w-px shrink-0 rounded-full bg-[#DFE1E6]"
-              />
+              <span aria-hidden className="h-5 w-px shrink-0 rounded-full bg-[#DFE1E6]" />
             </div>
             <label
               htmlFor="hide-invalid-tokens"
-              className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#172B4D]"
+              className={cn(
+                "flex cursor-pointer items-center gap-2 text-sm font-medium",
+                ads.bodyMedium,
+              )}
             >
               <span>Hide invalid tokens</span>
               <Switch
@@ -274,7 +267,7 @@ export default function ShowOnlyValidApiTokensPage() {
               type="button"
               onClick={handleAddNewToken}
               className={cn(
-                "rounded-[3px] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white",
+                ads.buttonPrimary,
                 ads.primaryInteractive,
                 ads.primaryInteractiveHover,
               )}
@@ -286,7 +279,7 @@ export default function ShowOnlyValidApiTokensPage() {
           <div className="overflow-x-auto px-0 pb-6 pt-2">
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
               <thead>
-                <tr className={cn("border-b", ads.border, ads.surfaceSubtle)}>
+                <tr className={ads.tableHeadRow}>
                   <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Name
                   </th>
@@ -305,7 +298,7 @@ export default function ShowOnlyValidApiTokensPage() {
                   <th className={cn("px-6 py-2.5 font-semibold", ads.overline)} aria-hidden />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DFE1E6]">
+              <tbody className={ads.tableDivideY}>
                 {displayGroups.length === 0 ? (
                   <tr>
                     <td
@@ -328,14 +321,16 @@ export default function ShowOnlyValidApiTokensPage() {
                             type="button"
                             onClick={() => toggleGroup(group.id)}
                             className={cn(
-                              "flex w-full items-center gap-2 rounded-[3px] px-2 py-1 text-left text-sm font-semibold text-[#172B4D]",
+                              "flex w-full items-center gap-2 rounded-[3px] px-2 py-1 text-left text-sm font-semibold",
+                              ads.ink800,
                               ads.surfaceHover,
                             )}
                             aria-expanded={open}
                           >
                             <ChevronDown
                               className={cn(
-                                "size-4 shrink-0 text-[#626F86] transition-transform",
+                                "size-4 shrink-0 transition-transform",
+                                ads.ink200,
                                 !open && "-rotate-90",
                               )}
                               aria-hidden
@@ -346,7 +341,7 @@ export default function ShowOnlyValidApiTokensPage() {
                         <td className="px-6 py-2 text-right">
                           <button
                             type="button"
-                            className="rounded p-1.5 text-[#626F86] hover:bg-[#EBECF0] hover:text-[#44546F]"
+                            className={ads.iconButtonNeutral}
                             aria-label={`Remove tokens for ${group.userName}`}
                           >
                             <Trash2 className="size-4" strokeWidth={2} aria-hidden />
@@ -355,10 +350,7 @@ export default function ShowOnlyValidApiTokensPage() {
                       </tr>
                       {open
                         ? group.tokens.map((token) => (
-                            <tr
-                              key={token.id}
-                              className="bg-white hover:bg-[#FAFBFC]"
-                            >
+                            <tr key={token.id} className={ads.tableRowBody}>
                               <td className={cn("py-3 pl-14 pr-6 font-medium", ads.body)}>
                                 {token.name}
                               </td>
@@ -377,7 +369,7 @@ export default function ShowOnlyValidApiTokensPage() {
                               <td className="px-6 py-3 text-right">
                                 <button
                                   type="button"
-                                  className="rounded p-1.5 text-[#626F86] hover:bg-[#EBECF0] hover:text-[#44546F]"
+                                  className={ads.iconButtonNeutral}
                                   aria-label={`Delete token ${token.name}`}
                                 >
                                   <Trash2 className="size-4" strokeWidth={2} aria-hidden />

@@ -48,4 +48,34 @@ export const ads = {
   /** Form control chrome — flat border, 3px radius (Atlaskit field), no elevation */
   fieldControl:
     "rounded-[3px] border border-[#DFE1E6] bg-white px-3 py-2 font-sans text-sm font-normal leading-5 text-[#172B4D] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[#626F86] focus:border-[#0C66E4] focus:ring-2 focus:ring-[#0C66E4]/20",
+
+  /**
+   * BigPicture admin-style primitives (Atlas Kit–aligned: lozenges, icon buttons,
+   * dynamic table rhythm).
+   */
+  /** Shell around dense tables / settings panels */
+  shellElevated:
+    "overflow-hidden rounded-[3px] border border-[#DFE1E6] bg-white shadow-sm",
+  /** Row separators inside tables — matches N40 */
+  tableDivideY: "divide-y divide-[#DFE1E6]",
+  /** Atlas lozenge — compact uppercase pill */
+  lozengeBase:
+    "inline-flex max-w-full items-center truncate rounded-[3px] px-2 py-0.5 font-sans text-[11px] font-bold uppercase leading-4 tracking-wide",
+  lozengeSuccess:
+    "text-[#216E4E] bg-[#DCFFF1] shadow-[inset_0_0_0_1px_#7EE2C1]",
+  lozengeRemoved:
+    "text-[#AE2E24] bg-[#FFECEB] shadow-[inset_0_0_0_1px_#FFD5D2]",
+  /** Neutral icon-only control — toolbar / table row actions */
+  iconButtonNeutral:
+    "inline-flex items-center justify-center rounded-[3px] p-1.5 text-[#626F86] outline-none transition-colors hover:bg-[#EBECF0] hover:text-[#44546F] focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40",
+  /** Subtle bordered icon button — destructive-adjacent cluster */
+  iconButtonBordered:
+    "inline-flex items-center justify-center rounded-[3px] border bg-white p-2 text-[#626F86] outline-none transition-colors border-[#DFE1E6] hover:bg-[#EBECF0] hover:text-[#44546F] focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40",
+  /** Primary CTA — bundles radius + type */
+  buttonPrimary:
+    "rounded-[3px] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white outline-none transition-colors shadow-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/40 focus-visible:ring-offset-2",
+  /** Standard interactive table body row */
+  tableRowBody: "bg-white transition-colors hover:bg-[#FAFBFC]",
+  /** Table header row surface */
+  tableHeadRow: "border-b border-[#DFE1E6] bg-[#FAFBFC]",
 } as const;
