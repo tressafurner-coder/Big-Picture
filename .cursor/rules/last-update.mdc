@@ -8,7 +8,7 @@ alwaysApply: true
 
 The **prototypes hub** table reads each row’s **Last updated** from **`src/app/generated/prototypeHubDates.ts`**.
 
-That file is **generated automatically** when you run **`npm run dev`** or **`npm run build`** (via `scripts/generate-prototype-hub-dates.mjs`): it uses **`git log`** over fixed paths per prototype (Teams demo vs chatbot files). If git is unavailable, it falls back to the **newest file mtime** among those paths.
+That file is **generated automatically** when you run **`npm run dev`** or **`npm run build`** (via `scripts/generate-prototype-hub-dates.mjs`): it uses **`git log`** over fixed paths per prototype (Teams demo vs chatbot files). If git is unavailable, it falls back to the **newest file mtime** among those paths. Display times are formatted in **UTC** so **GitHub Pages builds** match local regeneration (CI runs in UTC).
 
 **Do not edit `prototypeHubDates.ts` by hand.** Touch the relevant prototype sources and run dev/build so the stamp reflects real history.
 

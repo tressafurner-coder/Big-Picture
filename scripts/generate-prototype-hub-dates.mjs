@@ -49,15 +49,16 @@ const PROTOTYPES = {
   ],
 };
 
+/** Always UTC so GitHub Actions (UTC) and local dev show the same hub stamps. */
 function formatHubStamp(isoOrDate) {
   const d =
     typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
   if (Number.isNaN(d.getTime())) return "—";
-  const day = d.getDate();
-  const mon = MONTHS_SHORT[d.getMonth()];
-  const y = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
+  const day = d.getUTCDate();
+  const mon = MONTHS_SHORT[d.getUTCMonth()];
+  const y = d.getUTCFullYear();
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
   return `${day} ${mon} ${y}, ${hh}:${mm}`;
 }
 
