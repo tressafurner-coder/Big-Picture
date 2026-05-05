@@ -29,7 +29,7 @@ export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
   {
     id: "show-only-valid-api-tokens",
     name: "Show only valid API tokens",
-    status: "In progress",
+    status: "Done",
     summary:
       "Prototype place for UI or flows around filtering or validating API tokens.",
     lastEdited: SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
