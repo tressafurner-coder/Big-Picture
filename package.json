@@ -17,6 +17,7 @@
     "preview:pages": "node scripts/generate-prototype-hub-dates.mjs && node scripts/ensure-public-logo.mjs && GITHUB_PAGES=true vite build && node scripts/spa-github-pages.mjs && npm run build:independent && node scripts/copy-independent-dist.mjs && node scripts/vite-pages-preview.mjs"
   },
   "dependencies": {
+    "@atlaskit/lozenge": "^13.8.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",

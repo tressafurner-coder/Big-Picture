@@ -1,3 +1,4 @@
+import Lozenge from "@atlaskit/lozenge";
 import { ArrowLeft, ChevronDown, HelpCircle, Trash2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router";
@@ -118,11 +119,15 @@ function cloneTokenGroups(source: UserTokenGroup[]): UserTokenGroup[] {
 function TokenStatusBadge({ status }: { status: TokenStatus }) {
   if (status === "invalid") {
     return (
-      <span className={cn(ads.lozengeBase, ads.lozengeRemoved)}>Invalid</span>
+      <Lozenge appearance="removed" isBold>
+        Invalid
+      </Lozenge>
     );
   }
   return (
-    <span className={cn(ads.lozengeBase, ads.lozengeSuccess)}>Valid</span>
+    <Lozenge appearance="success" isBold>
+      Valid
+    </Lozenge>
   );
 }
 

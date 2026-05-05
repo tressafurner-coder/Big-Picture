@@ -58,13 +58,6 @@ export const ads = {
     "overflow-hidden rounded-[3px] border border-[#DFE1E6] bg-white shadow-sm",
   /** Row separators inside tables — matches N40 */
   tableDivideY: "divide-y divide-[#DFE1E6]",
-  /** Atlas lozenge — compact uppercase pill */
-  lozengeBase:
-    "inline-flex max-w-full items-center truncate rounded-[3px] px-2 py-0.5 font-sans text-[11px] font-bold uppercase leading-4 tracking-wide",
-  lozengeSuccess:
-    "text-[#216E4E] bg-[#DCFFF1] shadow-[inset_0_0_0_1px_#7EE2C1]",
-  lozengeRemoved:
-    "text-[#AE2E24] bg-[#FFECEB] shadow-[inset_0_0_0_1px_#FFD5D2]",
   /** Neutral icon-only control — toolbar / table row actions */
   iconButtonNeutral:
     "inline-flex items-center justify-center rounded-[3px] p-1.5 text-[#626F86] outline-none transition-colors hover:bg-[#EBECF0] hover:text-[#44546F] focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40",
