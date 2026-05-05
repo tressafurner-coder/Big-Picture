@@ -350,7 +350,6 @@ export default function MergingBoardGoalsPage() {
 
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [viewTaskWarnings, setViewTaskWarnings] = useState(false);
-  const [viewGoals, setViewGoals] = useState(false);
   const [viewGoalsCompactMode, setViewGoalsCompactMode] = useState(false);
   const viewTriggerRef = useRef<HTMLButtonElement>(null);
   const viewMenuRef = useRef<HTMLDivElement>(null);
@@ -825,9 +824,6 @@ export default function MergingBoardGoalsPage() {
                 onMouseEnter={openBoardFlyout}
                 onMouseLeave={scheduleCloseBoardFlyout}
               >
-                <div className="px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-wide text-[#44546F]">
-                  Board
-                </div>
                 {SWIMLANES_VIEW_OPTIONS.map((label) => (
                   <button
                     key={label}
@@ -1032,7 +1028,7 @@ export default function MergingBoardGoalsPage() {
                     aria-label="Board content scope"
                   >
                     <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#44546F]">
-                      Show on board
+                      Show on Swimlanes
                     </div>
                     <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
                       <input
@@ -1605,27 +1601,6 @@ export default function MergingBoardGoalsPage() {
                               )}
                             </span>
                             Task warnings
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                            onClick={() => setViewGoals((v) => !v)}
-                          >
-                            <span
-                              className={cn(
-                                "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
-                                viewGoals
-                                  ? "border-[#0C66E4] bg-[#0C66E4]"
-                                  : "border-[#DFE1E6] bg-white",
-                              )}
-                              aria-hidden
-                            >
-                              {viewGoals && (
-                                <Check className="size-3 text-white" strokeWidth={3} />
-                              )}
-                            </span>
-                            Goals
                           </button>
                         </>
                       )}

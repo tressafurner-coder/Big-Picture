@@ -1,6 +1,7 @@
 import {
   CHATBOT_LAST_UPDATE_DISPLAY,
   MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
+  SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
   TEST_PROTOTYPE_LAST_UPDATE_DISPLAY,
 } from "./generated/prototypeHubDates";
@@ -25,6 +26,16 @@ export type PrototypeEntry = {
 
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
+  {
+    id: "show-only-valid-api-tokens",
+    name: "Show only valid API tokens",
+    status: "In progress",
+    summary:
+      "Prototype place for UI or flows around filtering or validating API tokens.",
+    lastEdited: SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "show-only-valid-api-tokens",
+  },
   {
     id: "merging-board-goals",
     name: "Merging Board and Goals modules",

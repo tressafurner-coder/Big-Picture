@@ -11,6 +11,7 @@ import ChatbotPrototype from "./app/ChatbotPrototype.tsx";
 import ChatbotPrototypeV2 from "./app/ChatbotPrototypeV2.tsx";
 import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
 import MergingBoardGoalsPage from "./app/MergingBoardGoalsPage.tsx";
+import ShowOnlyValidApiTokensPage from "./app/ShowOnlyValidApiTokensPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
 import TeamsDemoPage from "./app/TeamsDemoPage.tsx";
 import TestPrototypePage from "./app/TestPrototypePage.tsx";
@@ -90,6 +91,14 @@ const hubRoutes = (
     <Route
       path="/merging-board-goals/"
       element={<MergingBoardGoalsPage />}
+    />
+    <Route
+      path="/show-only-valid-api-tokens"
+      element={<ShowOnlyValidApiTokensPage />}
+    />
+    <Route
+      path="/show-only-valid-api-tokens/"
+      element={<ShowOnlyValidApiTokensPage />}
     />
     {/* Legacy URL — keep bookmarks / shared links working */}
     <Route
