@@ -57,7 +57,6 @@ export default function PrototypesHub() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3 whitespace-nowrap">Last updated</th>
                 <th className="px-4 py-3">Open</th>
               </tr>
             </thead>
@@ -75,9 +74,6 @@ export default function PrototypesHub() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{p.summary}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 tabular-nums">
-                    {p.lastEdited}
-                  </td>
                   <td className="px-4 py-3">
                     {p.kind === "route" && p.routeSegment ? (
                       USE_HASH_ROUTER ? (
