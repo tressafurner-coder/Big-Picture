@@ -21,6 +21,7 @@ import {
   Flame,
   Gauge,
   HelpCircle,
+  Highlighter,
   List,
   MoreHorizontal,
   Plus,
@@ -63,6 +64,11 @@ const SWIMLANES_VIEW_OPTIONS = [
 ] as const;
 
 const ESSENTIALS_CARD_VIEWS = ["Essentials", "Hybrid", "Teams"] as const;
+const CAPACITY_METRIC_OPTIONS = [
+  "Story Points",
+  "Issue count",
+  "Original estimate",
+] as const;
 
 /** Teams toggled in Team → All — each visible row renders a swimlane + sprint columns. */
 const ALL_MENU_TEAMS = [
@@ -338,6 +344,17 @@ export default function MergingBoardGoalsPage() {
     left: number;
     minWidth: number;
   } | null>(null);
+  const [capacityMetricMenuOpen, setCapacityMetricMenuOpen] = useState(false);
+  const [capacityMetricSelection, setCapacityMetricSelection] = useState<
+    (typeof CAPACITY_METRIC_OPTIONS)[number]
+  >("Story Points");
+  const capacityMetricTriggerRef = useRef<HTMLButtonElement>(null);
+  const capacityMetricMenuRef = useRef<HTMLDivElement>(null);
+  const [capacityMetricMenuBox, setCapacityMetricMenuBox] = useState<{
+    top: number;
+    left: number;
+    minWidth: number;
+  } | null>(null);
 
   const [tasksMenuOpen, setTasksMenuOpen] = useState(false);
   const tasksTriggerRef = useRef<HTMLButtonElement>(null);
@@ -567,6 +584,30 @@ export default function MergingBoardGoalsPage() {
   }, [essentialsMenuOpen]);
 
   useEffect(() => {
+    if (!capacityMetricMenuOpen) {
+      setCapacityMetricMenuBox(null);
+      return;
+    }
+    const update = () => {
+      const el = capacityMetricTriggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setCapacityMetricMenuBox({
+        top: r.bottom + 4,
+        left: r.left,
+        minWidth: Math.max(r.width, 200),
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [capacityMetricMenuOpen]);
+
+  useEffect(() => {
     if (!tasksMenuOpen) {
       setTasksMenuBox(null);
       return;
@@ -620,6 +661,7 @@ export default function MergingBoardGoalsPage() {
       !teamMenuOpen &&
       !allMenuOpen &&
       !essentialsMenuOpen &&
+      !capacityMetricMenuOpen &&
       !tasksMenuOpen &&
       !viewMenuOpen &&
       !boardScopeMenuOpen
@@ -637,6 +679,8 @@ export default function MergingBoardGoalsPage() {
       if (allMenuRef.current?.contains(t)) return;
       if (essentialsTriggerRef.current?.contains(t)) return;
       if (essentialsMenuRef.current?.contains(t)) return;
+      if (capacityMetricTriggerRef.current?.contains(t)) return;
+      if (capacityMetricMenuRef.current?.contains(t)) return;
       if (tasksTriggerRef.current?.contains(t)) return;
       if (tasksMenuRef.current?.contains(t)) return;
       if (viewTriggerRef.current?.contains(t)) return;
@@ -645,6 +689,7 @@ export default function MergingBoardGoalsPage() {
       setTeamMenuOpen(false);
       setAllMenuOpen(false);
       setEssentialsMenuOpen(false);
+      setCapacityMetricMenuOpen(false);
       setTasksMenuOpen(false);
       setViewMenuOpen(false);
       setBoardScopeMenuOpen(false);
@@ -656,12 +701,14 @@ export default function MergingBoardGoalsPage() {
     teamMenuOpen,
     allMenuOpen,
     essentialsMenuOpen,
+    capacityMetricMenuOpen,
     tasksMenuOpen,
     viewMenuOpen,
     boardScopeMenuOpen,
   ]);
 
   const goalsOnlyBoardScope = !boardScope.tasks && boardScope.goals;
+  const isCapacityPlanningView = swimlanesSelection === "Capacity planning";
 
   useEffect(() => {
     if (goalsOnlyBoardScope) {
@@ -669,6 +716,19 @@ export default function MergingBoardGoalsPage() {
       setTasksMenuOpen(false);
     }
   }, [goalsOnlyBoardScope]);
+
+  useEffect(() => {
+    if (!isCapacityPlanningView) {
+      setCapacityMetricMenuOpen(false);
+    } else {
+      setTeamMenuOpen(false);
+      setAllMenuOpen(false);
+      setEssentialsMenuOpen(false);
+      setTasksMenuOpen(false);
+      setViewMenuOpen(false);
+      setBoardScopeMenuOpen(false);
+    }
+  }, [isCapacityPlanningView]);
 
   useEffect(() => {
     if (!(boardScope.tasks && boardScope.goals)) {
@@ -928,6 +988,7 @@ export default function MergingBoardGoalsPage() {
                   setTeamMenuOpen(false);
                   setAllMenuOpen(false);
                   setEssentialsMenuOpen(false);
+                  setCapacityMetricMenuOpen(false);
                   setTasksMenuOpen(false);
                   setViewMenuOpen(false);
                   setSwimlanesMenuOpen((open) => !open);
@@ -983,6 +1044,68 @@ export default function MergingBoardGoalsPage() {
                   document.body,
                 )}
             </div>
+            {isCapacityPlanningView ? (
+              <div className="relative">
+                <button
+                  ref={capacityMetricTriggerRef}
+                  type="button"
+                  aria-expanded={capacityMetricMenuOpen}
+                  aria-haspopup="listbox"
+                  onClick={() => {
+                    setSwimlanesMenuOpen(false);
+                    setCapacityMetricMenuOpen((open) => !open);
+                  }}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                    capacityMetricMenuOpen
+                      ? "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
+                      : "border-[#DFE1E6] bg-white text-[#172B4D] hover:bg-[#EBECF0]",
+                  )}
+                >
+                  {capacityMetricSelection}
+                  <ChevronDown
+                    className={cn(
+                      "size-4 shrink-0",
+                      capacityMetricMenuOpen ? "text-[#0C66E4]" : "opacity-70",
+                    )}
+                  />
+                </button>
+                {capacityMetricMenuOpen &&
+                  capacityMetricMenuBox &&
+                  createPortal(
+                    <div
+                      ref={capacityMetricMenuRef}
+                      className="fixed z-[500] min-w-[220px] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                      style={{
+                        top: capacityMetricMenuBox.top,
+                        left: capacityMetricMenuBox.left,
+                      }}
+                      role="listbox"
+                      aria-label="Capacity metric"
+                    >
+                      {CAPACITY_METRIC_OPTIONS.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          role="option"
+                          aria-selected={opt === capacityMetricSelection}
+                          className={cn(
+                            "flex w-full px-3 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]",
+                            opt === capacityMetricSelection && "font-medium",
+                          )}
+                          onClick={() => {
+                            setCapacityMetricSelection(opt);
+                            setCapacityMetricMenuOpen(false);
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>,
+                    document.body,
+                  )}
+              </div>
+            ) : (
             <div className="relative">
               <button
                 ref={boardScopeTriggerRef}
@@ -1062,6 +1185,8 @@ export default function MergingBoardGoalsPage() {
                   document.body,
                 )}
             </div>
+            )}
+            {!isCapacityPlanningView ? (
             <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-[#DFE1E6] bg-white">
               {goalsOnlyBoardScope ? (
                 <Tooltip
@@ -1149,8 +1274,10 @@ export default function MergingBoardGoalsPage() {
                 />
               </button>
             </div>
+            ) : null}
             {teamMenuOpen &&
               teamMenuBox &&
+              !isCapacityPlanningView &&
               !goalsOnlyBoardScope &&
               createPortal(
                 <div
@@ -1218,6 +1345,7 @@ export default function MergingBoardGoalsPage() {
               )}
             {allMenuOpen &&
               allMenuBox &&
+              !isCapacityPlanningView &&
               createPortal(
                 <div
                   ref={allMenuRef}
@@ -1285,6 +1413,7 @@ export default function MergingBoardGoalsPage() {
                 </div>,
                 document.body,
               )}
+            {!isCapacityPlanningView ? (
             <div className="relative">
               <button
                 ref={essentialsTriggerRef}
@@ -1377,6 +1506,8 @@ export default function MergingBoardGoalsPage() {
                   document.body,
                 )}
             </div>
+            ) : null}
+            {!isCapacityPlanningView ? (
             <div className="inline-flex items-center gap-1">
               {!goalsOnlyBoardScope && (
                 <div className="relative">
@@ -1609,29 +1740,42 @@ export default function MergingBoardGoalsPage() {
                   )}
               </div>
             </div>
+            ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-0.5 text-[#44546F]">
-            <button
-              type="button"
-              className="rounded-md p-1.5 hover:bg-[#EBECF0]"
-              aria-label="Search"
-            >
-              <Search className="size-4" strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              className="rounded-md p-1.5 hover:bg-[#EBECF0]"
-              aria-label="Filter"
-            >
-              <Filter className="size-4" strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              className="rounded-md p-1.5 hover:bg-[#EBECF0]"
-              aria-label="Undo"
-            >
-              <Undo2 className="size-4" strokeWidth={2} />
-            </button>
+            {isCapacityPlanningView ? (
+              <button
+                type="button"
+                className="rounded-md p-1.5 hover:bg-[#EBECF0]"
+                aria-label="Highlight changes"
+              >
+                <Highlighter className="size-4" strokeWidth={2} />
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="rounded-md p-1.5 hover:bg-[#EBECF0]"
+                  aria-label="Search"
+                >
+                  <Search className="size-4" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md p-1.5 hover:bg-[#EBECF0]"
+                  aria-label="Filter"
+                >
+                  <Filter className="size-4" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md p-1.5 hover:bg-[#EBECF0]"
+                  aria-label="Undo"
+                >
+                  <Undo2 className="size-4" strokeWidth={2} />
+                </button>
+              </>
+            )}
             <button
               type="button"
               className="rounded-md p-1.5 hover:bg-[#EBECF0]"
@@ -1711,9 +1855,18 @@ export default function MergingBoardGoalsPage() {
                 </div>
               </div>
 
-              {/* Sprint column headers */}
-              <div className="grid grid-cols-3 gap-2 border-b border-[#DFE1E6] px-4 py-3">
-                {(["Sprint 1", "Sprint 2", "Sprint 3"] as const).map((label) => (
+              {/* Sprint / stage headers */}
+              <div
+                className={cn(
+                  "gap-2 border-b border-[#DFE1E6] px-4 py-3",
+                  isCapacityPlanningView ? "grid grid-cols-2" : "grid grid-cols-3",
+                )}
+              >
+                {(
+                  isCapacityPlanningView
+                    ? (["Stage 1", "Stage 2"] as const)
+                    : (["Sprint 1", "Sprint 2", "Sprint 3"] as const)
+                ).map((label) => (
                   <div
                     key={label}
                     className="flex min-h-[40px] items-center gap-2 rounded-md bg-[#44546F] px-2.5 py-2 text-white"
@@ -1743,8 +1896,35 @@ export default function MergingBoardGoalsPage() {
                 ))}
               </div>
 
-              {/* Swimlanes — one block per team selected in Team → All */}
-              {ALL_MENU_TEAMS.filter((t) => allTeamFilter[t.id]).map((team) => (
+              {isCapacityPlanningView ? (
+                <section className="border-b border-[#DFE1E6] bg-white">
+                  <div className="grid grid-cols-2 gap-2 p-4 pt-3">
+                    {(["Stage 1", "Stage 2"] as const).map((stage) => (
+                      <div
+                        key={stage}
+                        className="overflow-hidden rounded-md border border-[#DFE1E6] bg-white"
+                      >
+                        {([
+                          { name: "Total", value: "0" },
+                          { name: "ALPHA", value: "0" },
+                        ] as const).map((row) => (
+                          <div
+                            key={row.name}
+                            className="flex items-center justify-between gap-2 border-b border-[#F1F2F4] px-3 py-2 text-sm last:border-b-0"
+                          >
+                            <span className="text-[#172B4D]">{row.name}</span>
+                            <span className="tabular-nums text-[#44546F]">
+                              {row.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : (
+              /* Swimlanes — one block per team selected in Team → All */
+              ALL_MENU_TEAMS.filter((t) => allTeamFilter[t.id]).map((team) => (
                 <section key={team.id} className="border-b border-[#DFE1E6]">
                   <div className="bg-white px-4 py-2">
                     <button
@@ -1906,22 +2086,24 @@ export default function MergingBoardGoalsPage() {
                     </div>
                   ) : null}
                 </section>
-              ))}
+              )))}
 
-              <div className="mt-auto px-4 py-3">
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-md border px-4 py-2 text-sm font-medium",
-                    ads.border,
-                    ads.surface,
-                    ads.bodyMedium,
-                    "hover:bg-[#F1F2F4]",
-                  )}
-                >
-                  Allocate Team
-                </button>
-              </div>
+              {!isCapacityPlanningView ? (
+                <div className="mt-auto px-4 py-3">
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-md border px-4 py-2 text-sm font-medium",
+                      ads.border,
+                      ads.surface,
+                      ads.bodyMedium,
+                      "hover:bg-[#F1F2F4]",
+                    )}
+                  >
+                    Allocate Team
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
 
