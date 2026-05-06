@@ -15,7 +15,7 @@ export default function GlobalTeamsPage() {
   return (
     <div className="min-h-dvh bg-[#F7F8F9]">
       <main className="mx-auto max-w-xl px-8 py-16">
-        <h1 className="text-xl font-semibold tracking-tight text-[#172B4D]">
+        <h1 className="text-xl font-normal tracking-tight text-[#172B4D]">
           Global teams
         </h1>
         <ul className="mt-10 space-y-5">

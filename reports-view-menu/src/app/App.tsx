@@ -30,7 +30,7 @@ export default function App() {
 
       <main className="mx-auto flex w-full max-w-4xl flex-col items-center px-4 py-10">
         <div className="mb-8 w-full max-w-2xl text-center">
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">
+          <h1 className="mb-2 text-3xl font-normal text-gray-900">
             Demo: View → Reports
           </h1>
           <p className="text-gray-600">

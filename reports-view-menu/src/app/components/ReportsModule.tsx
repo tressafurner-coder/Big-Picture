@@ -25,7 +25,7 @@ export function ReportsModule({
         className,
       )}
     >
-      <h2 className="text-lg font-semibold text-gray-900">Module</h2>
+      <h2 className="text-lg font-normal text-gray-900">Module</h2>
       <p className="mt-1 text-sm text-gray-500">
         Raporty reagują na menu View — główny przełącznik Reports oraz poszczególne
         pozycje w podmenu.
@@ -59,7 +59,7 @@ export function ReportsModule({
               key={r.id}
               className="rounded-lg border border-gray-100 bg-sky-50/80 px-4 py-5 shadow-xs"
             >
-              <h3 className="font-medium text-gray-900">{r.label}</h3>
+              <h3 className="font-normal text-gray-900">{r.label}</h3>
               <p className="mt-2 text-xs text-gray-500">
                 Placeholder treści raportu — podłącz tu wykres lub tabelę.
               </p>

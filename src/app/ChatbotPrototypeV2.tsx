@@ -33,14 +33,14 @@ export default function ChatbotPrototypeV2() {
     <div className="relative min-h-dvh w-full bg-gray-50">
       <Link
         to="/"
-        className="absolute left-4 top-4 z-10 text-sm font-medium text-blue-600 underline-offset-4 hover:underline"
+        className="absolute left-4 top-4 z-10 text-sm font-normal text-blue-600 underline-offset-4 hover:underline"
       >
         ← All prototypes
       </Link>
 
       <div className="flex min-h-dvh w-full items-center justify-center px-4">
         <div className="max-w-2xl text-center">
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">
+          <h1 className="mb-2 text-3xl font-normal text-gray-900">
             AI Chatbot for BigPicture (Version 2)
           </h1>
           <p className="text-gray-600">

@@ -24,26 +24,26 @@ export const ads = {
   sidebarBg: "bg-[#172B4D]",
   sidebarMuted: "text-[#B6C2CF]",
 
-  /** Page title — ~20px semibold (ADS heading small / page) */
-  titlePage: "font-sans text-xl font-semibold leading-6 tracking-tight text-[#172B4D]",
+  /** Page title — ~20px regular */
+  titlePage: "font-sans text-xl font-normal leading-6 tracking-tight text-[#172B4D]",
   /** Standard UI copy — 14px / 20px */
   body: "font-sans text-sm font-normal leading-5 text-[#172B4D]",
-  bodyMedium: "font-sans text-sm font-medium leading-5 text-[#172B4D]",
+  bodyMedium: "font-sans text-sm font-normal leading-5 text-[#172B4D]",
   bodySubtle: "font-sans text-sm leading-5 text-[#626F86]",
   /** Caption / helper — 12px / 16px */
   caption: "font-sans text-xs leading-4 text-[#626F86]",
-  /** Field label — ADS compact label (~11px semibold) */
+  /** Field label — compact label (~11px regular) */
   labelField:
-    "font-sans text-[11px] font-semibold leading-4 tracking-normal text-[#172B4D]",
+    "font-sans text-[11px] font-normal leading-4 tracking-normal text-[#172B4D]",
   /** Section overline / table header caps */
   overline:
-    "font-sans text-[11px] font-semibold uppercase leading-4 tracking-[0.06em] text-[#626F86]",
+    "font-sans text-[11px] font-normal uppercase leading-4 tracking-[0.06em] text-[#626F86]",
   /** Inline link */
-  linkUi: "font-sans text-sm font-medium text-[#0C66E4] underline-offset-4 hover:underline",
+  linkUi: "font-sans text-sm font-normal text-[#0C66E4] underline-offset-4 hover:underline",
   /** Tabs */
-  tabActive: "font-sans text-sm font-semibold leading-5 text-[#0C66E4]",
+  tabActive: "font-sans text-sm font-normal leading-5 text-[#0C66E4]",
   tabInactive:
-    "font-sans text-sm font-medium leading-5 text-[#626F86] hover:text-[#172B4D]",
+    "font-sans text-sm font-normal leading-5 text-[#626F86] hover:text-[#172B4D]",
 
   /** Form control chrome — flat border, 3px radius (Atlaskit field), no elevation */
   fieldControl:
@@ -66,7 +66,7 @@ export const ads = {
     "inline-flex items-center justify-center rounded-[3px] border bg-white p-2 text-[#626F86] outline-none transition-colors border-[#DFE1E6] hover:bg-[#EBECF0] hover:text-[#44546F] focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40",
   /** Primary CTA — bundles radius + type */
   buttonPrimary:
-    "rounded-[3px] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white outline-none transition-colors shadow-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/40 focus-visible:ring-offset-2",
+    "rounded-[3px] px-4 py-2 font-sans text-sm font-normal leading-5 text-white outline-none transition-colors shadow-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/40 focus-visible:ring-offset-2",
   /** Standard interactive table body row */
   tableRowBody: "bg-white transition-colors hover:bg-[#FAFBFC]",
   /** Table header row surface */

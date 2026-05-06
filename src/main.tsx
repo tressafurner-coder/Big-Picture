@@ -61,7 +61,7 @@ function UnknownPrototypeRoute() {
       </p>
       <Link
         to="/"
-        className="font-medium text-blue-600 underline-offset-4 hover:underline"
+        className="font-normal text-blue-600 underline-offset-4 hover:underline"
       >
         Back to all prototypes
       </Link>

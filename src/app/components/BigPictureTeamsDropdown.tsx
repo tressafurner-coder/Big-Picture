@@ -511,14 +511,14 @@ export function BigPictureTeamsDropdown({
             <div className="flex items-center gap-4 px-3 py-2">
               <button
                 type="button"
-                className="text-sm font-medium text-[#0C66E4] hover:underline"
+                className="text-sm font-normal text-[#0C66E4] hover:underline"
                 onClick={selectAllVisible}
               >
                 Select all
               </button>
               <button
                 type="button"
-                className="text-sm font-medium text-[#0C66E4] hover:underline"
+                className="text-sm font-normal text-[#0C66E4] hover:underline"
                 onClick={deselectVisible}
               >
                 Deselect all
@@ -544,7 +544,7 @@ export function BigPictureTeamsDropdown({
               <div className="py-1">
                 {filteredGroups.map((group, gi) => (
                   <div key={`${group.title}-${gi}`}>
-                    <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-[#626F86]">
+                    <div className="px-3 py-2 text-[11px] font-normal uppercase tracking-wide text-[#626F86]">
                       {group.title}
                     </div>
                     {group.items.map((item) => renderRow(item))}
@@ -563,7 +563,7 @@ export function BigPictureTeamsDropdown({
               Go to{" "}
               <Link
                 to={globalTeamsTo}
-                className="font-semibold text-[#0C66E4] underline-offset-2 hover:underline"
+                className="font-normal text-[#0C66E4] underline-offset-2 hover:underline"
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 Global teams
