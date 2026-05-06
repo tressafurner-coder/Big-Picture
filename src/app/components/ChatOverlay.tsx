@@ -85,6 +85,9 @@ const THINKING_STATUS_TEMPLATES = [
   "Finalizing the response...",
 ] as const;
 
+const THINKING_TYPE_SPEED_MS = 130;
+const THINKING_STATUS_PAUSE_MS = 2800;
+
 /** Fade + slight upward drift when prompts hide as the user types — avoids a hard cut. */
 const starterPromptListVariants = {
   show: {
@@ -207,6 +210,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatusIdx, setThinkingStatusIdx] = useState(0);
+  const [thinkingTypedLength, setThinkingTypedLength] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -289,15 +293,26 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   useEffect(() => {
     if (!isThinking) {
       setThinkingStatusIdx(0);
+      setThinkingTypedLength(0);
       return;
     }
-    const timer = window.setInterval(() => {
-      setThinkingStatusIdx(
-        (prev) => (prev + 1) % THINKING_STATUS_TEMPLATES.length,
-      );
-    }, 4000);
-    return () => window.clearInterval(timer);
-  }, [isThinking]);
+    const full = THINKING_STATUS_TEMPLATES[thinkingStatusIdx];
+    const delay =
+      thinkingTypedLength < full.length
+        ? THINKING_TYPE_SPEED_MS
+        : THINKING_STATUS_PAUSE_MS;
+    const timer = window.setTimeout(() => {
+      if (thinkingTypedLength < full.length) {
+        setThinkingTypedLength((len) => len + 1);
+      } else {
+        setThinkingStatusIdx(
+          (prev) => (prev + 1) % THINKING_STATUS_TEMPLATES.length,
+        );
+        setThinkingTypedLength(0);
+      }
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [isThinking, thinkingStatusIdx, thinkingTypedLength]);
 
   // Keep focus on the chat input whenever the conversation view is visible (skip while thinking — input is disabled)
   useEffect(() => {
@@ -1430,12 +1445,22 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                           transition={{ duration: 0.8, repeat: Infinity, delay: 0.4 }}
                         />
                       </div>
-                      <p
-                        className="mt-2 text-xs font-medium leading-snug text-gray-700"
-                        aria-live="polite"
-                      >
-                        {THINKING_STATUS_TEMPLATES[thinkingStatusIdx]}
-                      </p>
+                      <div className="mt-2 min-h-[18px]">
+                        <p className="text-xs font-medium leading-snug text-gray-700" aria-live="polite">
+                          {THINKING_STATUS_TEMPLATES[thinkingStatusIdx].slice(
+                            0,
+                            thinkingTypedLength,
+                          )}
+                          <motion.span
+                            className="ml-0.5 inline-block text-gray-500"
+                            aria-hidden
+                            animate={{ opacity: [1, 0, 1] }}
+                            transition={{ duration: 0.9, repeat: Infinity }}
+                          >
+                            |
+                          </motion.span>
+                        </p>
+                      </div>
                       <p className="mt-2 text-[11px] leading-snug text-gray-500">
                         Tip: you can minimize this window and come back when the answer is ready.
                       </p>
