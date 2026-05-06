@@ -40,6 +40,19 @@ const STARTER_PROMPTS = [
   "Summarize the main product releases from the recent cycle, highlighting key features and improvements.",
 ] as const;
 
+const THINKING_STATUS_TEMPLATES = [
+  "Processing your request...",
+  "Analyzing your question...",
+  "Gathering relevant information...",
+  "Preparing a response...",
+  "Working on the best answer...",
+  "Reviewing the available context...",
+  "Putting the answer together...",
+  "Checking what's most relevant...",
+  "Almost there...",
+  "Finalizing the response...",
+] as const;
+
 const TITLE_STOP_WORDS = new Set([
   "the",
   "and",
@@ -177,6 +190,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   const [activeConversationId, setActiveConversationId] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [thinkingStatusIdx, setThinkingStatusIdx] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -253,6 +267,19 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   useEffect(() => {
     if (!showHistory) setHistorySearchQuery("");
   }, [showHistory]);
+
+  useEffect(() => {
+    if (!isThinking) {
+      setThinkingStatusIdx(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setThinkingStatusIdx(
+        (prev) => (prev + 1) % THINKING_STATUS_TEMPLATES.length,
+      );
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [isThinking]);
 
   useEffect(() => {
     if (!showHistory) return;
@@ -612,7 +639,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
       onThinkingChange(false);
       console.log('ChatOverlay: Calling onNewResponse()');
       onNewResponse();
-    }, 2000);
+    }, 12000);
   };
 
   const handleNewConversation = () => {
@@ -1209,7 +1236,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
                       <img src={aiAvatarIcon} alt="AI" className="w-6 h-6 rounded-lg" />
                     </div>
-                    <div className="bg-gray-100 px-4 py-3 rounded-2xl">
+                    <div className="max-w-[92%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900">
                       <div className="flex gap-1.5">
                         <motion.div
                           className="w-1.5 h-1.5 bg-gray-300 rounded-full"
@@ -1227,6 +1254,15 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                           transition={{ duration: 0.8, repeat: Infinity, delay: 0.4 }}
                         />
                       </div>
+                      <p
+                        className="mt-2 text-xs font-medium leading-snug text-gray-700"
+                        aria-live="polite"
+                      >
+                        {THINKING_STATUS_TEMPLATES[thinkingStatusIdx]}
+                      </p>
+                      <p className="mt-2 text-[11px] leading-snug text-gray-500">
+                        Tip: you can minimize this window and come back when the answer is ready.
+                      </p>
                     </div>
                   </div>
                 )}
