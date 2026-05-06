@@ -35,6 +35,12 @@ export default defineConfig(({ command }) => ({
     },
   },
 
+  server: {
+    port: 5176,
+    strictPort: true,
+    open: false,
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 }))

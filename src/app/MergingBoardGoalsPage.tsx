@@ -29,15 +29,15 @@ import {
   Share2,
   Star,
   Target,
-  Ticket,
   Undo2,
   Users,
   Waves,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { RadioGroup } from "@atlaskit/radio";
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { BigPictureAppTile } from "./components/BigPictureAppTile";
 import { BigPictureModuleMark } from "./components/BigPictureModuleMark";
@@ -64,10 +64,262 @@ const SWIMLANES_VIEW_OPTIONS = [
 ] as const;
 
 const ESSENTIALS_CARD_VIEWS = ["Essentials", "Hybrid", "Teams"] as const;
-const CAPACITY_METRIC_OPTIONS = [
-  "Story Points",
-  "Issue count",
-  "Original estimate",
+const CAPACITY_METRIC_OPTIONS = ["Story Points", "Man-days"] as const;
+
+/** View → Tasks board scope (non–Goals-only): top-level rows match product chrome; flyouts are prototype stubs. */
+const VIEW_TASKS_MENU_KEYS = ["reports-type", "aggregation"] as const;
+type ViewTasksMenuKey = (typeof VIEW_TASKS_MENU_KEYS)[number];
+
+const VIEW_TASKS_MENU_LABEL: Record<ViewTasksMenuKey, string> = {
+  "reports-type": "Reports type",
+  aggregation: "Aggregation",
+};
+
+/** View flyout — section + radio row (Reports type / Aggregation panels). */
+function ViewFlyoutRadioRow({
+  name,
+  checked,
+  onChange,
+  label,
+}: {
+  name: string;
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded-[3px] px-2 py-1.5 hover:bg-[#F1F2F4]">
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onChange}
+        className="size-4 shrink-0 border-[#DFE1E6] accent-[#0C66E4]"
+      />
+      <span className="text-sm text-[#172B4D]">{label}</span>
+    </label>
+  );
+}
+
+function ViewFlyoutFieldset({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset className="border-b border-[#DFE1E6] px-2 pb-2 pt-2 last:border-b-0">
+      <legend className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
+        {title}
+      </legend>
+      <div className="flex flex-col">{children}</div>
+    </fieldset>
+  );
+}
+
+function ViewReportsTypeOptionsPanel({
+  chartType,
+  setChartType,
+  dataSource,
+  setDataSource,
+  groupBy,
+  setGroupBy,
+  countBy,
+  setCountBy,
+}: {
+  chartType: "pie" | "bar";
+  setChartType: (v: "pie" | "bar") => void;
+  dataSource: "tasks" | "capacities";
+  setDataSource: (v: "tasks" | "capacities") => void;
+  groupBy:
+    | "status"
+    | "assignee"
+    | "priority"
+    | "status-categories";
+  setGroupBy: (
+    v: "status" | "assignee" | "priority" | "status-categories",
+  ) => void;
+  countBy:
+    | "tasks"
+    | "story-points"
+    | "remaining-estimate"
+    | "original-estimate";
+  setCountBy: (
+    v:
+      | "tasks"
+      | "story-points"
+      | "remaining-estimate"
+      | "original-estimate",
+  ) => void;
+}) {
+  return (
+    <>
+      <ViewFlyoutFieldset title="Chart type">
+        <ViewFlyoutRadioRow
+          name="view-reports-chart"
+          label="Pie"
+          checked={chartType === "pie"}
+          onChange={() => setChartType("pie")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-chart"
+          label="Bar"
+          checked={chartType === "bar"}
+          onChange={() => setChartType("bar")}
+        />
+      </ViewFlyoutFieldset>
+      <ViewFlyoutFieldset title="Data source">
+        <ViewFlyoutRadioRow
+          name="view-reports-datasource"
+          label="Tasks"
+          checked={dataSource === "tasks"}
+          onChange={() => setDataSource("tasks")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-datasource"
+          label="Capacities"
+          checked={dataSource === "capacities"}
+          onChange={() => setDataSource("capacities")}
+        />
+      </ViewFlyoutFieldset>
+      <ViewFlyoutFieldset title="Group by">
+        <ViewFlyoutRadioRow
+          name="view-reports-groupby"
+          label="Status"
+          checked={groupBy === "status"}
+          onChange={() => setGroupBy("status")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-groupby"
+          label="Assignee"
+          checked={groupBy === "assignee"}
+          onChange={() => setGroupBy("assignee")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-groupby"
+          label="Priority"
+          checked={groupBy === "priority"}
+          onChange={() => setGroupBy("priority")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-groupby"
+          label="Status categories"
+          checked={groupBy === "status-categories"}
+          onChange={() => setGroupBy("status-categories")}
+        />
+      </ViewFlyoutFieldset>
+      <ViewFlyoutFieldset title="Count">
+        <ViewFlyoutRadioRow
+          name="view-reports-count"
+          label="Tasks"
+          checked={countBy === "tasks"}
+          onChange={() => setCountBy("tasks")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-count"
+          label="Story Points"
+          checked={countBy === "story-points"}
+          onChange={() => setCountBy("story-points")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-count"
+          label="Remaining Estimate"
+          checked={countBy === "remaining-estimate"}
+          onChange={() => setCountBy("remaining-estimate")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-reports-count"
+          label="Original Estimate"
+          checked={countBy === "original-estimate"}
+          onChange={() => setCountBy("original-estimate")}
+        />
+      </ViewFlyoutFieldset>
+    </>
+  );
+}
+
+function ViewAggregationOptionsPanel({
+  aggType,
+  setAggType,
+  aggregateBy,
+  setAggregateBy,
+}: {
+  aggType: "none" | "work-progress" | "capacity-allocation";
+  setAggType: (v: "none" | "work-progress" | "capacity-allocation") => void;
+  aggregateBy:
+    | "story-points"
+    | "original-estimates"
+    | "remaining-estimates";
+  setAggregateBy: (
+    v: "story-points" | "original-estimates" | "remaining-estimates",
+  ) => void;
+}) {
+  return (
+    <>
+      <ViewFlyoutFieldset title="Type">
+        <ViewFlyoutRadioRow
+          name="view-agg-type"
+          label="None"
+          checked={aggType === "none"}
+          onChange={() => setAggType("none")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-agg-type"
+          label="Work progress"
+          checked={aggType === "work-progress"}
+          onChange={() => setAggType("work-progress")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-agg-type"
+          label="Capacity allocation"
+          checked={aggType === "capacity-allocation"}
+          onChange={() => setAggType("capacity-allocation")}
+        />
+      </ViewFlyoutFieldset>
+      <ViewFlyoutFieldset title="Aggregate by">
+        <ViewFlyoutRadioRow
+          name="view-agg-by"
+          label="Story Points"
+          checked={aggregateBy === "story-points"}
+          onChange={() => setAggregateBy("story-points")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-agg-by"
+          label="Original Estimates"
+          checked={aggregateBy === "original-estimates"}
+          onChange={() => setAggregateBy("original-estimates")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-agg-by"
+          label="Remaining Estimates"
+          checked={aggregateBy === "remaining-estimates"}
+          onChange={() => setAggregateBy("remaining-estimates")}
+        />
+      </ViewFlyoutFieldset>
+    </>
+  );
+}
+
+/** View → Reports + Goals: top-level rows + flyout stubs (screen 2). */
+const VIEW_REPORTS_GOALS_MENU_KEYS = [
+  "achievement",
+  "reports-type",
+] as const;
+type ViewReportsGoalsMenuKey =
+  (typeof VIEW_REPORTS_GOALS_MENU_KEYS)[number];
+
+const VIEW_REPORTS_GOALS_MENU_LABEL: Record<
+  ViewReportsGoalsMenuKey,
+  string
+> = {
+  achievement: "Achievement",
+  "reports-type": "Reports Type",
+};
+
+const VIEW_REPORTS_GOALS_ACHIEVEMENT_SUBITEMS = [
+  "Portfolio rollup",
+  "Team breakdown",
 ] as const;
 
 /** Teams toggled in Team → All — each visible row renders a swimlane + sprint columns. */
@@ -125,6 +377,38 @@ function boardScopeLabel(scope: { tasks: boolean; goals: boolean }): string {
   return "Goals";
 }
 
+/** Compact Jira mark matching chrome header tile (`AtlassianTopBar`), scaled for menu rows. */
+function JiraIssueMenuIcon() {
+  return (
+    <span
+      className="flex size-4 shrink-0 items-center justify-center rounded-[3px] bg-[rgb(24,104,219)]"
+      aria-hidden
+    >
+      <svg width={11} height={11} viewBox="0 0 16 16" fill="none" className="text-white">
+        <path
+          d="M2 2h5.5v5.5H2V2zm0 6.5h5.5V14H2V8.5zM8.5 2H14v5.5H8.5V2z"
+          fill="currentColor"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/** Same composition as sidebar BP branding (`BigPictureAppTile` + `BigPictureModuleMark`), half scale for menus. */
+function BigPictureTaskMenuIcon() {
+  return (
+    <span
+      className="relative flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[3px]"
+      aria-hidden
+    >
+      <BigPictureAppTile className="pointer-events-none absolute inset-0 size-4" />
+      <span className="relative z-[1] flex items-center justify-center">
+        <BigPictureModuleMark height={11} />
+      </span>
+    </span>
+  );
+}
+
 function SwimlaneIssueCard({
   issueKey,
   title,
@@ -166,6 +450,206 @@ function SwimlaneIssueCard({
           {title}
         </span>
       </div>
+    </div>
+  );
+}
+
+/** Reports donut statuses: gray / blue / green (prototype aggregation). */
+const REPORT_VIEW_STATUS_ORDER = [
+  { label: "Not started", color: "#8993A4" },
+  { label: "In progress", color: "#0C66E4" },
+  { label: "Done", color: "#36B37E" },
+] as const;
+
+function reportViewSegmentsForTasks(
+  tasks: { issueKey: string }[],
+): { label: string; color: string; count: number }[] {
+  if (tasks.length === 0) return [];
+  if (tasks.length === 1) {
+    return [{ label: "Not started", color: "#8993A4", count: 1 }];
+  }
+  const counts = new Map<string, { color: string; count: number }>();
+  for (const t of tasks) {
+    let h = 0;
+    for (let i = 0; i < t.issueKey.length; i++) {
+      h = (h * 31 + t.issueKey.charCodeAt(i)) >>> 0;
+    }
+    const meta = REPORT_VIEW_STATUS_ORDER[h % REPORT_VIEW_STATUS_ORDER.length];
+    const cur = counts.get(meta.label);
+    if (cur) cur.count += 1;
+    else counts.set(meta.label, { color: meta.color, count: 1 });
+  }
+  return REPORT_VIEW_STATUS_ORDER.filter((m) => counts.has(m.label)).map(
+    (m) => ({
+      label: m.label,
+      color: counts.get(m.label)!.color,
+      count: counts.get(m.label)!.count,
+    }),
+  );
+}
+
+function reportViewConicGradient(
+  segments: { color: string; count: number }[],
+  total: number,
+): string {
+  if (segments.length === 0) return "conic-gradient(#DFE1E6 0deg 360deg)";
+  let deg = 0;
+  const stops: string[] = [];
+  for (const s of segments) {
+    const sweep = (s.count / total) * 360;
+    const next = deg + sweep;
+    stops.push(`${s.color} ${deg}deg ${next}deg`);
+    deg = next;
+  }
+  return `conic-gradient(${stops.join(", ")})`;
+}
+
+/** Goal completion % → same three-status palette as task donuts. */
+const REPORT_GOAL_BUCKET_ORDER = [
+  {
+    label: "Not started",
+    color: "#8993A4",
+    test: (p: number) => p < 34,
+  },
+  {
+    label: "In progress",
+    color: "#0C66E4",
+    test: (p: number) => p >= 34 && p < 85,
+  },
+  { label: "Done", color: "#36B37E", test: (p: number) => p >= 85 },
+] as const;
+
+function reportViewSegmentsForGoals(
+  goals: { percent: number }[],
+): { label: string; color: string; count: number }[] {
+  if (goals.length === 0) return [];
+  const counts = new Map<string, { color: string; count: number }>();
+  for (const g of goals) {
+    const bucket =
+      REPORT_GOAL_BUCKET_ORDER.find((b) => b.test(g.percent)) ??
+      REPORT_GOAL_BUCKET_ORDER[REPORT_GOAL_BUCKET_ORDER.length - 1];
+    const cur = counts.get(bucket.label);
+    if (cur) cur.count += 1;
+    else counts.set(bucket.label, { color: bucket.color, count: 1 });
+  }
+  return REPORT_GOAL_BUCKET_ORDER.filter((b) => counts.has(b.label)).map(
+    (b) => ({
+      label: b.label,
+      color: counts.get(b.label)!.color,
+      count: counts.get(b.label)!.count,
+    }),
+  );
+}
+
+/** Reports view: shared donut + legend (centered row). */
+function SwimlaneReportDonutCard({
+  segments,
+  total,
+  ariaLabel,
+}: {
+  segments: { label: string; color: string; count: number }[];
+  total: number;
+  ariaLabel: string;
+}) {
+  const singleSlice = segments.length === 1 && segments[0].count === total;
+
+  return (
+    <div
+      className="flex min-h-[138px] w-full rounded-md border border-[#DFE1E6] bg-[#F4F5F7] px-3 py-3 shadow-[0_1px_2px_rgba(9,30,66,0.15)]"
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <div className="flex w-full flex-wrap items-center justify-center gap-4">
+        <div className="relative grid size-[112px] shrink-0 place-items-center">
+          <div
+            className="col-start-1 row-start-1 size-[112px] rounded-full"
+            style={{
+              background: reportViewConicGradient(segments, total),
+            }}
+          />
+          <div className="col-start-1 row-start-1 flex size-[72px] flex-col items-center justify-center rounded-full bg-[#F4F5F7] text-center">
+            <span className="text-[11px] font-medium leading-none text-[#626F86]">
+              Total
+            </span>
+            <span className="text-lg font-semibold leading-tight text-[#172B4D]">
+              {total}
+            </span>
+          </div>
+          {singleSlice ? (
+            <span
+              className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold leading-none text-white drop-shadow-[0_1px_1px_rgba(9,30,66,0.45)]"
+              aria-hidden
+            >
+              100%
+            </span>
+          ) : null}
+        </div>
+        <ul className="flex shrink-0 flex-col gap-1.5 py-0.5">
+          {segments.map((s) => (
+            <li
+              key={s.label}
+              className="flex items-center gap-2 text-sm text-[#172B4D]"
+            >
+              <span
+                className="size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: s.color }}
+                aria-hidden
+              />
+              <span>{s.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function SwimlaneSprintTasksDonut({
+  tasks,
+}: {
+  tasks: { issueKey: string }[];
+}) {
+  const segments = reportViewSegmentsForTasks(tasks);
+  const total = tasks.length;
+  return (
+    <SwimlaneReportDonutCard
+      segments={segments}
+      total={total}
+      ariaLabel={`Task status breakdown: ${segments.map((s) => `${s.label} ${Math.round((s.count / total) * 100)}%`).join(", ")}`}
+    />
+  );
+}
+
+function SwimlaneSprintGoalsDonut({
+  goals,
+}: {
+  goals: { percent: number }[];
+}) {
+  const segments = reportViewSegmentsForGoals(goals);
+  const total = goals.length;
+  return (
+    <SwimlaneReportDonutCard
+      segments={segments}
+      total={total}
+      ariaLabel={`Goal health breakdown: ${segments.map((s) => `${s.label} ${Math.round((s.count / total) * 100)}%`).join(", ")}`}
+    />
+  );
+}
+
+/** Reports view: empty sprint cell — no task cards ⇒ no status donut. */
+function ReportsSprintTasksReportEmptySplash({ sprintCol }: { sprintCol: number }) {
+  return (
+    <div
+      className="flex min-h-[138px] w-full items-center justify-center rounded-md border border-[#DFE1E6] bg-white px-4 text-center shadow-[0_1px_2px_rgba(9,30,66,0.06)]"
+      role="status"
+      aria-live="polite"
+      aria-label={`Sprint ${sprintCol}: no tasks to report`}
+    >
+      <p className="text-[15px] leading-normal text-[#172B4D]">
+        No tasks to report. Display a chart by{" "}
+        <span className="font-medium text-[#0C66E4]">adding the first one</span>
+        .
+      </p>
     </div>
   );
 }
@@ -366,10 +850,50 @@ export default function MergingBoardGoalsPage() {
   } | null>(null);
 
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
-  const [viewTaskWarnings, setViewTaskWarnings] = useState(false);
   const [viewGoalsCompactMode, setViewGoalsCompactMode] = useState(false);
+  const [viewTasksFlyout, setViewTasksFlyout] = useState<ViewTasksMenuKey | null>(
+    null,
+  );
+  const [viewTasksFlyoutBox, setViewTasksFlyoutBox] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const viewTriggerRef = useRef<HTMLButtonElement>(null);
   const viewMenuRef = useRef<HTMLDivElement>(null);
+  const viewReportsFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewAggregationFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewTasksFlyoutMenuRef = useRef<HTMLDivElement>(null);
+
+  const [viewTasksReportsChartType, setViewTasksReportsChartType] = useState<
+    "pie" | "bar"
+  >("pie");
+  const [viewTasksReportsDataSource, setViewTasksReportsDataSource] =
+    useState<"tasks" | "capacities">("tasks");
+  const [viewTasksReportsGroupBy, setViewTasksReportsGroupBy] = useState<
+    "status" | "assignee" | "priority" | "status-categories"
+  >("status");
+  const [viewTasksReportsCountBy, setViewTasksReportsCountBy] = useState<
+    | "tasks"
+    | "story-points"
+    | "remaining-estimate"
+    | "original-estimate"
+  >("tasks");
+  const [viewTasksAggType, setViewTasksAggType] = useState<
+    "none" | "work-progress" | "capacity-allocation"
+  >("capacity-allocation");
+  const [viewTasksAggAggregateBy, setViewTasksAggAggregateBy] = useState<
+    "story-points" | "original-estimates" | "remaining-estimates"
+  >("story-points");
+
+  const [viewReportsGoalsFlyout, setViewReportsGoalsFlyout] =
+    useState<ViewReportsGoalsMenuKey | null>(null);
+  const [viewReportsGoalsFlyoutBox, setViewReportsGoalsFlyoutBox] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const viewRgAchievementFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewRgReportsTypeFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewReportsGoalsFlyoutMenuRef = useRef<HTMLDivElement>(null);
   const [viewMenuBox, setViewMenuBox] = useState<{
     top: number;
     left: number;
@@ -392,6 +916,7 @@ export default function MergingBoardGoalsPage() {
   const [swimlaneStacks, setSwimlaneStacks] = useState<SwimlaneCellStacks>(
     createInitialSwimlaneStacks,
   );
+
   const [sprintMixPicker, setSprintMixPicker] = useState<{
     teamId: TeamFilterId;
     sprintIdx: 0 | 1 | 2;
@@ -595,7 +1120,7 @@ export default function MergingBoardGoalsPage() {
       setCapacityMetricMenuBox({
         top: r.bottom + 4,
         left: r.left,
-        minWidth: Math.max(r.width, 200),
+        minWidth: Math.max(r.width, 240),
       });
     };
     update();
@@ -656,6 +1181,59 @@ export default function MergingBoardGoalsPage() {
   }, [viewMenuOpen]);
 
   useEffect(() => {
+    if (!viewMenuOpen) {
+      setViewTasksFlyout(null);
+      setViewReportsGoalsFlyout(null);
+    }
+  }, [viewMenuOpen]);
+
+  useEffect(() => {
+    if (!viewMenuOpen || !viewReportsGoalsFlyout) {
+      setViewReportsGoalsFlyoutBox(null);
+      return;
+    }
+    const update = () => {
+      const el =
+        viewReportsGoalsFlyout === "achievement"
+          ? viewRgAchievementFlyoutTriggerRef.current
+          : viewRgReportsTypeFlyoutTriggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setViewReportsGoalsFlyoutBox({ top: r.top, left: r.right + 4 });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [viewMenuOpen, viewReportsGoalsFlyout]);
+
+  useEffect(() => {
+    if (!viewMenuOpen || !viewTasksFlyout) {
+      setViewTasksFlyoutBox(null);
+      return;
+    }
+    const update = () => {
+      const el =
+        viewTasksFlyout === "reports-type"
+          ? viewReportsFlyoutTriggerRef.current
+          : viewAggregationFlyoutTriggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setViewTasksFlyoutBox({ top: r.top, left: r.right + 4 });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [viewMenuOpen, viewTasksFlyout]);
+
+  useEffect(() => {
     if (
       !swimlanesMenuOpen &&
       !teamMenuOpen &&
@@ -685,6 +1263,8 @@ export default function MergingBoardGoalsPage() {
       if (tasksMenuRef.current?.contains(t)) return;
       if (viewTriggerRef.current?.contains(t)) return;
       if (viewMenuRef.current?.contains(t)) return;
+      if (viewTasksFlyoutMenuRef.current?.contains(t)) return;
+      if (viewReportsGoalsFlyoutMenuRef.current?.contains(t)) return;
       setSwimlanesMenuOpen(false);
       setTeamMenuOpen(false);
       setAllMenuOpen(false);
@@ -693,6 +1273,10 @@ export default function MergingBoardGoalsPage() {
       setTasksMenuOpen(false);
       setViewMenuOpen(false);
       setBoardScopeMenuOpen(false);
+      setViewTasksFlyout(null);
+      setViewTasksFlyoutBox(null);
+      setViewReportsGoalsFlyout(null);
+      setViewReportsGoalsFlyoutBox(null);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -708,27 +1292,40 @@ export default function MergingBoardGoalsPage() {
   ]);
 
   const goalsOnlyBoardScope = !boardScope.tasks && boardScope.goals;
+  /** Any Goals on swimlanes ⇒ Team row grouping is fixed (same as Goals-only UX). */
+  const teamSwimlaneLocked = boardScope.goals;
   const isCapacityPlanningView = swimlanesSelection === "Capacity planning";
+  const isReportsView = swimlanesSelection === "Reports view";
+  const reportsGoalsToolbar = isReportsView && goalsOnlyBoardScope;
 
   useEffect(() => {
-    if (goalsOnlyBoardScope) {
-      setTeamMenuOpen(false);
-      setTasksMenuOpen(false);
+    if (!reportsGoalsToolbar) {
+      setViewReportsGoalsFlyout(null);
+      setViewReportsGoalsFlyoutBox(null);
     }
-  }, [goalsOnlyBoardScope]);
+  }, [reportsGoalsToolbar]);
 
   useEffect(() => {
-    if (!isCapacityPlanningView) {
-      setCapacityMetricMenuOpen(false);
-    } else {
+    if (teamSwimlaneLocked) {
       setTeamMenuOpen(false);
-      setAllMenuOpen(false);
+      setTeamDimension("team");
+    }
+  }, [teamSwimlaneLocked]);
+
+  useEffect(() => {
+    if (boardScope.goals) {
       setEssentialsMenuOpen(false);
-      setTasksMenuOpen(false);
-      setViewMenuOpen(false);
-      setBoardScopeMenuOpen(false);
     }
-  }, [isCapacityPlanningView]);
+  }, [boardScope.goals]);
+
+  /** Reports view: only Tasks or Goals (no combined scope). */
+  useEffect(() => {
+    if (!isReportsView) return;
+    setBoardScope((prev) => {
+      if (prev.tasks && prev.goals) return { tasks: true, goals: false };
+      return prev;
+    });
+  }, [isReportsView]);
 
   useEffect(() => {
     if (!(boardScope.tasks && boardScope.goals)) {
@@ -746,6 +1343,25 @@ export default function MergingBoardGoalsPage() {
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [sprintMixPicker]);
+
+  useEffect(() => {
+    if (goalsOnlyBoardScope) {
+      setTasksMenuOpen(false);
+    }
+  }, [goalsOnlyBoardScope]);
+
+  useEffect(() => {
+    if (!isCapacityPlanningView) {
+      setCapacityMetricMenuOpen(false);
+    } else {
+      setTeamMenuOpen(false);
+      setAllMenuOpen(false);
+      setEssentialsMenuOpen(false);
+      setTasksMenuOpen(false);
+      setViewMenuOpen(false);
+      setBoardScopeMenuOpen(false);
+    }
+  }, [isCapacityPlanningView]);
 
   const appendJiraTask = (teamId: TeamFilterId, sprintIdx: 0 | 1 | 2) => {
     setSwimlaneStacks((prev) => {
@@ -1050,13 +1666,15 @@ export default function MergingBoardGoalsPage() {
                   ref={capacityMetricTriggerRef}
                   type="button"
                   aria-expanded={capacityMetricMenuOpen}
-                  aria-haspopup="listbox"
+                  aria-haspopup="dialog"
+                  aria-controls="capacity-metric-units-dropdown"
                   onClick={() => {
                     setSwimlanesMenuOpen(false);
+                    setBoardScopeMenuOpen(false);
                     setCapacityMetricMenuOpen((open) => !open);
                   }}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                    "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm outline-none transition-colors",
                     capacityMetricMenuOpen
                       ? "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
                       : "border-[#DFE1E6] bg-white text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1075,32 +1693,44 @@ export default function MergingBoardGoalsPage() {
                   createPortal(
                     <div
                       ref={capacityMetricMenuRef}
-                      className="fixed z-[500] min-w-[220px] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                      id="capacity-metric-units-dropdown"
+                      className="fixed z-[500] min-w-[240px] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
                       style={{
                         top: capacityMetricMenuBox.top,
                         left: capacityMetricMenuBox.left,
                       }}
-                      role="listbox"
-                      aria-label="Capacity metric"
                     >
-                      {CAPACITY_METRIC_OPTIONS.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          role="option"
-                          aria-selected={opt === capacityMetricSelection}
-                          className={cn(
-                            "flex w-full px-3 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]",
-                            opt === capacityMetricSelection && "font-medium",
-                          )}
-                          onClick={() => {
-                            setCapacityMetricSelection(opt);
+                      <div
+                        id="capacity-metric-units-heading"
+                        className="px-4 pb-2 pt-1 text-[11px] uppercase tracking-wide text-[#626F86]"
+                      >
+                        Units
+                      </div>
+                      <div className="px-3 pb-1">
+                        <RadioGroup
+                          name="capacity-metric-units"
+                          value={capacityMetricSelection}
+                          labelId="capacity-metric-units-heading"
+                          testId="capacity-metric-units"
+                          onChange={(e) => {
+                            const next = e.currentTarget.value;
+                            if (
+                              (CAPACITY_METRIC_OPTIONS as readonly string[]).includes(
+                                next,
+                              )
+                            ) {
+                              setCapacityMetricSelection(
+                                next as (typeof CAPACITY_METRIC_OPTIONS)[number],
+                              );
+                            }
                             setCapacityMetricMenuOpen(false);
                           }}
-                        >
-                          {opt}
-                        </button>
-                      ))}
+                          options={CAPACITY_METRIC_OPTIONS.map((opt) => ({
+                            label: opt,
+                            value: opt,
+                          }))}
+                        />
+                      </div>
                     </div>,
                     document.body,
                   )}
@@ -1153,34 +1783,73 @@ export default function MergingBoardGoalsPage() {
                     <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#44546F]">
                       Show on Swimlanes
                     </div>
-                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
-                      <input
-                        type="checkbox"
-                        className="size-4 shrink-0 rounded border-[#DFE1E6] text-[#0C66E4] accent-[#0C66E4]"
-                        checked={boardScope.tasks}
-                        onChange={() => {
-                          setBoardScope((prev) => {
-                            if (prev.tasks && !prev.goals) return prev;
-                            return { ...prev, tasks: !prev.tasks };
-                          });
-                        }}
-                      />
-                      <span className="text-sm text-[#172B4D]">Tasks</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
-                      <input
-                        type="checkbox"
-                        className="size-4 shrink-0 rounded border-[#DFE1E6] text-[#0C66E4] accent-[#0C66E4]"
-                        checked={boardScope.goals}
-                        onChange={() => {
-                          setBoardScope((prev) => {
-                            if (!prev.tasks && prev.goals) return prev;
-                            return { ...prev, goals: !prev.goals };
-                          });
-                        }}
-                      />
-                      <span className="text-sm text-[#172B4D]">Goals</span>
-                    </label>
+                    {isReportsView ? (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={cn(
+                            "flex w-full px-3 py-2 text-left text-sm hover:bg-[#F1F2F4]",
+                            boardScope.tasks && !boardScope.goals
+                              ? "bg-[#E9F2FF] font-medium text-[#0C66E4]"
+                              : "text-[#172B4D]",
+                          )}
+                          onClick={() => {
+                            setBoardScope({ tasks: true, goals: false });
+                            setBoardScopeMenuOpen(false);
+                          }}
+                        >
+                          Tasks
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={cn(
+                            "flex w-full px-3 py-2 text-left text-sm hover:bg-[#F1F2F4]",
+                            boardScope.goals && !boardScope.tasks
+                              ? "bg-[#E9F2FF] font-medium text-[#0C66E4]"
+                              : "text-[#172B4D]",
+                          )}
+                          onClick={() => {
+                            setBoardScope({ tasks: false, goals: true });
+                            setBoardScopeMenuOpen(false);
+                          }}
+                        >
+                          Goals
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
+                          <input
+                            type="checkbox"
+                            className="size-4 shrink-0 rounded border-[#DFE1E6] text-[#0C66E4] accent-[#0C66E4]"
+                            checked={boardScope.tasks}
+                            onChange={() => {
+                              setBoardScope((prev) => {
+                                if (prev.tasks && !prev.goals) return prev;
+                                return { ...prev, tasks: !prev.tasks };
+                              });
+                            }}
+                          />
+                          <span className="text-sm text-[#172B4D]">Tasks</span>
+                        </label>
+                        <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
+                          <input
+                            type="checkbox"
+                            className="size-4 shrink-0 rounded border-[#DFE1E6] text-[#0C66E4] accent-[#0C66E4]"
+                            checked={boardScope.goals}
+                            onChange={() => {
+                              setBoardScope((prev) => {
+                                if (!prev.tasks && prev.goals) return prev;
+                                return { ...prev, goals: !prev.goals };
+                              });
+                            }}
+                          />
+                          <span className="text-sm text-[#172B4D]">Goals</span>
+                        </label>
+                      </>
+                    )}
                   </div>,
                   document.body,
                 )}
@@ -1188,15 +1857,19 @@ export default function MergingBoardGoalsPage() {
             )}
             {!isCapacityPlanningView ? (
             <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-[#DFE1E6] bg-white">
-              {goalsOnlyBoardScope ? (
+              {teamSwimlaneLocked ? (
                 <Tooltip
-                  content="Goals are set per team"
+                  content={
+                    reportsGoalsToolbar
+                      ? "Team swimlanes are fixed in Reports (Goals)"
+                      : "Goals are set per team"
+                  }
                   className="inline-flex shrink-0 cursor-default"
                 >
                   <div
                     ref={teamTriggerRef}
-                    className="flex cursor-default select-none items-center gap-1.5 border-0 border-r border-[#DFE1E6] bg-white px-2 py-1.5 text-sm font-medium text-[#626F86]"
-                    aria-label="Team swimlane (fixed in Goals mode)"
+                    className="flex cursor-default select-none items-center gap-1.5 border-0 border-r border-[#DFE1E6] bg-white px-2 py-1.5 text-sm text-[#626F86]"
+                    aria-label="Team swimlane (fixed while Goals are shown)"
                   >
                     <Waves
                       className="size-4 shrink-0 text-[#44546F]"
@@ -1222,7 +1895,7 @@ export default function MergingBoardGoalsPage() {
                     setTeamMenuOpen((open) => !open);
                   }}
                   className={cn(
-                    "flex items-center gap-1.5 border-0 border-r border-[#DFE1E6] px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                    "flex items-center gap-1.5 border-0 border-r border-[#DFE1E6] px-2 py-1.5 text-sm outline-none transition-colors",
                     teamMenuOpen
                       ? "bg-[#E9F2FF] text-[#0C66E4]"
                       : "bg-white text-[#172B4D] hover:bg-[#F7F8F9]",
@@ -1259,7 +1932,7 @@ export default function MergingBoardGoalsPage() {
                   setAllMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "flex items-center gap-1 border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                  "flex items-center gap-1 border-0 px-2 py-1.5 text-sm outline-none transition-colors",
                   allMenuOpen
                     ? "bg-[#E9F2FF] text-[#0C66E4]"
                     : "bg-white text-[#172B4D] hover:bg-[#F7F8F9]",
@@ -1278,7 +1951,7 @@ export default function MergingBoardGoalsPage() {
             {teamMenuOpen &&
               teamMenuBox &&
               !isCapacityPlanningView &&
-              !goalsOnlyBoardScope &&
+              !teamSwimlaneLocked &&
               createPortal(
                 <div
                   ref={teamMenuRef}
@@ -1413,7 +2086,9 @@ export default function MergingBoardGoalsPage() {
                 </div>,
                 document.body,
               )}
-            {!isCapacityPlanningView ? (
+            {!isCapacityPlanningView &&
+            boardScope.tasks &&
+            !(isReportsView && boardScope.goals) ? (
             <div className="relative">
               <button
                 ref={essentialsTriggerRef}
@@ -1430,7 +2105,7 @@ export default function MergingBoardGoalsPage() {
                   setEssentialsMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm outline-none transition-colors",
                   essentialsMenuOpen
                     ? "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
                     : "border-[#DFE1E6] bg-white text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1497,7 +2172,7 @@ export default function MergingBoardGoalsPage() {
                     />
                     <button
                       type="button"
-                      className="w-full px-3 py-2 text-left text-sm font-medium text-[#0C66E4] hover:bg-[#F1F2F4]"
+                      className="w-full px-3 py-2 text-left text-sm text-[#0C66E4] hover:bg-[#F1F2F4]"
                       onClick={() => setEssentialsMenuOpen(false)}
                     >
                       Manage card views
@@ -1557,11 +2232,7 @@ export default function MergingBoardGoalsPage() {
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
                           onClick={() => setTasksMenuOpen(false)}
                         >
-                          <Ticket
-                            className="size-4 shrink-0 text-[#0052CC]"
-                            strokeWidth={2}
-                            aria-hidden
-                          />
+                          <JiraIssueMenuIcon />
                           Jira issue
                         </button>
                         <button
@@ -1570,9 +2241,7 @@ export default function MergingBoardGoalsPage() {
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
                           onClick={() => setTasksMenuOpen(false)}
                         >
-                          <span className="relative block size-4 shrink-0 overflow-hidden rounded-[3px]">
-                            <BigPictureAppTile className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 scale-[0.5]" />
-                          </span>
+                          <BigPictureTaskMenuIcon />
                           BigPicture task
                         </button>
                         <div
@@ -1608,10 +2277,15 @@ export default function MergingBoardGoalsPage() {
                     setViewMenuOpen((open) => !open);
                   }}
                   className={cn(
-                    "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
+                    "inline-flex items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
+                    reportsGoalsToolbar ? "border" : "border-0",
                     viewMenuOpen
-                      ? "bg-[#E9F2FF] text-[#0C66E4]"
-                      : "bg-transparent text-[#172B4D] hover:bg-[#EBECF0]",
+                      ? reportsGoalsToolbar
+                        ? "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
+                        : "bg-[#E9F2FF] text-[#0C66E4]"
+                      : reportsGoalsToolbar
+                        ? "border-transparent bg-transparent text-[#172B4D] hover:bg-[#EBECF0]"
+                        : "bg-transparent text-[#172B4D] hover:bg-[#EBECF0]",
                   )}
                 >
                   View
@@ -1629,80 +2303,122 @@ export default function MergingBoardGoalsPage() {
                       }}
                       role="menu"
                       aria-label={
-                        goalsOnlyBoardScope
-                          ? "View options (Goals mode)"
-                          : "View options"
+                        reportsGoalsToolbar
+                          ? "View options (Reports, Goals)"
+                          : goalsOnlyBoardScope
+                            ? "View options (Goals mode)"
+                            : "View options"
                       }
                     >
                       {goalsOnlyBoardScope ? (
-                        <>
-                          {(
-                            [
-                              "Sort",
-                              "Achievement",
-                              "Heatmap mode",
-                            ] as const
-                          ).map((item) => (
+                        reportsGoalsToolbar ? (
+                          <>
+                            {VIEW_REPORTS_GOALS_MENU_KEYS.map((key) => (
+                              <button
+                                key={key}
+                                ref={
+                                  key === "achievement"
+                                    ? viewRgAchievementFlyoutTriggerRef
+                                    : viewRgReportsTypeFlyoutTriggerRef
+                                }
+                                type="button"
+                                role="menuitem"
+                                aria-expanded={
+                                  viewReportsGoalsFlyout === key
+                                }
+                                aria-haspopup="menu"
+                                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                                onClick={() =>
+                                  setViewReportsGoalsFlyout((prev) =>
+                                    prev === key ? null : key,
+                                  )
+                                }
+                              >
+                                <span>
+                                  {VIEW_REPORTS_GOALS_MENU_LABEL[key]}
+                                </span>
+                                <ChevronRight
+                                  className="size-4 shrink-0 text-[#626F86]"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                              </button>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            {(
+                              [
+                                "Sort",
+                                "Achievement",
+                                "Heatmap mode",
+                              ] as const
+                            ).map((item) => (
+                              <button
+                                key={item}
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                                onClick={() => setViewMenuOpen(false)}
+                              >
+                                <span>{item}</span>
+                                <ChevronRight
+                                  className="size-4 shrink-0 text-[#626F86]"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                              </button>
+                            ))}
                             <button
-                              key={item}
                               type="button"
                               role="menuitem"
-                              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                              onClick={() => setViewMenuOpen(false)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                              onClick={() =>
+                                setViewGoalsCompactMode((v) => !v)
+                              }
                             >
-                              <span>{item}</span>
-                              <ChevronRight
-                                className="size-4 shrink-0 text-[#626F86]"
-                                strokeWidth={2}
+                              <span
+                                className={cn(
+                                  "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+                                  viewGoalsCompactMode
+                                    ? "border-[#0C66E4] bg-[#0C66E4]"
+                                    : "border-[#DFE1E6] bg-white",
+                                )}
                                 aria-hidden
-                              />
+                              >
+                                {viewGoalsCompactMode && (
+                                  <Check
+                                    className="size-3 text-white"
+                                    strokeWidth={3}
+                                  />
+                                )}
+                              </span>
+                              Compact mode
                             </button>
-                          ))}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                            onClick={() =>
-                              setViewGoalsCompactMode((v) => !v)
-                            }
-                          >
-                            <span
-                              className={cn(
-                                "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
-                                viewGoalsCompactMode
-                                  ? "border-[#0C66E4] bg-[#0C66E4]"
-                                  : "border-[#DFE1E6] bg-white",
-                              )}
-                              aria-hidden
-                            >
-                              {viewGoalsCompactMode && (
-                                <Check
-                                  className="size-3 text-white"
-                                  strokeWidth={3}
-                                />
-                              )}
-                            </span>
-                            Compact mode
-                          </button>
-                        </>
+                          </>
+                        )
                       ) : (
                         <>
-                          {(
-                            [
-                              "Dependencies",
-                              "Sort",
-                              "Layout",
-                              "Aggregation",
-                            ] as const
-                          ).map((item) => (
+                          {VIEW_TASKS_MENU_KEYS.map((key) => (
                             <button
-                              key={item}
+                              key={key}
+                              ref={
+                                key === "reports-type"
+                                  ? viewReportsFlyoutTriggerRef
+                                  : viewAggregationFlyoutTriggerRef
+                              }
                               type="button"
                               role="menuitem"
+                              aria-expanded={viewTasksFlyout === key}
+                              aria-haspopup="menu"
                               className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                              onClick={() => setViewMenuOpen(false)}
+                              onClick={() =>
+                                setViewTasksFlyout((prev) =>
+                                  prev === key ? null : key,
+                                )
+                              }
                             >
-                              <span>{item}</span>
+                              <span>{VIEW_TASKS_MENU_LABEL[key]}</span>
                               <ChevronRight
                                 className="size-4 shrink-0 text-[#626F86]"
                                 strokeWidth={2}
@@ -1710,30 +2426,103 @@ export default function MergingBoardGoalsPage() {
                               />
                             </button>
                           ))}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                            onClick={() =>
-                              setViewTaskWarnings((v) => !v)
-                            }
-                          >
-                            <span
-                              className={cn(
-                                "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
-                                viewTaskWarnings
-                                  ? "border-[#0C66E4] bg-[#0C66E4]"
-                                  : "border-[#DFE1E6] bg-white",
-                              )}
-                              aria-hidden
-                            >
-                              {viewTaskWarnings && (
-                                <Check className="size-3 text-white" strokeWidth={3} />
-                              )}
-                            </span>
-                            Task warnings
-                          </button>
                         </>
+                      )}
+                    </div>,
+                    document.body,
+                  )}
+                {!goalsOnlyBoardScope &&
+                  viewTasksFlyout &&
+                  viewTasksFlyoutBox &&
+                  createPortal(
+                    <div
+                      ref={viewTasksFlyoutMenuRef}
+                      className="fixed z-[250] min-w-[272px] max-w-[320px] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                      style={{
+                        top: viewTasksFlyoutBox.top,
+                        left: viewTasksFlyoutBox.left,
+                      }}
+                      role="dialog"
+                      aria-label={VIEW_TASKS_MENU_LABEL[viewTasksFlyout]}
+                    >
+                      {viewTasksFlyout === "reports-type" ? (
+                        <ViewReportsTypeOptionsPanel
+                          chartType={viewTasksReportsChartType}
+                          setChartType={setViewTasksReportsChartType}
+                          dataSource={viewTasksReportsDataSource}
+                          setDataSource={setViewTasksReportsDataSource}
+                          groupBy={viewTasksReportsGroupBy}
+                          setGroupBy={setViewTasksReportsGroupBy}
+                          countBy={viewTasksReportsCountBy}
+                          setCountBy={setViewTasksReportsCountBy}
+                        />
+                      ) : (
+                        <ViewAggregationOptionsPanel
+                          aggType={viewTasksAggType}
+                          setAggType={setViewTasksAggType}
+                          aggregateBy={viewTasksAggAggregateBy}
+                          setAggregateBy={setViewTasksAggAggregateBy}
+                        />
+                      )}
+                    </div>,
+                    document.body,
+                  )}
+                {reportsGoalsToolbar &&
+                  viewReportsGoalsFlyout &&
+                  viewReportsGoalsFlyoutBox &&
+                  createPortal(
+                    <div
+                      ref={viewReportsGoalsFlyoutMenuRef}
+                      className={cn(
+                        "fixed z-[250] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]",
+                        viewReportsGoalsFlyout === "reports-type"
+                          ? "min-w-[272px] max-w-[320px]"
+                          : "min-w-[200px]",
+                      )}
+                      style={{
+                        top: viewReportsGoalsFlyoutBox.top,
+                        left: viewReportsGoalsFlyoutBox.left,
+                      }}
+                      role={
+                        viewReportsGoalsFlyout === "reports-type"
+                          ? "dialog"
+                          : "menu"
+                      }
+                      aria-label={
+                        VIEW_REPORTS_GOALS_MENU_LABEL[
+                          viewReportsGoalsFlyout
+                        ]
+                      }
+                    >
+                      {viewReportsGoalsFlyout === "achievement" ? (
+                        VIEW_REPORTS_GOALS_ACHIEVEMENT_SUBITEMS.map(
+                          (label) => (
+                            <button
+                              key={label}
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                              onClick={() => {
+                                setViewMenuOpen(false);
+                                setViewReportsGoalsFlyout(null);
+                                setViewReportsGoalsFlyoutBox(null);
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ),
+                        )
+                      ) : (
+                        <ViewReportsTypeOptionsPanel
+                          chartType={viewTasksReportsChartType}
+                          setChartType={setViewTasksReportsChartType}
+                          dataSource={viewTasksReportsDataSource}
+                          setDataSource={setViewTasksReportsDataSource}
+                          groupBy={viewTasksReportsGroupBy}
+                          setGroupBy={setViewTasksReportsGroupBy}
+                          countBy={viewTasksReportsCountBy}
+                          setCountBy={setViewTasksReportsCountBy}
+                        />
                       )}
                     </div>,
                     document.body,
@@ -1948,63 +2737,128 @@ export default function MergingBoardGoalsPage() {
                   </div>
                   {swimlaneExpanded[team.id] ? (
                     <div className="grid grid-cols-3 gap-2 bg-white p-4 pt-3">
-                      {(() => {
+                      {[1, 2, 3].map((col) => {
+                        const sprintIdx = (col - 1) as 0 | 1 | 2;
+                        const rawStack = swimlaneStacks[team.id][sprintIdx];
+                        const visibleStack = rawStack.filter((item) => {
+                          if (boardScope.tasks && boardScope.goals)
+                            return true;
+                          if (boardScope.tasks) return item.type === "task";
+                          return item.type === "goal";
+                        });
+                        const sprintTasks = visibleStack.filter(
+                          (
+                            item,
+                          ): item is Extract<
+                            SwimlaneStackItem,
+                            { type: "task" }
+                          > => item.type === "task",
+                        );
+                        const sprintGoals = visibleStack.filter(
+                          (
+                            item,
+                          ): item is Extract<
+                            SwimlaneStackItem,
+                            { type: "goal" }
+                          > => item.type === "goal",
+                        );
+                        const goalsPercentsForReport =
+                          isReportsView && boardScope.goals
+                            ? sprintGoals.length > 0
+                              ? sprintGoals.map((g) => ({ percent: g.percent }))
+                              : [
+                                  {
+                                    percent:
+                                      swimlaneGoalForSprint(
+                                        team.id,
+                                        sprintIdx,
+                                      ).percent,
+                                  },
+                                ]
+                            : [];
                         const tasksGoalsMix =
-                          boardScope.tasks && boardScope.goals;
-                        return [1, 2, 3].map((col) => {
-                          const sprintIdx = (col - 1) as 0 | 1 | 2;
-                          const rawStack = swimlaneStacks[team.id][sprintIdx];
-                          const visibleStack = rawStack.filter((item) => {
-                            if (boardScope.tasks && boardScope.goals)
-                              return true;
-                            if (boardScope.tasks) return item.type === "task";
-                            return item.type === "goal";
-                          });
-                          const showMixPicker =
-                            tasksGoalsMix &&
-                            sprintMixPicker?.teamId === team.id &&
-                            sprintMixPicker.sprintIdx === sprintIdx;
-                          const addLabel = tasksGoalsMix
-                            ? `${team.label}, Sprint ${col}: add Task or Goal`
-                            : boardScope.tasks
-                              ? `${team.label}, Sprint ${col}: add Jira task`
-                              : `${team.label}, Sprint ${col}: add goal`;
+                          boardScope.tasks &&
+                          boardScope.goals &&
+                          !isReportsView;
+                        const showMixPicker =
+                          tasksGoalsMix &&
+                          sprintMixPicker?.teamId === team.id &&
+                          sprintMixPicker.sprintIdx === sprintIdx;
+                        const addLabel = tasksGoalsMix
+                          ? `${team.label}, Sprint ${col}: add Task or Goal`
+                          : boardScope.tasks
+                            ? `${team.label}, Sprint ${col}: add Jira task`
+                            : `${team.label}, Sprint ${col}: add goal`;
 
-                          const onAddClick = () => {
-                            if (tasksGoalsMix) {
-                              setSprintMixPicker((prev) =>
-                                prev?.teamId === team.id &&
-                                prev.sprintIdx === sprintIdx
-                                  ? null
-                                  : {
-                                      teamId: team.id,
-                                      sprintIdx,
-                                    },
-                              );
-                              return;
-                            }
-                            if (boardScope.tasks) {
-                              appendJiraTask(team.id, sprintIdx);
-                            } else {
-                              appendGoalItem(team.id, sprintIdx);
-                            }
-                          };
-
-                          return (
-                            <div
-                              key={col}
-                              className="flex min-h-0 flex-col gap-2"
-                            >
-                              {boardScope.goals ? (
-                                <SwimlaneGoalBar
-                                  sprintLabel={`Sprint ${col}`}
-                                  {...swimlaneGoalForSprint(
-                                    team.id,
+                        const onAddClick = () => {
+                          if (isReportsView) return;
+                          if (tasksGoalsMix) {
+                            setSprintMixPicker((prev) =>
+                              prev?.teamId === team.id &&
+                              prev.sprintIdx === sprintIdx
+                                ? null
+                                : {
+                                    teamId: team.id,
                                     sprintIdx,
-                                  )}
-                                />
-                              ) : null}
-                              {visibleStack.map((item) =>
+                                  },
+                            );
+                            return;
+                          }
+                          if (boardScope.tasks) {
+                            appendJiraTask(team.id, sprintIdx);
+                          } else {
+                            appendGoalItem(team.id, sprintIdx);
+                          }
+                        };
+
+                        return (
+                          <div
+                            key={col}
+                            className="flex min-h-0 flex-col gap-2"
+                          >
+                            {boardScope.goals && !isReportsView ? (
+                              <SwimlaneGoalBar
+                                sprintLabel={`Sprint ${col}`}
+                                {...swimlaneGoalForSprint(
+                                  team.id,
+                                  sprintIdx,
+                                )}
+                              />
+                            ) : null}
+                            {boardScope.tasks &&
+                            isReportsView &&
+                            sprintTasks.length > 0 ? (
+                              <SwimlaneSprintTasksDonut tasks={sprintTasks} />
+                            ) : null}
+                            {boardScope.tasks &&
+                            isReportsView &&
+                            sprintTasks.length === 0 ? (
+                              <ReportsSprintTasksReportEmptySplash
+                                sprintCol={col}
+                              />
+                            ) : null}
+                            {boardScope.goals &&
+                            isReportsView &&
+                            goalsPercentsForReport.length > 0 ? (
+                              <SwimlaneSprintGoalsDonut
+                                goals={goalsPercentsForReport}
+                              />
+                            ) : null}
+                            {visibleStack
+                              .filter(
+                                (item) =>
+                                  !(
+                                    boardScope.tasks &&
+                                    isReportsView &&
+                                    item.type === "task"
+                                  ) &&
+                                  !(
+                                    boardScope.goals &&
+                                    isReportsView &&
+                                    item.type === "goal"
+                                  ),
+                              )
+                              .map((item) =>
                                 item.type === "task" ? (
                                   <SwimlaneIssueCard
                                     key={item.id}
@@ -2019,6 +2873,7 @@ export default function MergingBoardGoalsPage() {
                                   />
                                 ),
                               )}
+                            {!isReportsView ? (
                               <div
                                 className="relative shrink-0"
                                 ref={
@@ -2042,11 +2897,7 @@ export default function MergingBoardGoalsPage() {
                                         setSprintMixPicker(null);
                                       }}
                                     >
-                                      <Ticket
-                                        className="size-4 shrink-0 text-[#0052CC]"
-                                        strokeWidth={2}
-                                        aria-hidden
-                                      />
+                                      <JiraIssueMenuIcon />
                                       Jira task
                                     </button>
                                     <button
@@ -2079,10 +2930,10 @@ export default function MergingBoardGoalsPage() {
                                   />
                                 </button>
                               </div>
-                            </div>
-                          );
-                        });
-                      })()}
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : null}
                 </section>
