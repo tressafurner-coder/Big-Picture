@@ -119,13 +119,13 @@ function cloneTokenGroups(source: UserTokenGroup[]): UserTokenGroup[] {
 function TokenStatusBadge({ status }: { status: TokenStatus }) {
   if (status === "invalid") {
     return (
-      <Lozenge appearance="removed">
+      <Lozenge appearance="removed" isBold>
         Invalid
       </Lozenge>
     );
   }
   return (
-    <Lozenge appearance="success">
+    <Lozenge appearance="success" isBold>
       Valid
     </Lozenge>
   );
@@ -203,7 +203,7 @@ export default function ShowOnlyValidApiTokensPage() {
         <Link
           to="/"
           className={cn(
-            "mb-6 inline-flex items-center gap-2 text-sm font-normal",
+            "mb-6 inline-flex items-center gap-2 text-sm font-medium",
             ads.link,
             ads.linkHover,
           )}
@@ -256,7 +256,7 @@ export default function ShowOnlyValidApiTokensPage() {
             <label
               htmlFor="hide-invalid-tokens"
               className={cn(
-                "flex cursor-pointer items-center gap-2 text-sm font-normal",
+                "flex cursor-pointer items-center gap-2 text-sm font-medium",
                 ads.bodyMedium,
               )}
             >
@@ -285,22 +285,22 @@ export default function ShowOnlyValidApiTokensPage() {
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
               <thead>
                 <tr className={ads.tableHeadRow}>
-                  <th className={cn("px-6 py-2.5 font-normal", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Name
                   </th>
-                  <th className={cn("px-6 py-2.5 font-normal", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Status
                   </th>
-                  <th className={cn("px-6 py-2.5 font-normal", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Creation date
                   </th>
-                  <th className={cn("px-6 py-2.5 font-normal", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Expiration date
                   </th>
-                  <th className={cn("px-6 py-2.5 font-normal", ads.overline)}>
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)}>
                     Last access
                   </th>
-                  <th className={cn("px-6 py-2.5 font-normal", ads.overline)} aria-hidden />
+                  <th className={cn("px-6 py-2.5 font-semibold", ads.overline)} aria-hidden />
                 </tr>
               </thead>
               <tbody className={ads.tableDivideY}>
@@ -326,7 +326,7 @@ export default function ShowOnlyValidApiTokensPage() {
                             type="button"
                             onClick={() => toggleGroup(group.id)}
                             className={cn(
-                              "flex w-full items-center gap-2 rounded-[3px] px-2 py-1 text-left text-sm font-normal",
+                              "flex w-full items-center gap-2 rounded-[3px] px-2 py-1 text-left text-sm font-semibold",
                               ads.ink800,
                               ads.surfaceHover,
                             )}
@@ -356,7 +356,7 @@ export default function ShowOnlyValidApiTokensPage() {
                       {open
                         ? group.tokens.map((token) => (
                             <tr key={token.id} className={ads.tableRowBody}>
-                              <td className={cn("py-3 pl-14 pr-6 font-normal", ads.body)}>
+                              <td className={cn("py-3 pl-14 pr-6 font-medium", ads.body)}>
                                 {token.name}
                               </td>
                               <td className="px-6 py-3">

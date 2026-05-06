@@ -51,7 +51,7 @@ export function AtlassianTopBar({
               />
             </svg>
           </div>
-          <span className="text-sm font-normal leading-5 text-[#172B4D]">
+          <span className="text-sm font-semibold leading-5 text-[#172B4D]">
             Jira
           </span>
         </div>
@@ -91,7 +91,7 @@ export function AtlassianTopBar({
 
       <button
         type="button"
-        className="inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[3px] bg-[rgb(24,104,219)] px-2.5 text-sm font-normal leading-5 text-white hover:bg-[rgb(21,88,188)] active:bg-[rgb(0,87,217)]"
+        className="inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[3px] bg-[rgb(24,104,219)] px-2.5 text-sm font-medium leading-5 text-white hover:bg-[rgb(21,88,188)] active:bg-[rgb(0,87,217)]"
       >
         <Plus className="size-4" strokeWidth={2} aria-hidden />
         Create
@@ -106,7 +106,7 @@ export function AtlassianTopBar({
           aria-label="Notifications"
         >
           <Bell className="size-5" strokeWidth={2} aria-hidden />
-          <span className="absolute -right-0.5 -top-0.5 flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#DE350B] px-[5px] text-[10px] font-normal leading-none text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#DE350B] px-[5px] text-[10px] font-bold leading-none text-white">
             9+
           </span>
         </button>
@@ -129,7 +129,7 @@ export function AtlassianTopBar({
           className="ml-1 flex size-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-200 via-rose-100 to-amber-100 ring-2 ring-white hover:opacity-95"
           aria-label="User profile"
         >
-          <span className="text-[11px] font-normal text-[#42526E]">K</span>
+          <span className="text-[11px] font-semibold text-[#42526E]">K</span>
         </button>
       </div>
     </header>

@@ -344,7 +344,7 @@ function MetricsCard({
               )}
             >
               <AccordionTrigger className="border-b px-3 py-2.5 text-left hover:no-underline [&[data-state=open]>svg:last-child]:rotate-180">
-                <span className={cn("font-normal", ads.bodyMedium)}>
+                <span className={cn("font-medium", ads.bodyMedium)}>
                   Field contexts
                 </span>
               </AccordionTrigger>
@@ -400,7 +400,7 @@ function MetricsCard({
               )}
             >
               <AccordionTrigger className="border-b px-3 py-2.5 text-left hover:no-underline [&[data-state=open]>svg:last-child]:rotate-180">
-                <span className={cn("font-normal", ads.bodyMedium)}>Values</span>
+                <span className={cn("font-medium", ads.bodyMedium)}>Values</span>
               </AccordionTrigger>
               <AccordionContent className="pb-0 pt-0">
                 <div className="flex flex-wrap items-end justify-between gap-3 border-b px-3 py-3">
@@ -450,7 +450,7 @@ function MetricsCard({
                       onRemoveJiraContext(activeContext.id);
                     }}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[3px] border px-2.5 font-sans text-sm font-normal disabled:cursor-not-allowed disabled:opacity-40",
+                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[3px] border px-2.5 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40",
                       ads.border,
                       ads.surface,
                       ads.danger,
@@ -477,8 +477,8 @@ function MetricsCard({
                           ads.overline,
                         )}
                       >
-                        <th className="px-4 py-2 font-normal">Value name</th>
-                        <th className="px-4 py-2 font-normal">Value</th>
+                        <th className="px-4 py-2 font-semibold">Value name</th>
+                        <th className="px-4 py-2 font-semibold">Value</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#DFE1E6]">
@@ -551,8 +551,8 @@ function MetricsCard({
                   ads.overline,
                 )}
               >
-                <th className="px-4 py-2 font-normal">Value name</th>
-                <th className="px-4 py-2 font-normal">Value</th>
+                <th className="px-4 py-2 font-semibold">Value name</th>
+                <th className="px-4 py-2 font-semibold">Value</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#DFE1E6]">
@@ -838,13 +838,13 @@ export default function RiskManagementJiraMappingPage() {
           ads.sidebarMuted,
         )}
       >
-        <div className="flex h-14 items-center border-b border-white/10 px-4 text-sm font-normal tracking-tight text-white">
+        <div className="flex h-14 items-center border-b border-white/10 px-4 text-sm font-semibold tracking-tight text-white">
           BigPicture Enterprise
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 p-2 text-sm leading-5">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-[3px] px-3 py-2 text-left font-normal hover:bg-white/10"
+            className="flex items-center gap-2 rounded-[3px] px-3 py-2 text-left font-medium hover:bg-white/10"
           >
             <Flag className="size-4 shrink-0 opacity-80" />
             Strategic Areas
@@ -866,13 +866,13 @@ export default function RiskManagementJiraMappingPage() {
           <button
             type="button"
             className={cn(
-              "flex items-center gap-2 rounded-[3px] px-3 py-2 text-left font-normal text-white",
+              "flex items-center gap-2 rounded-[3px] px-3 py-2 text-left font-medium text-white",
               ads.primaryInteractive,
             )}
           >
             <ShieldAlert className="size-4 shrink-0" />
             <span className="min-w-0 truncate">Risk Management</span>
-            <span className="ml-auto rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-normal uppercase leading-none">
+            <span className="ml-auto rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none">
               New
             </span>
           </button>
@@ -906,7 +906,7 @@ export default function RiskManagementJiraMappingPage() {
               <div className={cn("mt-4 flex gap-6 border-b", ads.border)}>
                 <button
                   type="button"
-                  className="-mb-px border-b-2 border-[#0C66E4] pb-3 font-sans text-sm font-normal leading-5 text-[#0C66E4]"
+                  className="-mb-px border-b-2 border-[#0C66E4] pb-3 font-sans text-sm font-semibold leading-5 text-[#0C66E4]"
                 >
                   Risk register frameworks
                 </button>
@@ -918,7 +918,7 @@ export default function RiskManagementJiraMappingPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-[3px] bg-[#172B4D] px-4 py-2 font-sans text-sm font-normal leading-5 text-white hover:bg-[#091E42]"
+                className="rounded-[3px] bg-[#172B4D] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white hover:bg-[#091E42]"
               >
                 Risk
               </button>
@@ -963,7 +963,7 @@ export default function RiskManagementJiraMappingPage() {
               <button
                 type="button"
                 className={cn(
-                  "rounded-[3px] border px-4 py-2 font-sans text-sm font-normal leading-5",
+                  "rounded-[3px] border px-4 py-2 font-sans text-sm font-medium leading-5",
                   ads.border,
                   ads.surface,
                   ads.danger,
@@ -991,7 +991,7 @@ export default function RiskManagementJiraMappingPage() {
                 <div className={cn("flex flex-wrap items-center gap-2", ads.bodyMedium)}>
                   <span
                     className={cn(
-                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-normal uppercase tracking-wide",
+                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide",
                       ads.border,
                       ads.surface,
                       ads.ink300,
@@ -1004,7 +1004,7 @@ export default function RiskManagementJiraMappingPage() {
                   </span>
                   <span
                     className={cn(
-                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-normal uppercase tracking-wide",
+                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide",
                       ads.border,
                       ads.surface,
                       ads.ink300,
@@ -1025,7 +1025,7 @@ export default function RiskManagementJiraMappingPage() {
             >
               <Label
                 htmlFor="use-jira-custom-fields"
-                className={cn("cursor-pointer font-sans text-sm font-normal leading-5", ads.ink800)}
+                className={cn("cursor-pointer font-sans text-sm font-medium leading-5", ads.ink800)}
               >
                 Use Jira Custom Fields
               </Label>
@@ -1079,7 +1079,7 @@ export default function RiskManagementJiraMappingPage() {
               <button
                 type="button"
                 className={cn(
-                  "rounded-[3px] px-5 py-2.5 font-sans text-sm font-normal leading-5 text-white",
+                  "rounded-[3px] px-5 py-2.5 font-sans text-sm font-semibold leading-5 text-white",
                   ads.primaryInteractive,
                   ads.primaryInteractiveHover,
                 )}

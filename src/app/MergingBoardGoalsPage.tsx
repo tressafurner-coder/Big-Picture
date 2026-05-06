@@ -47,15 +47,15 @@ import { cn } from "./components/ui/utils";
 import { ads } from "./design/atlassianPageTokens";
 
 const purpleNewBadge =
-  "ml-auto shrink-0 rounded border border-[#C6C2F5] bg-[#F5F3FF] px-1.5 py-0.5 text-[10px] font-normal uppercase leading-none text-[#5E4DB2]";
+  "ml-auto shrink-0 rounded border border-[#C6C2F5] bg-[#F5F3FF] px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-[#5E4DB2]";
 const blueNewBadge =
-  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-normal uppercase leading-none bg-[#DEEBFF] text-[#0747A6]";
+  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#DEEBFF] text-[#0747A6]";
 
 const sidebarNavButton =
   "box-border flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-2 text-left text-sm leading-5 text-[#172B4D] hover:bg-[#EBECF0]";
 /** Selected row: full outline + light fill (BigPicture reference shell). */
 const sidebarActive =
-  "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4] hover:bg-[#E9F2FF]";
+  "border-[#0C66E4] bg-[#E9F2FF] font-medium text-[#0C66E4] hover:bg-[#E9F2FF]";
 
 const SWIMLANES_VIEW_OPTIONS = [
   "Swimlanes",
@@ -66,7 +66,8 @@ const SWIMLANES_VIEW_OPTIONS = [
 const ESSENTIALS_CARD_VIEWS = ["Essentials", "Hybrid", "Teams"] as const;
 const CAPACITY_METRIC_OPTIONS = [
   "Story Points",
-  "Man-days",
+  "Issue count",
+  "Original estimate",
 ] as const;
 
 /** Teams toggled in Team → All — each visible row renders a swimlane + sprint columns. */
@@ -139,11 +140,11 @@ function SwimlaneIssueCard({
             className="size-4 shrink-0 fill-emerald-600 text-emerald-600"
             aria-hidden
           />
-          <span className="truncate text-sm font-normal text-[#0C66E4]">
+          <span className="truncate text-sm font-semibold text-[#0C66E4]">
             {issueKey}
           </span>
         </div>
-        <span className="shrink-0 rounded-md bg-[#F1F2F4] px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-[#44546F]">
+        <span className="shrink-0 rounded-md bg-[#F1F2F4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#44546F]">
           To do
         </span>
         <button
@@ -161,7 +162,7 @@ function SwimlaneIssueCard({
         >
           <Equal className="size-4" strokeWidth={2.5} />
         </div>
-        <span className="min-w-0 flex-1 text-sm font-normal leading-snug text-[#172B4D]">
+        <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#172B4D]">
           {title}
         </span>
       </div>
@@ -259,15 +260,15 @@ function SwimlaneGoalBar({
   return (
     <div className="rounded-md border border-[#DFE1E6] bg-[#F7F8F9] px-2 py-2 shadow-[0_1px_2px_rgba(9,30,66,0.06)]">
       {sprintLabel ? (
-        <div className="mb-1 text-[10px] font-normal uppercase tracking-wide text-[#626F86]">
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
           {sprintLabel}
         </div>
       ) : null}
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-xs font-normal leading-snug text-[#172B4D]">
+        <span className="min-w-0 truncate text-xs font-semibold leading-snug text-[#172B4D]">
           Goal: {title}
         </span>
-        <span className="shrink-0 tabular-nums text-[11px] font-normal text-[#626F86]">
+        <span className="shrink-0 tabular-nums text-[11px] font-semibold text-[#626F86]">
           {percent}%
         </span>
       </div>
@@ -707,19 +708,11 @@ export default function MergingBoardGoalsPage() {
   ]);
 
   const goalsOnlyBoardScope = !boardScope.tasks && boardScope.goals;
-  /** Goals on swimlanes ⇒ grouping stays Team-only (same UX as Goals-only mode). */
-  const teamSwimlaneLocked = boardScope.goals;
   const isCapacityPlanningView = swimlanesSelection === "Capacity planning";
 
   useEffect(() => {
-    if (teamSwimlaneLocked) {
-      setTeamMenuOpen(false);
-      setTeamDimension("team");
-    }
-  }, [teamSwimlaneLocked]);
-
-  useEffect(() => {
     if (goalsOnlyBoardScope) {
+      setTeamMenuOpen(false);
       setTasksMenuOpen(false);
     }
   }, [goalsOnlyBoardScope]);
@@ -813,7 +806,7 @@ export default function MergingBoardGoalsPage() {
             </span>
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-sm font-normal",
+                "min-w-0 flex-1 truncate text-sm font-semibold",
                 ads.ink800,
               )}
             >
@@ -967,11 +960,11 @@ export default function MergingBoardGoalsPage() {
             <span className={cn("truncate text-sm text-[#626F86]", ads.bodySubtle)}>
               … / AGILE + HYBRID /{" "}
             </span>
-            <span className={cn("truncate text-sm font-normal", ads.ink800)}>
+            <span className={cn("truncate text-sm font-semibold", ads.ink800)}>
               HYBR-1 New Hybrid Project
             </span>
             <span
-              className="shrink-0 rounded px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-[#0747A6]"
+              className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#0747A6]"
               style={{ backgroundColor: "#DEEBFF" }}
             >
               In progress
@@ -1001,7 +994,7 @@ export default function MergingBoardGoalsPage() {
                   setSwimlanesMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
+                  "inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold outline-none transition-colors",
                   swimlanesMenuOpen
                     ? "border border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
                     : "border border-transparent text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1035,7 +1028,10 @@ export default function MergingBoardGoalsPage() {
                         type="button"
                         role="option"
                         aria-selected={opt === swimlanesSelection}
-                        className="flex w-full px-3 py-2 text-left text-sm font-normal text-[#172B4D] hover:bg-[#F1F2F4]"
+                        className={cn(
+                          "flex w-full px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]",
+                          opt === swimlanesSelection && "font-medium",
+                        )}
                         onClick={() => {
                           setSwimlanesSelection(opt);
                           setSwimlanesMenuOpen(false);
@@ -1060,7 +1056,7 @@ export default function MergingBoardGoalsPage() {
                     setCapacityMetricMenuOpen((open) => !open);
                   }}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm outline-none transition-colors",
+                    "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                     capacityMetricMenuOpen
                       ? "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
                       : "border-[#DFE1E6] bg-white text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1087,42 +1083,24 @@ export default function MergingBoardGoalsPage() {
                       role="listbox"
                       aria-label="Capacity metric"
                     >
-                      <div className="px-6 pb-2 pt-1 text-[12px] font-normal uppercase tracking-wide text-[#44546F]">
-                        Units
-                      </div>
-                      {CAPACITY_METRIC_OPTIONS.map((opt) => {
-                        const selected = opt === capacityMetricSelection;
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            className="flex w-full items-center gap-3 px-6 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                            onClick={() => {
-                              setCapacityMetricSelection(opt);
-                              setCapacityMetricMenuOpen(false);
-                            }}
-                          >
-                            <span
-                              className={cn(
-                                "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
-                                selected
-                                  ? "border-[#246CCF] bg-white"
-                                  : "border-[#8C8F97] bg-white",
-                              )}
-                              aria-hidden
-                            >
-                              {selected ? (
-                                <span className="size-2.5 rounded-full bg-[#246CCF]" />
-                              ) : null}
-                            </span>
-                            <span className="text-sm text-[#2E3138]">
-                              {opt}
-                            </span>
-                          </button>
-                        );
-                      })}
+                      {CAPACITY_METRIC_OPTIONS.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          role="option"
+                          aria-selected={opt === capacityMetricSelection}
+                          className={cn(
+                            "flex w-full px-3 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]",
+                            opt === capacityMetricSelection && "font-medium",
+                          )}
+                          onClick={() => {
+                            setCapacityMetricSelection(opt);
+                            setCapacityMetricMenuOpen(false);
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
                     </div>,
                     document.body,
                   )}
@@ -1144,7 +1122,7 @@ export default function MergingBoardGoalsPage() {
                   setBoardScopeMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md border border-[#DFE1E6] bg-white px-2 py-1.5 text-sm outline-none transition-colors",
+                  "flex items-center gap-1.5 rounded-md border border-[#DFE1E6] bg-white px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                   boardScopeMenuOpen
                     ? "bg-[#E9F2FF] text-[#0C66E4]"
                     : "text-[#172B4D] hover:bg-[#F7F8F9]",
@@ -1172,7 +1150,7 @@ export default function MergingBoardGoalsPage() {
                     role="menu"
                     aria-label="Board content scope"
                   >
-                    <div className="px-3 pb-1 text-[11px] font-normal uppercase tracking-wide text-[#44546F]">
+                    <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#44546F]">
                       Show on Swimlanes
                     </div>
                     <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-[#F1F2F4]">
@@ -1210,15 +1188,15 @@ export default function MergingBoardGoalsPage() {
             )}
             {!isCapacityPlanningView ? (
             <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-[#DFE1E6] bg-white">
-              {teamSwimlaneLocked ? (
+              {goalsOnlyBoardScope ? (
                 <Tooltip
                   content="Goals are set per team"
                   className="inline-flex shrink-0 cursor-default"
                 >
                   <div
                     ref={teamTriggerRef}
-                    className="flex cursor-default select-none items-center gap-1.5 border-0 border-r border-[#DFE1E6] bg-white px-2 py-1.5 text-sm text-[#626F86]"
-                    aria-label="Team swimlane (fixed while Goals are shown)"
+                    className="flex cursor-default select-none items-center gap-1.5 border-0 border-r border-[#DFE1E6] bg-white px-2 py-1.5 text-sm font-medium text-[#626F86]"
+                    aria-label="Team swimlane (fixed in Goals mode)"
                   >
                     <Waves
                       className="size-4 shrink-0 text-[#44546F]"
@@ -1244,7 +1222,7 @@ export default function MergingBoardGoalsPage() {
                     setTeamMenuOpen((open) => !open);
                   }}
                   className={cn(
-                    "flex items-center gap-1.5 border-0 border-r border-[#DFE1E6] px-2 py-1.5 text-sm outline-none transition-colors",
+                    "flex items-center gap-1.5 border-0 border-r border-[#DFE1E6] px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                     teamMenuOpen
                       ? "bg-[#E9F2FF] text-[#0C66E4]"
                       : "bg-white text-[#172B4D] hover:bg-[#F7F8F9]",
@@ -1281,7 +1259,7 @@ export default function MergingBoardGoalsPage() {
                   setAllMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "flex items-center gap-1 border-0 px-2 py-1.5 text-sm outline-none transition-colors",
+                  "flex items-center gap-1 border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                   allMenuOpen
                     ? "bg-[#E9F2FF] text-[#0C66E4]"
                     : "bg-white text-[#172B4D] hover:bg-[#F7F8F9]",
@@ -1300,7 +1278,7 @@ export default function MergingBoardGoalsPage() {
             {teamMenuOpen &&
               teamMenuBox &&
               !isCapacityPlanningView &&
-              !teamSwimlaneLocked &&
+              !goalsOnlyBoardScope &&
               createPortal(
                 <div
                   ref={teamMenuRef}
@@ -1393,7 +1371,7 @@ export default function MergingBoardGoalsPage() {
                   </div>
                   <button
                     type="button"
-                    className="mb-1 mt-3 w-full px-1 py-1 text-left text-xs font-normal uppercase tracking-wide text-[#626F86] hover:bg-[#F1F2F4]"
+                    className="mb-1 mt-3 w-full px-1 py-1 text-left text-xs font-bold uppercase tracking-wide text-[#626F86] hover:bg-[#F1F2F4]"
                     onClick={() =>
                       setAllTeamFilter(() => {
                         const next = {} as Record<TeamFilterId, boolean>;
@@ -1452,7 +1430,7 @@ export default function MergingBoardGoalsPage() {
                   setEssentialsMenuOpen((open) => !open);
                 }}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm outline-none transition-colors",
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                   essentialsMenuOpen
                     ? "border-[#0C66E4] bg-[#E9F2FF] text-[#0C66E4]"
                     : "border-[#DFE1E6] bg-white text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1480,7 +1458,7 @@ export default function MergingBoardGoalsPage() {
                     role="listbox"
                     aria-label="Card views"
                   >
-                    <div className="px-3 pb-1 pt-0.5 text-[10px] font-normal uppercase tracking-wide text-[#626F86]">
+                    <div className="px-3 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
                       Current view
                     </div>
                     <div className="px-3 py-2 text-sm text-[#172B4D]">
@@ -1490,7 +1468,7 @@ export default function MergingBoardGoalsPage() {
                       className="my-1.5 border-t border-[#DFE1E6]"
                       role="separator"
                     />
-                    <div className="px-3 pb-1 pt-1 text-[10px] font-normal uppercase tracking-wide text-[#626F86]">
+                    <div className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
                       Available
                     </div>
                     {ESSENTIALS_CARD_VIEWS.map((name) => (
@@ -1519,7 +1497,7 @@ export default function MergingBoardGoalsPage() {
                     />
                     <button
                       type="button"
-                      className="w-full px-3 py-2 text-left text-sm text-[#0C66E4] hover:bg-[#F1F2F4]"
+                      className="w-full px-3 py-2 text-left text-sm font-medium text-[#0C66E4] hover:bg-[#F1F2F4]"
                       onClick={() => setEssentialsMenuOpen(false)}
                     >
                       Manage card views
@@ -1548,7 +1526,7 @@ export default function MergingBoardGoalsPage() {
                       setTasksMenuOpen((open) => !open);
                     }}
                     className={cn(
-                      "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm outline-none transition-colors",
+                      "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                       tasksMenuOpen
                         ? "bg-[#E9F2FF] text-[#0C66E4]"
                         : "bg-transparent text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1570,7 +1548,7 @@ export default function MergingBoardGoalsPage() {
                         role="menu"
                         aria-label="Create task"
                       >
-                        <div className="px-3 pb-1 pt-0.5 text-[10px] font-normal uppercase tracking-wide text-[#626F86]">
+                        <div className="px-3 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
                           Create new
                         </div>
                         <button
@@ -1630,7 +1608,7 @@ export default function MergingBoardGoalsPage() {
                     setViewMenuOpen((open) => !open);
                   }}
                   className={cn(
-                    "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm outline-none transition-colors",
+                    "inline-flex items-center rounded-md border-0 px-2 py-1.5 text-sm font-medium outline-none transition-colors",
                     viewMenuOpen
                       ? "bg-[#E9F2FF] text-[#0C66E4]"
                       : "bg-transparent text-[#172B4D] hover:bg-[#EBECF0]",
@@ -1831,7 +1809,7 @@ export default function MergingBoardGoalsPage() {
                     {(["MAY", "JUN", "JUL"] as const).map((m) => (
                       <span
                         key={m}
-                        className="text-[11px] font-normal uppercase tracking-wide text-[#626F86]"
+                        className="text-[11px] font-semibold uppercase tracking-wide text-[#626F86]"
                       >
                         {m}
                       </span>
@@ -1904,7 +1882,7 @@ export default function MergingBoardGoalsPage() {
                         aria-hidden
                       />
                     </button>
-                    <span className="min-w-0 flex-1 truncate text-sm font-normal">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {label}
                     </span>
                     <button
@@ -1958,7 +1936,7 @@ export default function MergingBoardGoalsPage() {
                           [team.id]: !prev[team.id],
                         }))
                       }
-                      className="inline-flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-normal text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
+                      className="inline-flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
                     >
                       {swimlaneExpanded[team.id] ? (
                         <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
@@ -2115,7 +2093,7 @@ export default function MergingBoardGoalsPage() {
                   <button
                     type="button"
                     className={cn(
-                      "rounded-md border px-4 py-2 text-sm font-normal",
+                      "rounded-md border px-4 py-2 text-sm font-medium",
                       ads.border,
                       ads.surface,
                       ads.bodyMedium,
@@ -2135,7 +2113,7 @@ export default function MergingBoardGoalsPage() {
             aria-label="Infobar"
           >
             <span
-              className="flex items-center justify-center text-[10px] font-normal uppercase tracking-normal text-[#626F86]"
+              className="flex items-center justify-center text-[10px] font-semibold uppercase tracking-normal text-[#626F86]"
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
             >
               INFOBAR

@@ -57,7 +57,7 @@ function TooltipContent({
           variant === "default" &&
             "rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground",
           variant === "atlassian" &&
-            "max-w-[240px] rounded-[3px] border-0 bg-[#091E42] px-2 py-1.5 text-left text-[11px] font-normal leading-4 tracking-[0.005em] text-white antialiased shadow-[0_8px_16px_-4px_rgba(9,30,66,0.28)]",
+            "max-w-[240px] rounded-[3px] border-0 bg-[#091E42] px-2 py-1.5 text-left text-[11px] font-medium leading-4 tracking-[0.005em] text-white antialiased shadow-[0_8px_16px_-4px_rgba(9,30,66,0.28)]",
           className,
         )}
         {...props}

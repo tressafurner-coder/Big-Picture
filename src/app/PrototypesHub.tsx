@@ -36,7 +36,7 @@ export default function PrototypesHub() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-8">
           <BigPictureLogo className="mb-6" />
-          <h1 className="text-3xl font-normal tracking-tight text-gray-900">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
             Prototypes
           </h1>
           <p className="mt-2 text-gray-600">
@@ -45,7 +45,7 @@ export default function PrototypesHub() {
           </p>
           <p className="mt-3 text-sm text-gray-500">
             Created by{" "}
-            <span className="font-normal text-gray-700">Karolina Chrzanowska</span>
+            <span className="font-medium text-gray-700">Karolina Chrzanowska</span>
             . For questions, please get in touch directly.
           </p>
         </header>
@@ -53,7 +53,7 @@ export default function PrototypesHub() {
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-xs font-normal uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3">Description</th>
@@ -64,12 +64,12 @@ export default function PrototypesHub() {
             <tbody className="divide-y divide-gray-100">
               {PROTOTYPE_ENTRIES.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50/80">
-                  <td className="px-4 py-3 font-normal text-gray-900">
+                  <td className="px-4 py-3 font-medium text-gray-900">
                     {p.name}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span
-                      className={`inline-flex rounded-md px-2 py-1 text-xs font-normal ${statusClass(p.status)}`}
+                      className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${statusClass(p.status)}`}
                     >
                       {p.status}
                     </span>
@@ -83,14 +83,14 @@ export default function PrototypesHub() {
                       USE_HASH_ROUTER ? (
                         <a
                           href={hubHashHref(p.routeSegment)}
-                          className="inline-flex font-normal text-blue-600 underline-offset-4 hover:underline"
+                          className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
                         >
                           Open
                         </a>
                       ) : (
                         <Link
                           to={`/${p.routeSegment}`}
-                          className="inline-flex font-normal text-blue-600 underline-offset-4 hover:underline"
+                          className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
                         >
                           Open
                         </Link>
@@ -98,7 +98,7 @@ export default function PrototypesHub() {
                     ) : p.kind === "static" && p.staticPath ? (
                       <a
                         href={joinBase(p.staticPath)}
-                        className="inline-flex font-normal text-blue-600 underline-offset-4 hover:underline"
+                        className="inline-flex font-medium text-blue-600 underline-offset-4 hover:underline"
                       >
                         Open
                       </a>

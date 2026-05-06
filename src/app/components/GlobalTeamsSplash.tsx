@@ -60,7 +60,7 @@ export function GlobalTeamsSplash({ variant, className }: Props) {
           className="mb-5 h-[100px] w-auto max-w-[min(100%,160px)] shrink-0 select-none object-contain"
           draggable={false}
         />
-        <h2 className="max-w-md text-[20px] font-normal tracking-tight text-[#091E42]">
+        <h2 className="max-w-md text-[20px] font-semibold tracking-tight text-[#091E42]">
           {title}
         </h2>
         <p className="mt-3 max-w-md text-[14px] leading-relaxed text-[#42526E]">
@@ -71,7 +71,7 @@ export function GlobalTeamsSplash({ variant, className }: Props) {
             href={readMore.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-block max-w-md text-sm font-normal text-[#0C66E4] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F8F9]"
+            className="mt-3 inline-block max-w-md text-sm font-medium text-[#0C66E4] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C66E4]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F8F9]"
           >
             {readMore.label}
           </a>

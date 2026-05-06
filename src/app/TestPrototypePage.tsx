@@ -158,9 +158,9 @@ const SWATCH_CYCLE = [
 ] as const;
 
 const purpleNewBadge =
-  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-normal uppercase leading-none bg-[#EAE6FF] text-[#5E4DB2]";
+  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#EAE6FF] text-[#5E4DB2]";
 const blueNewBadge =
-  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-normal uppercase leading-none bg-[#DEEBFF] text-[#0747A6]";
+  "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none bg-[#DEEBFF] text-[#0747A6]";
 
 function ManualMetricCard({
   cardSlug,
@@ -337,8 +337,8 @@ function ManualMetricCard({
               ads.overline,
             )}
           >
-            <th className="px-4 py-2 font-normal">Value name</th>
-            <th className="px-4 py-2 font-normal">Value</th>
+            <th className="px-4 py-2 font-semibold">Value name</th>
+            <th className="px-4 py-2 font-semibold">Value</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#DFE1E6]">
@@ -586,12 +586,12 @@ export default function TestPrototypePage() {
           )}
         >
           <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-[3px] bg-[#F5CD47] text-[11px] font-normal text-[#172B4D]"
+            className="flex size-8 shrink-0 items-center justify-center rounded-[3px] bg-[#F5CD47] text-[11px] font-bold text-[#172B4D]"
             aria-hidden
           >
             BP
           </span>
-          <span className={cn("truncate text-sm font-normal", ads.ink800)}>
+          <span className={cn("truncate text-sm font-semibold", ads.ink800)}>
             BigPicture Enterprise
           </span>
         </div>
@@ -660,7 +660,7 @@ export default function TestPrototypePage() {
           <button
             type="button"
             className={cn(
-              "flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left font-normal",
+              "flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-left font-medium",
               "bg-[#E9F2FF] text-[#0C66E4]",
             )}
           >
@@ -687,7 +687,7 @@ export default function TestPrototypePage() {
             ads.canvas,
           )}
         >
-          <Link to="/" className={cn(ads.linkUi, "inline-block text-[15px] font-normal")}>
+          <Link to="/" className={cn(ads.linkUi, "inline-block text-[15px] font-semibold")}>
             ← All prototypes
           </Link>
         </div>
@@ -713,7 +713,7 @@ export default function TestPrototypePage() {
               <div className={cn("mt-4 flex gap-6 border-b", ads.border)}>
                 <button
                   type="button"
-                  className="-mb-px border-b-2 border-[#0C66E4] pb-3 font-sans text-sm font-normal leading-5 text-[#0C66E4]"
+                  className="-mb-px border-b-2 border-[#0C66E4] pb-3 font-sans text-sm font-semibold leading-5 text-[#0C66E4]"
                 >
                   Risk register frameworks
                 </button>
@@ -725,7 +725,7 @@ export default function TestPrototypePage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-[3px] bg-[#172B4D] px-4 py-2 font-sans text-sm font-normal leading-5 text-white hover:bg-[#091E42]"
+                className="rounded-[3px] bg-[#172B4D] px-4 py-2 font-sans text-sm font-semibold leading-5 text-white hover:bg-[#091E42]"
               >
                 Risk
               </button>
@@ -767,7 +767,7 @@ export default function TestPrototypePage() {
               <button
                 type="button"
                 className={cn(
-                  "rounded-[3px] border px-4 py-2 font-sans text-sm font-normal leading-5",
+                  "rounded-[3px] border px-4 py-2 font-sans text-sm font-medium leading-5",
                   ads.border,
                   ads.surface,
                   ads.danger,
@@ -795,7 +795,7 @@ export default function TestPrototypePage() {
                 <div className={cn("flex flex-wrap items-center gap-2", ads.bodyMedium)}>
                   <span
                     className={cn(
-                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-normal uppercase tracking-wide",
+                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide",
                       ads.border,
                       ads.surface,
                       ads.ink300,
@@ -808,7 +808,7 @@ export default function TestPrototypePage() {
                   </span>
                   <span
                     className={cn(
-                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-normal uppercase tracking-wide",
+                      "rounded-[3px] border px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wide",
                       ads.border,
                       ads.surface,
                       ads.ink300,
@@ -867,7 +867,7 @@ export default function TestPrototypePage() {
               <button
                 type="button"
                 className={cn(
-                  "rounded-[3px] px-5 py-2.5 font-sans text-sm font-normal leading-5 text-white",
+                  "rounded-[3px] px-5 py-2.5 font-sans text-sm font-semibold leading-5 text-white",
                   ads.primaryInteractive,
                   ads.primaryInteractiveHover,
                 )}

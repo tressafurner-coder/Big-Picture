@@ -361,7 +361,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             href={linkMatch[2]}
             target="_blank"
             rel="noreferrer"
-            className="font-normal underline hover:opacity-80"
+            className="font-medium underline hover:opacity-80"
             style={{ color: "#1868DB" }}
           >
             {linkMatch[1]}
@@ -443,10 +443,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
         const headingText = headingMatch[2];
         const headingClass =
           level === 1
-            ? "mt-2 text-lg font-normal text-gray-900"
+            ? "mt-2 text-lg font-semibold text-gray-900"
             : level === 2
-              ? "mt-2 text-base font-normal text-gray-900"
-              : "mt-2 text-sm font-normal text-gray-800";
+              ? "mt-2 text-base font-semibold text-gray-900"
+              : "mt-2 text-sm font-semibold text-gray-800";
 
         blocks.push(
           <div key={`heading-${blocks.length}`} className={headingClass}>
@@ -500,7 +500,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               <thead className="bg-gray-200">
                 <tr>
                   {header.map((cell, cellIdx) => (
-                    <th key={`head-${cellIdx}`} className="border border-gray-300 px-2.5 py-2 font-normal text-gray-800">
+                    <th key={`head-${cellIdx}`} className="border border-gray-300 px-2.5 py-2 font-semibold text-gray-800">
                       {renderInlineMarkdown(cell)}
                     </th>
                   ))}
@@ -776,7 +776,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
           <div className="chat-drag-handle flex cursor-move items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 py-3">
             <span className="sr-only">Drag the header to move this window</span>
             <div className="flex min-w-0 flex-1 items-center gap-2 pr-2">
-              <h2 className="text-sm font-normal shrink-0" style={{ color: '#292A2E' }}>
+              <h2 className="text-sm font-semibold shrink-0" style={{ color: '#292A2E' }}>
                 AI Assistant
               </h2>
               <Tooltip
@@ -934,7 +934,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
               {/* Ta sama wysokość co pasek rozmowy; ikona „+” w tym samym miejscu co w czacie */}
               <div className="flex h-12 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-100 px-4">
-                <span className="min-w-0 flex-1 truncate text-base font-normal text-gray-700">
+                <span className="min-w-0 flex-1 truncate text-base font-semibold text-gray-700">
                   Chat history
                 </span>
                 <Tooltip content="New chat">
@@ -988,7 +988,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                 )}
                 {!hasConversations ? (
                   <div className="flex h-full min-h-[260px] w-full flex-col items-center justify-center rounded-xl bg-white px-4 py-8 text-center sm:min-h-[320px] sm:px-6 sm:py-10">
-                    <p className="text-[20px] font-normal leading-[1.2] text-gray-900">
+                    <p className="text-[20px] font-semibold leading-[1.2] text-gray-900">
                       No saved chats yet
                     </p>
                     <p className="mt-3 max-w-[320px] text-[14px] leading-[1.4] text-gray-800">
@@ -997,7 +997,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     <button
                       type="button"
                       onClick={handleNewConversation}
-                      className="no-drag mt-8 inline-flex h-8 items-center justify-center rounded-lg px-5 text-[14px] font-normal leading-none text-white transition-colors"
+                      className="no-drag mt-8 inline-flex h-8 items-center justify-center rounded-lg px-5 text-[14px] font-semibold leading-none text-white transition-colors"
                       style={{ backgroundColor: "#1868DB" }}
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.backgroundColor = "#0D47A1")
@@ -1183,7 +1183,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         {newChatBadgeConvId === activeConversationId && (
                           <span
-                            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-white"
+                            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
                             style={{ backgroundColor: "#1868DB" }}
                           >
                             New
@@ -1224,7 +1224,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                           >
                             <button
                               type="button"
-                              className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center overflow-hidden rounded border border-transparent px-2 text-left text-sm font-normal transition-colors hover:border-gray-300"
+                              className="no-drag flex h-8 min-w-0 flex-1 cursor-pointer items-center overflow-hidden rounded border border-transparent px-2 text-left text-sm font-medium transition-colors hover:border-gray-300"
                               style={{ color: "#292A2E" }}
                               aria-label={`Rename: ${activeConversation?.title || "New Chat"}`}
                               onClick={() =>
@@ -1446,7 +1446,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                         />
                       </div>
                       <div className="mt-2 min-h-[18px]">
-                        <p className="text-xs font-normal leading-snug text-gray-700" aria-live="polite">
+                        <p className="text-xs font-medium leading-snug text-gray-700" aria-live="polite">
                           {THINKING_STATUS_TEMPLATES[thinkingStatusIdx].slice(
                             0,
                             thinkingTypedLength,
