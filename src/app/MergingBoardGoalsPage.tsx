@@ -2793,17 +2793,13 @@ export default function MergingBoardGoalsPage() {
             <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border border-[#DFE1E6] bg-white">
               {teamSwimlaneLocked ? (
                 <Tooltip
-                  content={
-                    reportsGoalsToolbar
-                      ? "Team swimlanes are fixed in Reports (Goals)"
-                      : "Goals are set per team"
-                  }
+                  content="Goals are set only per teams"
                   className="inline-flex shrink-0 cursor-default"
                 >
                   <div
                     ref={teamTriggerRef}
                     className="flex cursor-default select-none items-center gap-1.5 border-0 border-r border-[#DFE1E6] bg-white px-2 py-1.5 text-sm text-[#626F86]"
-                    aria-label="Team swimlane (fixed while Goals are shown)"
+                    aria-label="Goals are set only per teams"
                   >
                     <Waves
                       className="size-4 shrink-0 text-[#44546F]"
