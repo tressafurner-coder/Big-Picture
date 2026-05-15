@@ -4,11 +4,13 @@ import {
   ChartGantt,
   ArrowLeft,
   Bookmark,
+  Bug,
   ChartNetwork,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsUp,
   CircleDollarSign,
   CircleDot,
   CornerDownRight,
@@ -20,7 +22,6 @@ import {
   Filter,
   Flame,
   Gauge,
-  HelpCircle,
   Highlighter,
   List,
   MoreHorizontal,
@@ -31,13 +32,14 @@ import {
   Target,
   Undo2,
   Users,
+  X,
   Waves,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
 import { RadioGroup } from "@atlaskit/radio";
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { BigPictureAppTile } from "./components/BigPictureAppTile";
 import { BigPictureModuleMark } from "./components/BigPictureModuleMark";
@@ -350,26 +352,121 @@ function initialSwimlaneExpanded(): Record<TeamFilterId, boolean> {
   };
 }
 
-/** Deterministic sprint column index 0–2 so demo cards do not jump on re-render. */
-function sprintColumnForTeam(teamId: TeamFilterId): number {
+const SPRINT_LABELS = ["Sprint 1", "Sprint 2"] as const;
+const TASK_ROWS_PER_SPRINT = 2;
+type SprintIndex = 0 | 1;
+
+function issueKeyForTeamRow(
+  teamId: TeamFilterId,
+  sprintIndex: SprintIndex,
+  row: number,
+): string {
   let h = 0;
   for (let i = 0; i < teamId.length; i++) {
     h = (h * 31 + teamId.charCodeAt(i)) >>> 0;
   }
-  return h % 3;
+  const n = h * 11 + teamId.length * 7 + sprintIndex * 13 + row * 17;
+  return `ONE-${245900 + (n % 12000)}`;
 }
 
-function issueKeyForTeam(teamId: TeamFilterId): string {
-  const n = sprintColumnForTeam(teamId) * 11 + teamId.length * 7;
-  return `APP-${27 + (n % 60)}`;
-}
+const DEMO_TASK_TITLES = [
+  '"+" not showing in some inline edit fields…',
+  "Cannot open Column Layout in Overview…",
+  "Disallow creating a TEXT custom field wit…",
+  "FE: display custom fields in side-panel",
+  "Handle changing allowed values in select/…",
+  "Regression pass for sprint scope",
+  "API rollout hardening",
+  "QA checklist for release train",
+  "UX review for board swimlanes",
+  "Sync dependency graph with Jira",
+  "Spike: capacity planning metrics",
+  "Fix flaky e2e on merge board",
+] as const;
 
-const SWIMLANE_CARD_TITLE: Record<TeamFilterId, string> = {
-  unassigned: "TEST 1",
-  north: "API rollout",
-  south: "QA checklist",
-  design: "UX review",
+const DEMO_TASK_ASSIGNEES = [
+  { initials: "AK", bg: "#E9F2FF", color: "#0C66E4" },
+  { initials: "ML", bg: "#F3F0FF", color: "#5E4DB2" },
+  { initials: "PB", bg: "#DCFFF1", color: "#164B35" },
+  { initials: "JR", bg: "#FFF7D6", color: "#974F0C" },
+  { initials: "LS", bg: "#FFECEB", color: "#AE2E24" },
+] as const;
+
+type TaskStatus = "To do" | "In progress" | "Done" | "Canceled";
+type TaskPriority = "low" | "medium" | "high";
+type TaskIssueType = "bug" | "story";
+
+type SwimlaneTaskItem = {
+  id: string;
+  type: "task";
+  issueKey: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  issueType: TaskIssueType;
+  points: number;
+  assignee: (typeof DEMO_TASK_ASSIGNEES)[number];
 };
+
+function hashSeed(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i) + 11) >>> 0;
+  }
+  return h;
+}
+
+function pickFromConst<T>(items: readonly T[], seed: string, salt = 0): T {
+  const h = hashSeed(`${seed}:${salt}`);
+  return items[h % items.length]!;
+}
+
+function swimlaneTaskVisualMeta(
+  seed: string,
+  salt = 0,
+): Pick<
+  SwimlaneTaskItem,
+  "status" | "priority" | "issueType" | "points" | "assignee"
+> {
+  const h = hashSeed(`${seed}:${salt}`);
+  const statuses: TaskStatus[] = [
+    "Done",
+    "Canceled",
+    "In progress",
+    "To do",
+    "Done",
+    "In progress",
+  ];
+  const priorities: TaskPriority[] = ["low", "low", "medium", "high", "medium"];
+  const issueTypes: TaskIssueType[] = ["bug", "bug", "story", "story", "story"];
+  return {
+    status: statuses[h % statuses.length]!,
+    priority: priorities[h % priorities.length]!,
+    issueType: issueTypes[h % issueTypes.length]!,
+    points: h % 4,
+    assignee: pickFromConst(DEMO_TASK_ASSIGNEES, seed, salt + 3),
+  };
+}
+
+function swimlaneTaskTitle(seed: string, salt = 0): string {
+  return pickFromConst(DEMO_TASK_TITLES, seed, salt);
+}
+
+function createSwimlaneTask(input: {
+  id: string;
+  issueKey: string;
+  title: string;
+  seed: string;
+  salt?: number;
+}): SwimlaneTaskItem {
+  return {
+    id: input.id,
+    type: "task",
+    issueKey: input.issueKey,
+    title: input.title,
+    ...swimlaneTaskVisualMeta(input.seed, input.salt ?? 0),
+  };
+}
 
 function boardScopeLabel(scope: { tasks: boolean; goals: boolean }): string {
   if (scope.tasks && scope.goals) return "Tasks & Goals";
@@ -409,46 +506,108 @@ function BigPictureTaskMenuIcon() {
   );
 }
 
-function SwimlaneIssueCard({
-  issueKey,
-  title,
+const TASK_STATUS_BADGE: Record<
+  TaskStatus,
+  { label: string; className: string }
+> = {
+  "To do": {
+    label: "TO DO",
+    className: "bg-[#F1F2F4] text-[#44546F]",
+  },
+  "In progress": {
+    label: "IN PROGRESS",
+    className: "bg-[#E9F2FF] text-[#0C66E4]",
+  },
+  Done: {
+    label: "DONE",
+    className: "bg-[#DCFFF1] text-[#164B35]",
+  },
+  Canceled: {
+    label: "CANCELED",
+    className: "bg-[#E6F9ED] text-[#216E4E]",
+  },
+};
+
+function SwimlaneIssueTypeIcon({ issueType }: { issueType: TaskIssueType }) {
+  if (issueType === "bug") {
+    return <Bug className="size-4 shrink-0 text-[#E34935]" strokeWidth={2} aria-hidden />;
+  }
+  return (
+    <Bookmark
+      className="size-4 shrink-0 fill-emerald-600 text-emerald-600"
+      aria-hidden
+    />
+  );
+}
+
+function SwimlanePriorityIcon({ priority }: { priority: TaskPriority }) {
+  if (priority === "low") {
+    return (
+      <ChevronDown
+        className="size-4 shrink-0 text-[#0C66E4]"
+        strokeWidth={2.5}
+        aria-hidden
+      />
+    );
+  }
+  if (priority === "high") {
+    return (
+      <ChevronsUp
+        className="size-4 shrink-0 text-[#E56910]"
+        strokeWidth={2.5}
+        aria-hidden
+      />
+    );
+  }
+  return (
+    <Equal className="size-4 shrink-0 text-[#E56910]" strokeWidth={2.5} aria-hidden />
+  );
+}
+
+function SwimlaneAssigneeAvatar({
+  assignee,
 }: {
-  issueKey: string;
-  title: string;
+  assignee: SwimlaneTaskItem["assignee"];
 }) {
   return (
+    <span
+      className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none"
+      style={{ backgroundColor: assignee.bg, color: assignee.color }}
+      aria-label={`Assignee ${assignee.initials}`}
+      title={assignee.initials}
+    >
+      {assignee.initials}
+    </span>
+  );
+}
+
+function SwimlaneIssueCard({ task }: { task: SwimlaneTaskItem }) {
+  const statusBadge = TASK_STATUS_BADGE[task.status];
+  return (
     <div className="w-full rounded-md border border-[#DFE1E6] bg-white p-2.5 shadow-[0_1px_2px_rgba(9,30,66,0.15)]">
-      <div className="flex items-center justify-between gap-2 pb-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <Bookmark
-            className="size-4 shrink-0 fill-emerald-600 text-emerald-600"
-            aria-hidden
-          />
-          <span className="truncate text-sm font-semibold text-[#0C66E4]">
-            {issueKey}
-          </span>
-        </div>
-        <span className="shrink-0 rounded-md bg-[#F1F2F4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#44546F]">
-          To do
+      <div className="flex items-center gap-1.5">
+        <SwimlaneIssueTypeIcon issueType={task.issueType} />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#0C66E4]">
+          {task.issueKey}
         </span>
-        <button
-          type="button"
-          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#EBECF0] text-[#626F86]"
-          aria-label="More options"
+        <span
+          className={cn(
+            "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+            statusBadge.className,
+          )}
         >
-          <HelpCircle className="size-3.5" strokeWidth={2} aria-hidden />
-        </button>
+          {statusBadge.label}
+        </span>
+        <SwimlaneAssigneeAvatar assignee={task.assignee} />
       </div>
-      <div className="flex items-start gap-2 pt-0.5">
-        <div
-          className="flex size-6 shrink-0 items-center justify-center text-orange-500"
-          aria-hidden
-        >
-          <Equal className="size-4" strokeWidth={2.5} />
-        </div>
-        <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#172B4D]">
-          {title}
+      <div className="mt-1.5 flex items-start gap-1.5">
+        <SwimlanePriorityIcon priority={task.priority} />
+        <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#172B4D] line-clamp-2">
+          {task.title}
         </span>
+      </div>
+      <div className="mt-1.5 text-xs font-semibold tabular-nums text-[#44546F]">
+        {task.points}
       </div>
     </div>
   );
@@ -665,10 +824,10 @@ const SWIMLANE_GOAL_TITLES = [
   "NPS & quality target",
 ] as const;
 
-/** One goal per sprint column; stable hash per team + sprint index (1–3). */
+/** One goal per sprint column; stable hash per team + sprint index (1–2). */
 function swimlaneGoalForSprint(
   teamId: TeamFilterId,
-  sprintIndex: 0 | 1 | 2,
+  sprintIndex: SprintIndex,
 ): {
   title: string;
   percent: number;
@@ -683,19 +842,426 @@ function swimlaneGoalForSprint(
   return { title, percent };
 }
 
-type SwimlaneStackItem =
-  | { id: string; type: "task"; issueKey: string; title: string }
-  | { id: string; type: "goal"; title: string; percent: number };
+type GoalProgressState = "complete" | "at-risk" | "in-progress";
+
+type SwimlaneGoalTextRow = {
+  id: string;
+  type: "goal";
+  kind: "text";
+  title: string;
+  percent: number;
+  pbv: number;
+  abv: number;
+  progressState: GoalProgressState;
+  children?: SwimlaneGoalJiraRow[];
+};
+
+type SwimlaneGoalJiraRow = {
+  id: string;
+  type: "goal";
+  kind: "jira";
+  issueKey: string;
+  title: string;
+  workflowStatus: string;
+  workflowTone: "blue" | "green" | "lime" | "dark";
+  percent: number;
+  pbv: number;
+  abv: number;
+  assignee: (typeof DEMO_TASK_ASSIGNEES)[number];
+  progressState: GoalProgressState;
+  issueType: TaskIssueType;
+};
+
+type SwimlaneGoalSeparatorRow = {
+  id: string;
+  type: "goal";
+  kind: "separator";
+  title: string;
+  percent: number;
+  pbv: number;
+  abv: number;
+  progressState: GoalProgressState;
+  children?: SwimlaneGoalJiraRow[];
+};
+
+function separatorMetricsFromChildren(
+  children: SwimlaneGoalJiraRow[],
+): Pick<SwimlaneGoalSeparatorRow, "percent" | "pbv" | "abv" | "progressState"> {
+  if (children.length === 0) {
+    return { percent: 0, pbv: 0, abv: 0, progressState: "in-progress" };
+  }
+  const percent = Math.round(
+    children.reduce((sum, child) => sum + child.percent, 0) / children.length,
+  );
+  const progressState: GoalProgressState = children.some(
+    (child) => child.progressState === "at-risk",
+  )
+    ? "at-risk"
+    : percent >= 100
+      ? "complete"
+      : "in-progress";
+  return { percent, pbv: 0, abv: 0, progressState };
+}
+
+type SwimlaneGoalTableGroup =
+  | (SwimlaneGoalTextRow & { children: SwimlaneGoalJiraRow[] })
+  | (SwimlaneGoalSeparatorRow & { children: SwimlaneGoalJiraRow[] });
+
+type SwimlaneGoalItem =
+  | SwimlaneGoalTextRow
+  | SwimlaneGoalJiraRow
+  | SwimlaneGoalSeparatorRow;
+
+type SwimlaneStackItem = SwimlaneTaskItem | SwimlaneGoalItem;
+
+const GOAL_WORKFLOW_STATUS_CLASS: Record<string, string> = {
+  ACCEPTANCE: "bg-[#E9F2FF] text-[#0C66E4]",
+  "WAITING FOR RELEASE": "bg-[#E3FCEF] text-[#216E4E]",
+  DONE: "bg-[#DCFFF1] text-[#164B35]",
+  "IN PROGRESS": "bg-[#0747A6] text-white",
+};
+
+function goalProgressStateFromPercent(
+  percent: number,
+  salt: number,
+): GoalProgressState {
+  if (percent >= 100) return "complete";
+  if (percent > 0 && percent < 75 && salt % 4 === 0) return "at-risk";
+  return "in-progress";
+}
+
+function goalProgressBarColor(state: GoalProgressState, percent: number): string {
+  if (state === "complete" || percent >= 100) return "#36B37E";
+  if (state === "at-risk") return "#E34935";
+  if (percent === 0) return "#DFE1E6";
+  return "#0C66E4";
+}
+
+function goalRowBackground(state: GoalProgressState): string {
+  if (state === "complete") return "bg-[#E3FCEF]/60";
+  if (state === "at-risk") return "bg-[#FFEBE6]/80";
+  return "bg-white";
+}
+
+function enrichSwimlaneGoal(
+  item: Extract<SwimlaneStackItem, { type: "goal" }>,
+  salt = 0,
+): SwimlaneGoalItem {
+  if ("kind" in item && item.kind) return item as SwimlaneGoalItem;
+  const legacy = item as { id: string; type: "goal"; title: string; percent: number };
+  const progressState = goalProgressStateFromPercent(legacy.percent, salt);
+  return {
+    id: legacy.id,
+    type: "goal",
+    kind: "text",
+    title: legacy.title,
+    percent: legacy.percent,
+    pbv: 0,
+    abv: 0,
+    progressState,
+  };
+}
+
+function nestGoalRows(flat: SwimlaneGoalItem[]): SwimlaneGoalTableGroup[] {
+  const groups: SwimlaneGoalTableGroup[] = [];
+  let current: SwimlaneGoalTableGroup | null = null;
+
+  for (const row of flat) {
+    if (row.kind === "text") {
+      current = { ...row, children: [] };
+      groups.push(current);
+      continue;
+    }
+    if (row.kind === "separator") {
+      current = { ...row, children: [] };
+      groups.push(current);
+      continue;
+    }
+    if (row.kind === "jira" && current) {
+      current.children.push(row);
+    }
+  }
+
+  for (const group of groups) {
+    if (group.kind === "separator") {
+      Object.assign(group, separatorMetricsFromChildren(group.children));
+    }
+  }
+
+  return groups;
+}
+
+function flattenGoalGroups(groups: SwimlaneGoalTableGroup[]): SwimlaneGoalItem[] {
+  const out: SwimlaneGoalItem[] = [];
+  for (const group of groups) {
+    const { children, ...parent } = group;
+    out.push(parent as SwimlaneGoalItem);
+    out.push(...children);
+  }
+  return out;
+}
+
+function createSprintGoalRows(
+  teamId: TeamFilterId,
+  sprintIndex: SprintIndex,
+): SwimlaneGoalTableGroup[] {
+  const s = `${teamId}:goals:${sprintIndex}`;
+  const pickStatus = (i: number) =>
+    (["ACCEPTANCE", "WAITING FOR RELEASE", "DONE", "IN PROGRESS"] as const)[
+      (hashSeed(`${s}:wf:${i}`) + i) % 4
+    ]!;
+  const jiraTitles = [
+    "[FE] Users can access and contin…",
+    "Disallow creating a TEXT custom field wit…",
+    "Handle changing allowed values in select/…",
+    "FE: display custom fields in side-panel",
+    "Cannot open Column Layout in Overview …",
+  ] as const;
+
+  const jira1 = (() => {
+    const percent = 0;
+    return {
+      id: `goal-jira-${s}-1`,
+      type: "goal" as const,
+      kind: "jira" as const,
+      issueKey: `ONE-${257600 + hashSeed(`${s}:1`) % 200}`,
+      title: jiraTitles[0],
+      workflowStatus: pickStatus(1),
+      workflowTone: "blue" as const,
+      percent,
+      pbv: 0,
+      abv: 0,
+      assignee: pickFromConst(DEMO_TASK_ASSIGNEES, s, 1),
+      progressState: goalProgressStateFromPercent(percent, 1),
+      issueType: "story" as const,
+    };
+  })();
+  const jira2 = (() => {
+    const percent = 100;
+    return {
+      id: `goal-jira-${s}-2`,
+      type: "goal" as const,
+      kind: "jira" as const,
+      issueKey: `ONE-${256400 + hashSeed(`${s}:2`) % 200}`,
+      title: jiraTitles[1],
+      workflowStatus: "WAITING FOR RELEASE",
+      workflowTone: "lime" as const,
+      percent,
+      pbv: 0,
+      abv: 0,
+      assignee: pickFromConst(DEMO_TASK_ASSIGNEES, s, 2),
+      progressState: "complete" as const,
+      issueType: "story" as const,
+    };
+  })();
+  const jira3 = (() => {
+    const percent = 100;
+    return {
+      id: `goal-jira-${s}-3`,
+      type: "goal" as const,
+      kind: "jira" as const,
+      issueKey: `ONE-${255000 + hashSeed(`${s}:3`) % 200}`,
+      title: jiraTitles[2],
+      workflowStatus: "DONE",
+      workflowTone: "green" as const,
+      percent,
+      pbv: 0,
+      abv: 0,
+      assignee: pickFromConst(DEMO_TASK_ASSIGNEES, s, 3),
+      progressState: "complete" as const,
+      issueType: "story" as const,
+    };
+  })();
+  const jira4 = (() => {
+    const percent = 80;
+    return {
+      id: `goal-jira-${s}-4`,
+      type: "goal" as const,
+      kind: "jira" as const,
+      issueKey: `ONE-${256600 + hashSeed(`${s}:4`) % 200}`,
+      title: jiraTitles[3],
+      workflowStatus: "IN PROGRESS",
+      workflowTone: "dark" as const,
+      percent,
+      pbv: 0,
+      abv: 0,
+      assignee: pickFromConst(DEMO_TASK_ASSIGNEES, s, 4),
+      progressState: "in-progress" as const,
+      issueType: "story" as const,
+    };
+  })();
+  const jira5 = (() => {
+    const percent = 70;
+    return {
+      id: `goal-jira-${s}-5`,
+      type: "goal" as const,
+      kind: "jira" as const,
+      issueKey: `ONE-${255200 + hashSeed(`${s}:5`) % 200}`,
+      title: jiraTitles[4],
+      workflowStatus: "ACCEPTANCE",
+      workflowTone: "blue" as const,
+      percent,
+      pbv: 0,
+      abv: 0,
+      assignee: pickFromConst(DEMO_TASK_ASSIGNEES, s, 5),
+      progressState: "at-risk" as const,
+      issueType: "bug" as const,
+    };
+  })();
+
+  return [
+    {
+      id: `goal-text-${s}-0`,
+      type: "goal",
+      kind: "text",
+      title: "Finish DRS v2 integration",
+      percent: 100,
+      pbv: 0,
+      abv: 0,
+      progressState: "complete",
+      children: [jira1, jira2],
+    },
+    (() => {
+      const children = [jira3, jira4, jira5];
+      return {
+        id: `goal-sep-${s}`,
+        type: "goal" as const,
+        kind: "separator" as const,
+        title: `AI Assistant in BP — "KR-2736 — By the end of 2026, i…`,
+        children,
+        ...separatorMetricsFromChildren(children),
+      };
+    })(),
+  ];
+}
+
+function enrichSwimlaneTask(
+  task: Extract<SwimlaneStackItem, { type: "task" }>,
+  salt = 0,
+): SwimlaneTaskItem {
+  if (
+    "status" in task &&
+    "priority" in task &&
+    "issueType" in task &&
+    "assignee" in task &&
+    task.status &&
+    task.priority &&
+    task.issueType &&
+    task.assignee
+  ) {
+    return task as SwimlaneTaskItem;
+  }
+  return createSwimlaneTask({
+    id: task.id,
+    issueKey: task.issueKey,
+    title: task.title,
+    seed: `${task.issueKey}:${task.title}`,
+    salt,
+  });
+}
+
+type SwimlaneTaskColumns = [SwimlaneStackItem[], SwimlaneStackItem[]];
+
+type SwimlaneSprintCell = {
+  taskColumns: SwimlaneTaskColumns;
+  goals: SwimlaneStackItem[];
+};
 
 type SwimlaneCellStacks = Record<
   TeamFilterId,
-  [SwimlaneStackItem[], SwimlaneStackItem[], SwimlaneStackItem[]]
+  [SwimlaneSprintCell, SwimlaneSprintCell]
 >;
+
+function emptySprintCell(): SwimlaneSprintCell {
+  return { taskColumns: [[], []], goals: [] };
+}
+
+function sprintCellItems(cell: SwimlaneSprintCell): SwimlaneStackItem[] {
+  return [...cell.taskColumns[0], ...cell.taskColumns[1], ...cell.goals];
+}
+
+function normalizeSprintCell(raw: unknown): SwimlaneSprintCell {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "taskColumns" in raw &&
+    Array.isArray((raw as SwimlaneSprintCell).taskColumns)
+  ) {
+    const cell = raw as SwimlaneSprintCell;
+    const mapCol = (col: SwimlaneStackItem[], salt: number) =>
+      Array.isArray(col)
+        ? col.map((item, i) =>
+            item.type === "task" ? enrichSwimlaneTask(item, salt + i) : item,
+          )
+        : [];
+    return {
+      taskColumns: [
+        mapCol(cell.taskColumns[0], 0),
+        mapCol(cell.taskColumns[1], 10),
+      ],
+      goals: Array.isArray(cell.goals)
+        ? cell.goals.map((item, i) =>
+            item.type === "goal" ? enrichSwimlaneGoal(item, i) : item,
+          )
+        : [],
+    };
+  }
+
+  if (!Array.isArray(raw)) return emptySprintCell();
+
+  const tasks = raw.filter(
+    (x): x is Extract<SwimlaneStackItem, { type: "task" }> =>
+      x != null && typeof x === "object" && (x as SwimlaneStackItem).type === "task",
+  );
+  const goals = raw.filter(
+    (x): x is Extract<SwimlaneStackItem, { type: "goal" }> =>
+      x != null && typeof x === "object" && (x as SwimlaneStackItem).type === "goal",
+  );
+  const taskColumns: SwimlaneTaskColumns = [[], []];
+  for (const [i, task] of tasks.entries()) {
+    const targetCol =
+      taskColumns[0].length <= taskColumns[1].length ? 0 : 1;
+    taskColumns[targetCol].push(enrichSwimlaneTask(task, i));
+  }
+  return { taskColumns, goals };
+}
+
+function normalizeTeamSprints(
+  row: unknown,
+): [SwimlaneSprintCell, SwimlaneSprintCell] {
+  if (!Array.isArray(row)) {
+    return [emptySprintCell(), emptySprintCell()];
+  }
+  if (row.length >= 2 && row[0] != null && typeof row[0] === "object") {
+    return [normalizeSprintCell(row[0]), normalizeSprintCell(row[1])];
+  }
+  return [emptySprintCell(), emptySprintCell()];
+}
+
+/** Two vertical task stacks side by side under each sprint. */
+function SwimlaneTaskColumns({ columns }: { columns: SwimlaneTaskColumns }) {
+  return (
+    <div className="grid grid-cols-2 items-start gap-2">
+      {columns.map((column, colIdx) => (
+        <div key={colIdx} className="flex min-w-0 flex-col gap-2">
+          {column.map((item) =>
+            item.type === "task" ? (
+              <SwimlaneIssueCard
+                key={item.id}
+                task={enrichSwimlaneTask(item)}
+              />
+            ) : null,
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** Extra goal rows in a cell (salt = occurrence index). */
 function extraGoalFromSalt(
   teamId: TeamFilterId,
-  sprintIndex: 0 | 1 | 2,
+  sprintIndex: SprintIndex,
   salt: number,
 ): { title: string; percent: number } {
   const seed = `${teamId}:sprint${sprintIndex + 1}:extra:${salt}`;
@@ -712,67 +1278,277 @@ function extraGoalFromSalt(
 function createInitialSwimlaneStacks(): SwimlaneCellStacks {
   const out = {} as SwimlaneCellStacks;
   for (const t of ALL_MENU_TEAMS) {
-    const c = sprintColumnForTeam(t.id);
-    const cols: [
-      SwimlaneStackItem[],
-      SwimlaneStackItem[],
-      SwimlaneStackItem[],
-    ] = [[], [], []];
-    cols[c] = [
-      {
-        id: `seed-task-${t.id}`,
-        type: "task",
-        issueKey: issueKeyForTeam(t.id),
-        title: SWIMLANE_CARD_TITLE[t.id],
-      },
+    const sprints: [SwimlaneSprintCell, SwimlaneSprintCell] = [
+      emptySprintCell(),
+      emptySprintCell(),
     ];
-    out[t.id] = cols;
+    for (const sprintIdx of [0, 1] as const) {
+      for (let col = 0; col < TASK_ROWS_PER_SPRINT; col++) {
+        const seed = `${t.id}:${sprintIdx}:${col}`;
+        sprints[sprintIdx].taskColumns[col as 0 | 1].push(
+          createSwimlaneTask({
+            id: `seed-task-${t.id}-${sprintIdx}-${col}`,
+            issueKey: issueKeyForTeamRow(t.id, sprintIdx, col),
+            title: swimlaneTaskTitle(seed, col),
+            seed,
+            salt: col,
+          }),
+        );
+      }
+      sprints[sprintIdx].goals = flattenGoalGroups(
+        createSprintGoalRows(t.id, sprintIdx),
+      );
+    }
+    out[t.id] = sprints;
   }
   return out;
 }
 
-function SwimlaneGoalBar({
-  title,
+function SwimlaneGoalProgressCell({
   percent,
-  sprintLabel,
+  progressState,
 }: {
-  title: string;
   percent: number;
-  /** Shown above the goal title (per-column sprint). */
-  sprintLabel?: string;
+  progressState: GoalProgressState;
 }) {
+  const barColor = goalProgressBarColor(progressState, percent);
   return (
-    <div className="rounded-md border border-[#DFE1E6] bg-[#F7F8F9] px-2 py-2 shadow-[0_1px_2px_rgba(9,30,66,0.06)]">
-      {sprintLabel ? (
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
-          {sprintLabel}
-        </div>
-      ) : null}
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-xs font-semibold leading-snug text-[#172B4D]">
-          Goal: {title}
-        </span>
-        <span className="shrink-0 tabular-nums text-[11px] font-semibold text-[#626F86]">
-          {percent}%
-        </span>
-      </div>
+    <div className="flex min-w-0 items-center gap-1.5">
       <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-[#DFE1E6]"
+        className="h-1 min-w-[36px] flex-1 overflow-hidden rounded-full bg-[#DFE1E6]"
         role="progressbar"
-        aria-label={
-          sprintLabel
-            ? `${sprintLabel}: ${title}, ${percent}%`
-            : `${title}, ${percent}%`
-        }
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className="h-full rounded-full bg-[#0C66E4]"
-          style={{ width: `${percent}%` }}
+          className="h-full rounded-full"
+          style={{ width: `${Math.min(100, percent)}%`, backgroundColor: barColor }}
         />
       </div>
+      <span className="shrink-0 tabular-nums text-[11px] text-[#44546F]">
+        {percent} %
+      </span>
+    </div>
+  );
+}
+
+function SwimlaneGoalStatusIcon({ state }: { state: GoalProgressState }) {
+  if (state === "complete") {
+    return (
+      <span
+        className="flex size-5 items-center justify-center text-[#22A06B]/80"
+        aria-label="Complete"
+      >
+        <Check className="size-3.5" strokeWidth={2.25} aria-hidden />
+      </span>
+    );
+  }
+  if (state === "at-risk") {
+    return (
+      <span
+        className="flex size-5 items-center justify-center text-[#C9372C]/75"
+        aria-label="At risk"
+      >
+        <X className="size-3.5" strokeWidth={2.25} aria-hidden />
+      </span>
+    );
+  }
+  return <span className="block size-5" aria-hidden />;
+}
+
+
+function sprintGoalTableRows(
+  goals: SwimlaneStackItem[],
+  teamId: TeamFilterId,
+  sprintIdx: SprintIndex,
+): SwimlaneGoalTableGroup[] {
+  const enriched = goals
+    .filter(
+      (g): g is Extract<SwimlaneStackItem, { type: "goal" }> => g.type === "goal",
+    )
+    .map((g, i) => enrichSwimlaneGoal(g, i));
+  return enriched.length > 0
+    ? nestGoalRows(enriched)
+    : createSprintGoalRows(teamId, sprintIdx);
+}
+
+function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(rows.map((row) => row.id)),
+  );
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const renderJiraRow = (row: SwimlaneGoalJiraRow, nested: boolean) => {
+    const bg = goalRowBackground(row.progressState);
+    return (
+      <tr
+        key={row.id}
+        className={cn("border-b border-[#EBECF0] last:border-b-0", bg)}
+      >
+        <td className={cn("px-2 py-1.5 align-middle", nested && "pl-6")}>
+          <div className="flex min-w-0 items-center gap-1">
+            <SwimlaneIssueTypeIcon issueType={row.issueType} />
+            <span className="shrink-0 text-xs font-semibold text-[#0C66E4]">
+              {row.issueKey}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-xs text-[#172B4D]">
+              {row.title}
+            </span>
+            <span
+              className={cn(
+                "shrink-0 rounded px-1 py-0.5 text-[9px] font-bold uppercase leading-none",
+                GOAL_WORKFLOW_STATUS_CLASS[row.workflowStatus] ??
+                  "bg-[#F1F2F4] text-[#44546F]",
+              )}
+            >
+              {row.workflowStatus}
+            </span>
+            <SwimlaneAssigneeAvatar assignee={row.assignee} />
+          </div>
+        </td>
+        <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+          {row.pbv}
+        </td>
+        <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+          {row.abv === 0 ? "" : row.abv}
+        </td>
+        <td className="px-2 py-1.5 align-middle">
+          <SwimlaneGoalProgressCell
+            percent={row.percent}
+            progressState={row.progressState}
+          />
+        </td>
+        <td className="px-1 py-1.5 align-middle">
+          <SwimlaneGoalStatusIcon state={row.progressState} />
+        </td>
+      </tr>
+    );
+  };
+
+  const renderExpandChevron = (id: string, isExpanded: boolean) => (
+    <button
+      type="button"
+      className="flex size-4 shrink-0 items-center justify-center rounded hover:bg-[#EBECF0]"
+      aria-expanded={isExpanded}
+      aria-label={isExpanded ? "Collapse tasks" : "Expand tasks"}
+      onClick={() => toggleExpanded(id)}
+    >
+      <ChevronRight
+        className={cn(
+          "size-3.5 text-[#626F86] transition-transform",
+          isExpanded && "rotate-90",
+        )}
+        strokeWidth={2}
+        aria-hidden
+      />
+    </button>
+  );
+
+  return (
+    <div className="w-full overflow-hidden rounded-md border border-[#DFE1E6] bg-white shadow-[0_1px_2px_rgba(9,30,66,0.06)]">
+      <table className="w-full table-fixed border-collapse text-left">
+        <colgroup>
+          <col className="min-w-0" />
+          <col className="w-9" />
+          <col className="w-9" />
+          <col className="w-[92px]" />
+          <col className="w-7" />
+        </colgroup>
+        <thead>
+          <tr className="border-b border-[#DFE1E6] bg-[#F7F8F9] text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
+            <th className="px-2 py-1.5 font-bold">Goals</th>
+            <th className="px-1 py-1.5 text-right font-bold">PBV</th>
+            <th className="px-1 py-1.5 text-right font-bold">ABV</th>
+            <th className="px-2 py-1.5 font-bold">Progress</th>
+            <th className="px-1 py-1.5" aria-label="Status" />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((group) => {
+            const isExpanded = expanded.has(group.id);
+            const hasChildren = group.children.length > 0;
+
+            if (group.kind === "separator") {
+              const sepBg = goalRowBackground(group.progressState);
+              return (
+                <Fragment key={group.id}>
+                  <tr className={cn("border-b border-[#EBECF0]", sepBg)}>
+                    <td className="min-w-0 px-2 py-1.5 align-middle">
+                      <span
+                        className="block w-full truncate text-xs font-medium text-[#172B4D]"
+                        title={group.title}
+                      >
+                        {group.title}
+                      </span>
+                    </td>
+                    <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+                      {group.pbv}
+                    </td>
+                    <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+                      {group.abv === 0 ? "" : group.abv}
+                    </td>
+                    <td className="px-2 py-1.5 align-middle">
+                      <SwimlaneGoalProgressCell
+                        percent={group.percent}
+                        progressState={group.progressState}
+                      />
+                    </td>
+                    <td className="px-1 py-1.5 align-middle">
+                      <SwimlaneGoalStatusIcon state={group.progressState} />
+                    </td>
+                  </tr>
+                  {group.children.map((child) => renderJiraRow(child, true))}
+                </Fragment>
+              );
+            }
+
+            const bg = goalRowBackground(group.progressState);
+            return (
+              <Fragment key={group.id}>
+                <tr className={cn("border-b border-[#EBECF0]", bg)}>
+                  <td className="px-2 py-1.5 align-middle">
+                    <div className="flex min-w-0 items-center gap-1">
+                      {hasChildren
+                        ? renderExpandChevron(group.id, isExpanded)
+                        : <span className="size-4 shrink-0" aria-hidden />}
+                      <span className="truncate text-xs font-medium text-[#172B4D]">
+                        {group.title}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+                    {group.pbv}
+                  </td>
+                  <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+                    {group.abv === 0 ? "" : group.abv}
+                  </td>
+                  <td className="px-2 py-1.5 align-middle">
+                    <SwimlaneGoalProgressCell
+                      percent={group.percent}
+                      progressState={group.progressState}
+                    />
+                  </td>
+                  <td className="px-1 py-1.5 align-middle">
+                    <SwimlaneGoalStatusIcon state={group.progressState} />
+                  </td>
+                </tr>
+                {isExpanded
+                  ? group.children.map((child) => renderJiraRow(child, true))
+                  : null}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -919,7 +1695,7 @@ export default function MergingBoardGoalsPage() {
 
   const [sprintMixPicker, setSprintMixPicker] = useState<{
     teamId: TeamFilterId;
-    sprintIdx: 0 | 1 | 2;
+    sprintIdx: SprintIndex;
   } | null>(null);
   const sprintMixWrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -1363,42 +2139,48 @@ export default function MergingBoardGoalsPage() {
     }
   }, [isCapacityPlanningView]);
 
-  const appendJiraTask = (teamId: TeamFilterId, sprintIdx: 0 | 1 | 2) => {
+  const appendJiraTask = (teamId: TeamFilterId, sprintIdx: SprintIndex) => {
     setSwimlaneStacks((prev) => {
-      const row = prev[teamId];
-      const next: [
-        SwimlaneStackItem[],
-        SwimlaneStackItem[],
-        SwimlaneStackItem[],
-      ] = [[...row[0]], [...row[1]], [...row[2]]];
-      const n = next[sprintIdx].filter((x) => x.type === "task").length;
-      next[sprintIdx].push({
-        id: `task-${teamId}-${sprintIdx}-${Date.now()}-${n}`,
-        type: "task",
-        issueKey: `APP-${200 + ((n + teamId.length * 3 + sprintIdx * 11) % 700)}`,
-        title: "New Jira task",
-      });
-      return { ...prev, [teamId]: next };
+      const sprints = normalizeTeamSprints(prev[teamId]);
+      const cell = normalizeSprintCell(sprints[sprintIdx]);
+      const targetCol: 0 | 1 =
+        cell.taskColumns[0].length <= cell.taskColumns[1].length ? 0 : 1;
+      const n =
+        cell.taskColumns[0].length + cell.taskColumns[1].length;
+      const seed = `${teamId}:${sprintIdx}:${n}:${Date.now()}`;
+      cell.taskColumns[targetCol].push(
+        createSwimlaneTask({
+          id: `task-${teamId}-${sprintIdx}-${Date.now()}-${n}`,
+          issueKey: `ONE-${257700 + ((n + teamId.length * 3 + sprintIdx * 11) % 12000)}`,
+          title: swimlaneTaskTitle(seed, n),
+          seed,
+          salt: n,
+        }),
+      );
+      sprints[sprintIdx] = cell;
+      return { ...prev, [teamId]: sprints };
     });
   };
 
-  const appendGoalItem = (teamId: TeamFilterId, sprintIdx: 0 | 1 | 2) => {
+  const appendGoalItem = (teamId: TeamFilterId, sprintIdx: SprintIndex) => {
     setSwimlaneStacks((prev) => {
-      const row = prev[teamId];
-      const next: [
-        SwimlaneStackItem[],
-        SwimlaneStackItem[],
-        SwimlaneStackItem[],
-      ] = [[...row[0]], [...row[1]], [...row[2]]];
-      const salt = next[sprintIdx].filter((x) => x.type === "goal").length;
+      const sprints = normalizeTeamSprints(prev[teamId]);
+      const cell = normalizeSprintCell(sprints[sprintIdx]);
+      const salt = cell.goals.length;
       const meta = extraGoalFromSalt(teamId, sprintIdx, salt);
-      next[sprintIdx].push({
+      const percent = meta.percent;
+      cell.goals.push({
         id: `goal-${teamId}-${sprintIdx}-${Date.now()}`,
         type: "goal",
+        kind: "text",
         title: meta.title,
-        percent: meta.percent,
+        percent,
+        pbv: 0,
+        abv: 0,
+        progressState: goalProgressStateFromPercent(percent, salt),
       });
-      return { ...prev, [teamId]: next };
+      sprints[sprintIdx] = cell;
+      return { ...prev, [teamId]: sprints };
     });
   };
 
@@ -1552,10 +2334,10 @@ export default function MergingBoardGoalsPage() {
             <span className="min-w-0 flex-1 truncate text-left">Financials</span>
             <span className={purpleNewBadge}>New</span>
           </button>
-          <div className={cn("border-t p-2", ads.border)}>
+          <div className={cn("mt-1 shrink-0 border-t pt-2", ads.border)}>
             <button type="button" className={sidebarNavButton}>
               <Cog className="size-4 shrink-0 text-[#44546F]" strokeWidth={2} />
-              <span className="truncate text-sm">Box Configuration</span>
+              <span className="truncate">Box Configuration</span>
             </button>
           </div>
         </nav>
@@ -2646,15 +3428,12 @@ export default function MergingBoardGoalsPage() {
 
               {/* Sprint / stage headers */}
               <div
-                className={cn(
-                  "gap-2 border-b border-[#DFE1E6] px-4 py-3",
-                  isCapacityPlanningView ? "grid grid-cols-2" : "grid grid-cols-3",
-                )}
+                className="grid grid-cols-2 gap-2 border-b border-[#DFE1E6] px-4 py-3"
               >
                 {(
                   isCapacityPlanningView
                     ? (["Stage 1", "Stage 2"] as const)
-                    : (["Sprint 1", "Sprint 2", "Sprint 3"] as const)
+                    : SPRINT_LABELS
                 ).map((label) => (
                   <div
                     key={label}
@@ -2736,10 +3515,13 @@ export default function MergingBoardGoalsPage() {
                     </button>
                   </div>
                   {swimlaneExpanded[team.id] ? (
-                    <div className="grid grid-cols-3 gap-2 bg-white p-4 pt-3">
-                      {[1, 2, 3].map((col) => {
-                        const sprintIdx = (col - 1) as 0 | 1 | 2;
-                        const rawStack = swimlaneStacks[team.id][sprintIdx];
+                    <div className="grid grid-cols-2 gap-2 bg-white p-4 pt-3">
+                      {([0, 1] as const).map((sprintIdx) => {
+                        const col = sprintIdx + 1;
+                        const sprintCell = normalizeSprintCell(
+                          swimlaneStacks[team.id]?.[sprintIdx],
+                        );
+                        const rawStack = sprintCellItems(sprintCell);
                         const visibleStack = rawStack.filter((item) => {
                           if (boardScope.tasks && boardScope.goals)
                             return true;
@@ -2765,16 +3547,14 @@ export default function MergingBoardGoalsPage() {
                         const goalsPercentsForReport =
                           isReportsView && boardScope.goals
                             ? sprintGoals.length > 0
-                              ? sprintGoals.map((g) => ({ percent: g.percent }))
-                              : [
-                                  {
-                                    percent:
-                                      swimlaneGoalForSprint(
-                                        team.id,
-                                        sprintIdx,
-                                      ).percent,
-                                  },
-                                ]
+                              ? sprintGoals.map((g, i) => ({
+                                  percent: enrichSwimlaneGoal(g, i).percent,
+                                }))
+                              : flattenGoalGroups(
+                                  createSprintGoalRows(team.id, sprintIdx),
+                                )
+                                  .filter((g) => g.kind !== "separator")
+                                  .map((g) => ({ percent: g.percent }))
                             : [];
                         const tasksGoalsMix =
                           boardScope.tasks &&
@@ -2817,9 +3597,9 @@ export default function MergingBoardGoalsPage() {
                             className="flex min-h-0 flex-col gap-2"
                           >
                             {boardScope.goals && !isReportsView ? (
-                              <SwimlaneGoalBar
-                                sprintLabel={`Sprint ${col}`}
-                                {...swimlaneGoalForSprint(
+                              <SwimlaneGoalsTable
+                                rows={sprintGoalTableRows(
+                                  sprintCell.goals,
                                   team.id,
                                   sprintIdx,
                                 )}
@@ -2844,9 +3624,28 @@ export default function MergingBoardGoalsPage() {
                                 goals={goalsPercentsForReport}
                               />
                             ) : null}
+                            {boardScope.tasks && !isReportsView ? (
+                              <SwimlaneTaskColumns
+                                columns={[
+                                  sprintCell.taskColumns[0].filter(
+                                    (item) =>
+                                      boardScope.goals || item.type === "task",
+                                  ),
+                                  sprintCell.taskColumns[1].filter(
+                                    (item) =>
+                                      boardScope.goals || item.type === "task",
+                                  ),
+                                ]}
+                              />
+                            ) : null}
                             {visibleStack
                               .filter(
                                 (item) =>
+                                  !(
+                                    boardScope.tasks &&
+                                    !isReportsView &&
+                                    item.type === "task"
+                                  ) &&
                                   !(
                                     boardScope.tasks &&
                                     isReportsView &&
@@ -2856,22 +3655,20 @@ export default function MergingBoardGoalsPage() {
                                     boardScope.goals &&
                                     isReportsView &&
                                     item.type === "goal"
+                                  ) &&
+                                  !(
+                                    boardScope.goals &&
+                                    !isReportsView &&
+                                    item.type === "goal"
                                   ),
                               )
                               .map((item) =>
                                 item.type === "task" ? (
                                   <SwimlaneIssueCard
                                     key={item.id}
-                                    issueKey={item.issueKey}
-                                    title={item.title}
+                                    task={enrichSwimlaneTask(item)}
                                   />
-                                ) : (
-                                  <SwimlaneGoalBar
-                                    key={item.id}
-                                    title={item.title}
-                                    percent={item.percent}
-                                  />
-                                ),
+                                ) : null,
                               )}
                             {!isReportsView ? (
                               <div
