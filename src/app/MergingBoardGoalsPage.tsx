@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import { RadioGroup } from "@atlaskit/radio";
 import { createPortal } from "react-dom";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { BigPictureAppTile } from "./components/BigPictureAppTile";
 import { BigPictureModuleMark } from "./components/BigPictureModuleMark";
@@ -1017,6 +1017,128 @@ function flattenGoalGroups(groups: SwimlaneGoalTableGroup[]): SwimlaneGoalItem[]
   return out;
 }
 
+type GoalContextWorkflowStatus =
+  | "open"
+  | "completed"
+  | "failed"
+  | "abandoned";
+
+const GOAL_CONTEXT_STATUS_ITEMS: {
+  id: GoalContextWorkflowStatus;
+  label: string;
+}[] = [
+  { id: "open", label: "Open" },
+  { id: "completed", label: "Completed" },
+  { id: "failed", label: "Failed" },
+  { id: "abandoned", label: "Abandoned" },
+];
+
+const GOAL_CONTEXT_ACTION_ITEMS = [
+  "Continue",
+  "Set as uncommitted",
+  "Details",
+  "Add associated work",
+  "Remove",
+] as const;
+
+function defaultGoalContextWorkflowStatus(
+  progressState: GoalProgressState,
+  percent: number,
+): GoalContextWorkflowStatus {
+  if (progressState === "complete" || percent >= 100) return "completed";
+  if (progressState === "at-risk") return "failed";
+  return "open";
+}
+
+function patchSwimlaneGoalJiraRowFromContextStatus(
+  row: SwimlaneGoalJiraRow,
+  status: GoalContextWorkflowStatus,
+): SwimlaneGoalJiraRow {
+  switch (status) {
+    case "completed":
+      return {
+        ...row,
+        progressState: "complete",
+        percent: 100,
+        workflowStatus: "DONE",
+        workflowTone: "green",
+      };
+    case "open": {
+      const nextPercent =
+        row.percent >= 100 ? 45 : row.percent < 1 ? 28 : Math.min(row.percent, 90);
+      return {
+        ...row,
+        progressState: "in-progress",
+        percent: nextPercent,
+        workflowStatus: "IN PROGRESS",
+        workflowTone: "dark",
+      };
+    }
+    case "failed": {
+      const nextPercent =
+        row.percent >= 100 ? 55 : Math.min(Math.max(row.percent, 15), 72);
+      return {
+        ...row,
+        progressState: "at-risk",
+        percent: nextPercent,
+        workflowStatus: "IN PROGRESS",
+        workflowTone: "dark",
+      };
+    }
+    case "abandoned":
+      return {
+        ...row,
+        progressState: "in-progress",
+        percent: 0,
+        workflowStatus: "ACCEPTANCE",
+        workflowTone: "blue",
+      };
+    default:
+      return row;
+  }
+}
+
+function patchSwimlaneGoalNonJiraFromContextStatus(
+  row: SwimlaneGoalTextRow | SwimlaneGoalSeparatorRow,
+  status: GoalContextWorkflowStatus,
+): SwimlaneGoalTextRow | SwimlaneGoalSeparatorRow {
+  switch (status) {
+    case "completed":
+      return { ...row, progressState: "complete", percent: 100 };
+    case "open": {
+      const nextPercent =
+        row.percent >= 100 ? 40 : row.percent < 1 ? 30 : Math.min(row.percent, 90);
+      return { ...row, progressState: "in-progress", percent: nextPercent };
+    }
+    case "failed": {
+      const nextPercent =
+        row.percent >= 100 ? 50 : Math.min(Math.max(row.percent, 12), 72);
+      return { ...row, progressState: "at-risk", percent: nextPercent };
+    }
+    case "abandoned":
+      return { ...row, progressState: "in-progress", percent: 0 };
+    default:
+      return row;
+  }
+}
+
+function applyGoalContextWorkflowToStackItem(
+  item: Extract<SwimlaneStackItem, { type: "goal" }>,
+  status: GoalContextWorkflowStatus,
+): SwimlaneGoalItem {
+  const resolved: SwimlaneGoalItem =
+    "kind" in item && item.kind
+      ? (item as SwimlaneGoalItem)
+      : enrichSwimlaneGoal(item, 0);
+  if (resolved.kind === "jira") {
+    return patchSwimlaneGoalJiraRowFromContextStatus(resolved, status);
+  }
+  if (resolved.kind === "text" || resolved.kind === "separator") {
+    return patchSwimlaneGoalNonJiraFromContextStatus(resolved, status);
+  }
+  return resolved;
+}
+
 function createSprintGoalRows(
   teamId: TeamFilterId,
   sprintIndex: SprintIndex,
@@ -1435,10 +1557,28 @@ function SwimlaneTeamSprintGoalStat({
   );
 }
 
-function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
+function SwimlaneGoalsTable({
+  rows,
+  onGoalContextStatusCommit,
+}: {
+  rows: SwimlaneGoalTableGroup[];
+  onGoalContextStatusCommit?: (
+    goalId: string,
+    status: GoalContextWorkflowStatus,
+  ) => void;
+}) {
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(rows.map((row) => row.id)),
   );
+  const goalContextMenuRef = useRef<HTMLDivElement>(null);
+  const [goalContextMenu, setGoalContextMenu] = useState<null | {
+    x: number;
+    y: number;
+    goalId: string;
+    title: string;
+  }>(null);
+  const [goalContextWorkflowStatus, setGoalContextWorkflowStatus] =
+    useState<GoalContextWorkflowStatus>("open");
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -1449,12 +1589,65 @@ function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
     });
   };
 
+  const openGoalContextMenu = (
+    e: ReactMouseEvent,
+    meta: {
+      id: string;
+      title: string;
+      progressState: GoalProgressState;
+      percent: number;
+    },
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const menuW = 200;
+    const menuH = 360;
+    const x = Math.max(8, Math.min(e.clientX, window.innerWidth - menuW - 8));
+    const y = Math.max(8, Math.min(e.clientY, window.innerHeight - menuH - 8));
+    setGoalContextMenu({
+      x,
+      y,
+      goalId: meta.id,
+      title: meta.title,
+    });
+    setGoalContextWorkflowStatus(
+      defaultGoalContextWorkflowStatus(meta.progressState, meta.percent),
+    );
+  };
+
+  useEffect(() => {
+    if (!goalContextMenu) return;
+    const close = () => setGoalContextMenu(null);
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") close();
+    };
+    const onPointerDown = (ev: PointerEvent) => {
+      const el = goalContextMenuRef.current;
+      if (el?.contains(ev.target as Node)) return;
+      close();
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [goalContextMenu]);
+
   const renderJiraRow = (row: SwimlaneGoalJiraRow, nested: boolean) => {
     const bg = goalRowBackground(row.progressState);
     return (
       <tr
         key={row.id}
         className={cn("border-b border-[#EBECF0] last:border-b-0", bg)}
+        onContextMenu={(e) =>
+          openGoalContextMenu(e, {
+            id: row.id,
+            title: row.title,
+            progressState: row.progressState,
+            percent: row.percent,
+          })
+        }
       >
         <td className={cn("px-2 py-1.5 align-middle", nested && "pl-6")}>
           <div className="flex min-w-0 items-center gap-1">
@@ -1516,41 +1709,97 @@ function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
   );
 
   return (
-    <div className="w-full overflow-hidden rounded-md border border-[#DFE1E6] bg-white shadow-[0_1px_2px_rgba(9,30,66,0.06)]">
-      <table className="w-full table-fixed border-collapse text-left">
-        <colgroup>
-          <col className="min-w-0" />
-          <col className="w-9" />
-          <col className="w-9" />
-          <col className="w-[92px]" />
-          <col className="w-7" />
-        </colgroup>
-        <thead>
-          <tr className="border-b border-[#DFE1E6] bg-[#F7F8F9] text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
-            <th className="px-2 py-1.5 font-bold">Goals</th>
-            <th className="px-1 py-1.5 text-right font-bold">PBV</th>
-            <th className="px-1 py-1.5 text-right font-bold">ABV</th>
-            <th className="px-2 py-1.5 font-bold">Progress</th>
-            <th className="px-1 py-1.5" aria-label="Status" />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((group) => {
-            const isExpanded = expanded.has(group.id);
-            const hasChildren = group.children.length > 0;
+    <>
+      <div className="w-full overflow-hidden rounded-md border border-[#DFE1E6] bg-white shadow-[0_1px_2px_rgba(9,30,66,0.06)]">
+        <table className="w-full table-fixed border-collapse text-left">
+          <colgroup>
+            <col className="min-w-0" />
+            <col className="w-9" />
+            <col className="w-9" />
+            <col className="w-[92px]" />
+            <col className="w-7" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-[#DFE1E6] bg-[#F7F8F9] text-[10px] font-bold uppercase tracking-wide text-[#626F86]">
+              <th className="px-2 py-1.5 font-bold">Goals</th>
+              <th className="px-1 py-1.5 text-right font-bold">PBV</th>
+              <th className="px-1 py-1.5 text-right font-bold">ABV</th>
+              <th className="px-2 py-1.5 font-bold">Progress</th>
+              <th className="px-1 py-1.5" aria-label="Status" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((group) => {
+              const isExpanded = expanded.has(group.id);
+              const hasChildren = group.children.length > 0;
 
-            if (group.kind === "separator") {
-              const sepBg = goalRowBackground(group.progressState);
+              if (group.kind === "separator") {
+                const sepBg = goalRowBackground(group.progressState);
+                return (
+                  <Fragment key={group.id}>
+                    <tr
+                      className={cn("border-b border-[#EBECF0]", sepBg)}
+                      onContextMenu={(e) =>
+                        openGoalContextMenu(e, {
+                          id: group.id,
+                          title: group.title,
+                          progressState: group.progressState,
+                          percent: group.percent,
+                        })
+                      }
+                    >
+                      <td className="min-w-0 px-2 py-1.5 align-middle">
+                        <span
+                          className="block w-full truncate text-xs font-medium text-[#172B4D]"
+                          title={group.title}
+                        >
+                          {group.title}
+                        </span>
+                      </td>
+                      <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+                        {group.pbv}
+                      </td>
+                      <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
+                        {group.abv === 0 ? "" : group.abv}
+                      </td>
+                      <td className="px-2 py-1.5 align-middle">
+                        <SwimlaneGoalProgressCell
+                          percent={group.percent}
+                          progressState={group.progressState}
+                        />
+                      </td>
+                      <td className="px-1 py-1.5 align-middle">
+                        <SwimlaneGoalStatusIcon state={group.progressState} />
+                      </td>
+                    </tr>
+                    {group.children.map((child) => renderJiraRow(child, true))}
+                  </Fragment>
+                );
+              }
+
+              const bg = goalRowBackground(group.progressState);
               return (
                 <Fragment key={group.id}>
-                  <tr className={cn("border-b border-[#EBECF0]", sepBg)}>
-                    <td className="min-w-0 px-2 py-1.5 align-middle">
-                      <span
-                        className="block w-full truncate text-xs font-medium text-[#172B4D]"
-                        title={group.title}
-                      >
-                        {group.title}
-                      </span>
+                  <tr
+                    className={cn("border-b border-[#EBECF0]", bg)}
+                    onContextMenu={(e) =>
+                      openGoalContextMenu(e, {
+                        id: group.id,
+                        title: group.title,
+                        progressState: group.progressState,
+                        percent: group.percent,
+                      })
+                    }
+                  >
+                    <td className="px-2 py-1.5 align-middle">
+                      <div className="flex min-w-0 items-center gap-1">
+                        {hasChildren
+                          ? renderExpandChevron(group.id, isExpanded)
+                          : <span className="size-4 shrink-0" aria-hidden />}
+                        <span className="truncate text-xs font-medium text-[#172B4D]">
+                          {group.title}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
                       {group.pbv}
@@ -1568,50 +1817,77 @@ function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
                       <SwimlaneGoalStatusIcon state={group.progressState} />
                     </td>
                   </tr>
-                  {group.children.map((child) => renderJiraRow(child, true))}
+                  {isExpanded
+                    ? group.children.map((child) => renderJiraRow(child, true))
+                    : null}
                 </Fragment>
               );
-            }
-
-            const bg = goalRowBackground(group.progressState);
-            return (
-              <Fragment key={group.id}>
-                <tr className={cn("border-b border-[#EBECF0]", bg)}>
-                  <td className="px-2 py-1.5 align-middle">
-                    <div className="flex min-w-0 items-center gap-1">
-                      {hasChildren
-                        ? renderExpandChevron(group.id, isExpanded)
-                        : <span className="size-4 shrink-0" aria-hidden />}
-                      <span className="truncate text-xs font-medium text-[#172B4D]">
-                        {group.title}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
-                    {group.pbv}
-                  </td>
-                  <td className="px-1 py-1.5 text-right align-middle tabular-nums text-xs text-[#44546F]">
-                    {group.abv === 0 ? "" : group.abv}
-                  </td>
-                  <td className="px-2 py-1.5 align-middle">
-                    <SwimlaneGoalProgressCell
-                      percent={group.percent}
-                      progressState={group.progressState}
-                    />
-                  </td>
-                  <td className="px-1 py-1.5 align-middle">
-                    <SwimlaneGoalStatusIcon state={group.progressState} />
-                  </td>
-                </tr>
-                {isExpanded
-                  ? group.children.map((child) => renderJiraRow(child, true))
-                  : null}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+            })}
+          </tbody>
+        </table>
+      </div>
+      {goalContextMenu &&
+        createPortal(
+          <div
+            ref={goalContextMenuRef}
+            role="menu"
+            aria-label={`Goal: ${goalContextMenu.title}`}
+            className="fixed z-[320] w-max min-w-[160px] max-w-[200px] rounded-md border border-[#DFE1E6] bg-white py-1 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+            style={{
+              left: goalContextMenu.x,
+              top: goalContextMenu.y,
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {GOAL_CONTEXT_STATUS_ITEMS.map(({ id, label }) => {
+              const selected = goalContextWorkflowStatus === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  className="flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                  onClick={() => {
+                    setGoalContextWorkflowStatus(id);
+                    if (goalContextMenu && onGoalContextStatusCommit) {
+                      onGoalContextStatusCommit(goalContextMenu.goalId, id);
+                    }
+                  }}
+                >
+                  <span
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border-2 bg-white",
+                      selected
+                        ? "border-[#0C66E4]"
+                        : "border-[#B3B9C4]",
+                    )}
+                    aria-hidden
+                  >
+                    {selected ? (
+                      <span className="size-2 rounded-full bg-[#0C66E4]" />
+                    ) : null}
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
+            <div className="my-1 border-t border-[#DFE1E6]" role="separator" />
+            {GOAL_CONTEXT_ACTION_ITEMS.map((label) => (
+              <button
+                key={label}
+                type="button"
+                role="menuitem"
+                className="w-full px-2.5 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                onClick={() => setGoalContextMenu(null)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -2281,6 +2557,24 @@ export default function MergingBoardGoalsPage() {
         progressState,
       });
       sprints[sprintIdx] = cell;
+      return { ...prev, [teamId]: sprints };
+    });
+  };
+
+  const updateGoalWorkflowStatus = (
+    teamId: TeamFilterId,
+    sprintIdx: SprintIndex,
+    goalId: string,
+    status: GoalContextWorkflowStatus,
+  ) => {
+    setSwimlaneStacks((prev) => {
+      const sprints = normalizeTeamSprints(prev[teamId]);
+      const cell = normalizeSprintCell(sprints[sprintIdx]);
+      const nextGoals = cell.goals.map((item) => {
+        if (item.type !== "goal" || item.id !== goalId) return item;
+        return applyGoalContextWorkflowToStackItem(item, status);
+      });
+      sprints[sprintIdx] = { ...cell, goals: nextGoals };
       return { ...prev, [teamId]: sprints };
     });
   };
@@ -3800,6 +4094,14 @@ export default function MergingBoardGoalsPage() {
                                   team.id,
                                   sprintIdx,
                                 )}
+                                onGoalContextStatusCommit={(goalId, status) =>
+                                  updateGoalWorkflowStatus(
+                                    team.id,
+                                    sprintIdx,
+                                    goalId,
+                                    status,
+                                  )
+                                }
                               />
                             ) : null}
                             {boardScope.tasks &&
@@ -3878,14 +4180,14 @@ export default function MergingBoardGoalsPage() {
                               >
                                 {showMixPicker ? (
                                   <div
-                                    className="absolute bottom-full left-auto right-0 z-30 mb-1 w-max min-w-[10rem] rounded-md border border-[#DFE1E6] bg-white py-1 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                                    className="absolute bottom-full left-auto right-0 z-30 mb-1 w-max max-w-[200px] min-w-0 rounded-md border border-[#DFE1E6] bg-white py-1 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
                                     role="menu"
                                     aria-label="Add to sprint"
                                   >
                                     <button
                                       type="button"
                                       role="menuitem"
-                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
                                       onClick={() => {
                                         appendJiraTask(team.id, sprintIdx);
                                         setSprintMixPicker(null);
@@ -3897,7 +4199,7 @@ export default function MergingBoardGoalsPage() {
                                     <button
                                       type="button"
                                       role="menuitem"
-                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+                                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
                                       onClick={() => {
                                         appendGoalItem(team.id, sprintIdx);
                                         setSprintMixPicker(null);
