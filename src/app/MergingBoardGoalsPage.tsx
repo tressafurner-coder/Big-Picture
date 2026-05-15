@@ -19,6 +19,7 @@ import {
   Cog,
   Equal,
   Eye,
+  Flag,
   Filter,
   Flame,
   Gauge,
@@ -406,6 +407,8 @@ type SwimlaneTaskItem = {
   issueType: TaskIssueType;
   points: number;
   assignee: (typeof DEMO_TASK_ASSIGNEES)[number];
+  /** Local BigPicture task not linked to Jira. */
+  source?: "jira" | "basic";
 };
 
 function hashSeed(seed: string): number {
@@ -458,12 +461,14 @@ function createSwimlaneTask(input: {
   title: string;
   seed: string;
   salt?: number;
+  source?: "jira" | "basic";
 }): SwimlaneTaskItem {
   return {
     id: input.id,
     type: "task",
     issueKey: input.issueKey,
     title: input.title,
+    source: input.source ?? "jira",
     ...swimlaneTaskVisualMeta(input.seed, input.salt ?? 0),
   };
 }
@@ -583,13 +588,23 @@ function SwimlaneAssigneeAvatar({
 
 function SwimlaneIssueCard({ task }: { task: SwimlaneTaskItem }) {
   const statusBadge = TASK_STATUS_BADGE[task.status];
+  const isBasic = task.source === "basic";
   return (
     <div className="w-full rounded-md border border-[#DFE1E6] bg-white p-2.5 shadow-[0_1px_2px_rgba(9,30,66,0.15)]">
       <div className="flex items-center gap-1.5">
         <SwimlaneIssueTypeIcon issueType={task.issueType} />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#0C66E4]">
-          {task.issueKey}
-        </span>
+        {isBasic ? (
+          <span className="flex min-w-0 flex-1 items-center gap-1 truncate">
+            <BigPictureTaskMenuIcon />
+            <span className="truncate text-sm font-semibold text-[#626F86]">
+              Basic task
+            </span>
+          </span>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#0C66E4]">
+            {task.issueKey}
+          </span>
+        )}
         <span
           className={cn(
             "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
@@ -630,8 +645,9 @@ function reportViewSegmentsForTasks(
   const counts = new Map<string, { color: string; count: number }>();
   for (const t of tasks) {
     let h = 0;
-    for (let i = 0; i < t.issueKey.length; i++) {
-      h = (h * 31 + t.issueKey.charCodeAt(i)) >>> 0;
+    const keyForHash = t.issueKey || "basic";
+    for (let i = 0; i < keyForHash.length; i++) {
+      h = (h * 31 + keyForHash.charCodeAt(i)) >>> 0;
     }
     const meta = REPORT_VIEW_STATUS_ORDER[h % REPORT_VIEW_STATUS_ORDER.length];
     const cur = counts.get(meta.label);
@@ -1373,6 +1389,24 @@ function sprintGoalTableRows(
     : createSprintGoalRows(teamId, sprintIdx);
 }
 
+function isSwimlaneGoalDone(item: SwimlaneGoalItem): boolean {
+  return item.progressState === "complete" || item.percent >= 100;
+}
+
+/** Matches goal rows shown in the swimlane Goals table (including demo data when empty). */
+function sprintGoalsCompletionStats(
+  teamId: TeamFilterId,
+  sprintIdx: SprintIndex,
+  cell: SwimlaneSprintCell,
+): { done: number; total: number; pct: number } {
+  const groups = sprintGoalTableRows(cell.goals, teamId, sprintIdx);
+  const flat = flattenGoalGroups(groups);
+  const total = flat.length;
+  const done = flat.filter(isSwimlaneGoalDone).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return { done, total, pct };
+}
+
 function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(rows.map((row) => row.id)),
@@ -1624,6 +1658,16 @@ export default function MergingBoardGoalsPage() {
     left: number;
     minWidth: number;
   } | null>(null);
+
+  const [createWorkModal, setCreateWorkModal] = useState(false);
+  const [createModalTeamId, setCreateModalTeamId] =
+    useState<TeamFilterId>("unassigned");
+  const [createModalSprintIdx, setCreateModalSprintIdx] =
+    useState<SprintIndex>(0);
+  const [createModalTaskLink, setCreateModalTaskLink] = useState<
+    "jira" | "basic"
+  >("jira");
+  const [createModalTaskTitle, setCreateModalTaskTitle] = useState("");
 
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [viewGoalsCompactMode, setViewGoalsCompactMode] = useState(false);
@@ -2139,6 +2183,26 @@ export default function MergingBoardGoalsPage() {
     }
   }, [isCapacityPlanningView]);
 
+  useEffect(() => {
+    if (!createWorkModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCreateWorkModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [createWorkModal]);
+
+  const openCreateWorkModal = () => {
+    const firstVisible =
+      ALL_MENU_TEAMS.find((t) => allTeamFilter[t.id])?.id ?? "unassigned";
+    setCreateModalTeamId(firstVisible);
+    setCreateModalSprintIdx(0);
+    setCreateModalTaskLink("jira");
+    setCreateModalTaskTitle("");
+    setCreateWorkModal(true);
+    setTasksMenuOpen(false);
+  };
+
   const appendJiraTask = (teamId: TeamFilterId, sprintIdx: SprintIndex) => {
     setSwimlaneStacks((prev) => {
       const sprints = normalizeTeamSprints(prev[teamId]);
@@ -2162,26 +2226,86 @@ export default function MergingBoardGoalsPage() {
     });
   };
 
-  const appendGoalItem = (teamId: TeamFilterId, sprintIdx: SprintIndex) => {
+  const appendGoalItem = (
+    teamId: TeamFilterId,
+    sprintIdx: SprintIndex,
+    titleOverride?: string,
+  ) => {
     setSwimlaneStacks((prev) => {
       const sprints = normalizeTeamSprints(prev[teamId]);
       const cell = normalizeSprintCell(sprints[sprintIdx]);
       const salt = cell.goals.length;
       const meta = extraGoalFromSalt(teamId, sprintIdx, salt);
-      const percent = meta.percent;
+      const title =
+        titleOverride?.trim() || meta.title;
+      const percent = titleOverride?.trim()
+        ? 28 + ((salt + title.length * 11) % 63)
+        : meta.percent;
+      const progressState = goalProgressStateFromPercent(percent, salt);
       cell.goals.push({
         id: `goal-${teamId}-${sprintIdx}-${Date.now()}`,
         type: "goal",
         kind: "text",
-        title: meta.title,
+        title,
         percent,
         pbv: 0,
         abv: 0,
-        progressState: goalProgressStateFromPercent(percent, salt),
+        progressState,
       });
       sprints[sprintIdx] = cell;
       return { ...prev, [teamId]: sprints };
     });
+  };
+
+  const appendBigPictureTask = (
+    teamId: TeamFilterId,
+    sprintIdx: SprintIndex,
+    opts: { source: "jira" | "basic"; title?: string },
+  ) => {
+    setSwimlaneStacks((prev) => {
+      const sprints = normalizeTeamSprints(prev[teamId]);
+      const cell = normalizeSprintCell(sprints[sprintIdx]);
+      const targetCol: 0 | 1 =
+        cell.taskColumns[0].length <= cell.taskColumns[1].length ? 0 : 1;
+      const n =
+        cell.taskColumns[0].length + cell.taskColumns[1].length;
+      const seed = `${teamId}:${sprintIdx}:${n}:${Date.now()}`;
+      if (opts.source === "basic") {
+        const title = opts.title?.trim() || "New basic task";
+        cell.taskColumns[targetCol].push(
+          createSwimlaneTask({
+            id: `basic-task-${teamId}-${sprintIdx}-${Date.now()}-${n}`,
+            issueKey: "",
+            title,
+            seed: `${seed}:basic`,
+            salt: n,
+            source: "basic",
+          }),
+        );
+      } else {
+        cell.taskColumns[targetCol].push(
+          createSwimlaneTask({
+            id: `task-${teamId}-${sprintIdx}-${Date.now()}-${n}`,
+            issueKey: `ONE-${257700 + ((n + teamId.length * 3 + sprintIdx * 11) % 12000)}`,
+            title: swimlaneTaskTitle(seed, n),
+            seed,
+            salt: n,
+            source: "jira",
+          }),
+        );
+      }
+      sprints[sprintIdx] = cell;
+      return { ...prev, [teamId]: sprints };
+    });
+  };
+
+  const confirmCreateWork = () => {
+    if (!createWorkModal) return;
+    appendBigPictureTask(createModalTeamId, createModalSprintIdx, {
+      source: createModalTaskLink,
+      title: createModalTaskTitle,
+    });
+    setCreateWorkModal(false);
   };
 
   return (
@@ -3021,7 +3145,7 @@ export default function MergingBoardGoalsPage() {
                           type="button"
                           role="menuitem"
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
-                          onClick={() => setTasksMenuOpen(false)}
+                          onClick={() => openCreateWorkModal()}
                         >
                           <BigPictureTaskMenuIcon />
                           BigPicture task
@@ -3434,10 +3558,20 @@ export default function MergingBoardGoalsPage() {
                   isCapacityPlanningView
                     ? (["Stage 1", "Stage 2"] as const)
                     : SPRINT_LABELS
-                ).map((label) => (
+                ).map((label, idx) => (
                   <div
                     key={label}
-                    className="flex min-h-[40px] items-center gap-2 rounded-md bg-[#44546F] px-2.5 py-2 text-white"
+                    title={
+                      idx === 0
+                        ? `${label} — completed`
+                        : `${label} — in progress`
+                    }
+                    className={cn(
+                      "flex min-h-[40px] items-center gap-2 rounded-md px-2.5 py-2 text-white",
+                      idx === 0
+                        ? "bg-[#216E4E]"
+                        : "bg-[#09326C]",
+                    )}
                   >
                     <button
                       type="button"
@@ -3495,24 +3629,57 @@ export default function MergingBoardGoalsPage() {
               ALL_MENU_TEAMS.filter((t) => allTeamFilter[t.id]).map((team) => (
                 <section key={team.id} className="border-b border-[#DFE1E6]">
                   <div className="bg-white px-4 py-2">
-                    <button
-                      type="button"
-                      aria-expanded={swimlaneExpanded[team.id]}
-                      onClick={() =>
-                        setSwimlaneExpanded((prev) => ({
-                          ...prev,
-                          [team.id]: !prev[team.id],
-                        }))
-                      }
-                      className="inline-flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
-                    >
-                      {swimlaneExpanded[team.id] ? (
-                        <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
-                      ) : (
-                        <ChevronRight className="size-4 shrink-0 text-[#626F86]" />
-                      )}
-                      {team.label}
-                    </button>
+                    <div className="flex w-full min-w-0 items-center gap-3">
+                      <button
+                        type="button"
+                        aria-expanded={swimlaneExpanded[team.id]}
+                        onClick={() =>
+                          setSwimlaneExpanded((prev) => ({
+                            ...prev,
+                            [team.id]: !prev[team.id],
+                          }))
+                        }
+                        className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
+                      >
+                        {swimlaneExpanded[team.id] ? (
+                          <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
+                        ) : (
+                          <ChevronRight className="size-4 shrink-0 text-[#626F86]" />
+                        )}
+                        {team.label}
+                      </button>
+                      {boardScope.goals ? (
+                        <div
+                          className="grid shrink-0 grid-cols-2 gap-x-3 gap-y-0 border-l border-[#DFE1E6] pl-3 text-right sm:gap-x-4 sm:pl-4"
+                          aria-label={`Goals completion by sprint for ${team.label}`}
+                        >
+                          {([0, 1] as const).map((sprintIdx) => {
+                            const cell = normalizeSprintCell(
+                              swimlaneStacks[team.id]?.[sprintIdx],
+                            );
+                            const { done, total, pct } =
+                              sprintGoalsCompletionStats(
+                                team.id,
+                                sprintIdx,
+                                cell,
+                              );
+                            return (
+                              <div key={sprintIdx}>
+                                <div className="text-[10px] font-semibold uppercase leading-none tracking-wide text-[#626F86]">
+                                  {SPRINT_LABELS[sprintIdx]}
+                                </div>
+                                <div className="mt-0.5 text-xs tabular-nums text-[#172B4D]">
+                                  <span className="font-medium">
+                                    {done}/{total}
+                                  </span>
+                                  <span className="text-[#626F86]"> {pct}%</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   {swimlaneExpanded[team.id] ? (
                     <div className="grid grid-cols-2 gap-2 bg-white p-4 pt-3">
@@ -3681,7 +3848,7 @@ export default function MergingBoardGoalsPage() {
                               >
                                 {showMixPicker ? (
                                   <div
-                                    className="absolute bottom-full left-0 right-0 z-30 mb-1 rounded-md border border-[#DFE1E6] bg-white py-1 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                                    className="absolute bottom-full left-auto right-0 z-30 mb-1 w-max min-w-[10rem] rounded-md border border-[#DFE1E6] bg-white py-1 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
                                     role="menu"
                                     aria-label="Add to sprint"
                                   >
@@ -3706,7 +3873,7 @@ export default function MergingBoardGoalsPage() {
                                         setSprintMixPicker(null);
                                       }}
                                     >
-                                      <Target
+                                      <Flag
                                         className="size-4 shrink-0 text-[#44546F]"
                                         strokeWidth={2}
                                         aria-hidden
@@ -3718,11 +3885,27 @@ export default function MergingBoardGoalsPage() {
                                 <button
                                   type="button"
                                   onClick={onAddClick}
-                                  className="flex min-h-[72px] w-full cursor-pointer items-center justify-center rounded-md border border-dashed border-[#DFE1E6] bg-white transition-colors hover:border-[#0C66E4]/40 hover:bg-[#F7F8F9]"
+                                  className={cn(
+                                    "flex min-h-[72px] w-full cursor-pointer items-center justify-center rounded-md border transition-colors",
+                                    showMixPicker
+                                      ? "border-solid border-[#0C66E4] bg-[#E9F2FF] shadow-[inset_0_0_0_1px_rgba(12,102,228,0.12)]"
+                                      : "border-dashed border-[#DFE1E6] bg-white hover:border-[#0C66E4]/40 hover:bg-[#F7F8F9]",
+                                  )}
                                   aria-label={addLabel}
+                                  aria-expanded={
+                                    tasksGoalsMix ? showMixPicker : undefined
+                                  }
+                                  aria-haspopup={
+                                    tasksGoalsMix ? "menu" : undefined
+                                  }
                                 >
                                   <Plus
-                                    className="size-10 text-[#B3B9C4]"
+                                    className={cn(
+                                      "size-10 transition-colors",
+                                      showMixPicker
+                                        ? "text-[#0C66E4]"
+                                        : "text-[#B3B9C4]",
+                                    )}
                                     strokeWidth={1.25}
                                   />
                                 </button>
@@ -3771,6 +3954,148 @@ export default function MergingBoardGoalsPage() {
         </div>
       </div>
       </div>
+      {createWorkModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[280] flex items-center justify-center bg-[#091E42]/40 p-4"
+            role="presentation"
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) setCreateWorkModal(false);
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-work-modal-title"
+              className="w-full max-w-md rounded-lg border border-[#DFE1E6] bg-white p-4 shadow-[0_4px_8px_rgba(9,30,66,0.25)]"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <h2
+                id="create-work-modal-title"
+                className="text-base font-semibold text-[#172B4D]"
+              >
+                Create BigPicture task
+              </h2>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label
+                    className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[#626F86]"
+                    htmlFor="create-work-team"
+                  >
+                    Team
+                  </label>
+                  <select
+                    id="create-work-team"
+                    className="w-full rounded-md border border-[#DFE1E6] bg-white px-2 py-1.5 text-sm text-[#172B4D]"
+                    value={createModalTeamId}
+                    onChange={(e) =>
+                      setCreateModalTeamId(e.target.value as TeamFilterId)
+                    }
+                  >
+                    {(ALL_MENU_TEAMS.some((t) => allTeamFilter[t.id])
+                      ? ALL_MENU_TEAMS.filter((t) => allTeamFilter[t.id])
+                      : ALL_MENU_TEAMS
+                    ).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <fieldset>
+                  <legend className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[#626F86]">
+                    Sprint
+                  </legend>
+                  <div className="flex flex-col gap-1.5">
+                    {([0, 1] as const).map((idx) => (
+                      <label
+                        key={idx}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 hover:bg-[#F4F5F7]"
+                      >
+                        <input
+                          type="radio"
+                          name="create-work-sprint"
+                          className="size-4 accent-[#0C66E4]"
+                          checked={createModalSprintIdx === idx}
+                          onChange={() => setCreateModalSprintIdx(idx)}
+                        />
+                        <span className="text-sm text-[#172B4D]">
+                          {SPRINT_LABELS[idx]}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[#626F86]">
+                    Task type
+                  </legend>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 hover:bg-[#F4F5F7]">
+                      <input
+                        type="radio"
+                        name="create-work-link"
+                        className="size-4 accent-[#0C66E4]"
+                        checked={createModalTaskLink === "jira"}
+                        onChange={() => setCreateModalTaskLink("jira")}
+                      />
+                      <span className="text-sm text-[#172B4D]">
+                        Linked Jira issue (demo key)
+                      </span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 hover:bg-[#F4F5F7]">
+                      <input
+                        type="radio"
+                        name="create-work-link"
+                        className="size-4 accent-[#0C66E4]"
+                        checked={createModalTaskLink === "basic"}
+                        onChange={() => setCreateModalTaskLink("basic")}
+                      />
+                      <span className="text-sm text-[#172B4D]">
+                        Basic task (not in Jira)
+                      </span>
+                    </label>
+                  </div>
+                </fieldset>
+                {createModalTaskLink === "basic" ? (
+                  <div>
+                    <label
+                      className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[#626F86]"
+                      htmlFor="create-work-task-title"
+                    >
+                      Title
+                    </label>
+                    <input
+                      id="create-work-task-title"
+                      type="text"
+                      className="w-full rounded-md border border-[#DFE1E6] px-2 py-1.5 text-sm text-[#172B4D]"
+                      placeholder="Describe the task"
+                      value={createModalTaskTitle}
+                      onChange={(e) => setCreateModalTaskTitle(e.target.value)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-[#DFE1E6] px-3 py-1.5 text-sm font-medium text-[#172B4D] hover:bg-[#F4F5F7]"
+                  onClick={() => setCreateWorkModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md bg-[#0C66E4] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#0055CC]"
+                  onClick={confirmCreateWork}
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
