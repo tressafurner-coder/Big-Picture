@@ -1407,6 +1407,34 @@ function sprintGoalsCompletionStats(
   return { done, total, pct };
 }
 
+function SwimlaneTeamSprintGoalStat({
+  teamId,
+  teamLabel,
+  sprintIdx,
+  stacks,
+}: {
+  teamId: TeamFilterId;
+  teamLabel: string;
+  sprintIdx: SprintIndex;
+  stacks: SwimlaneCellStacks;
+}) {
+  const cell = normalizeSprintCell(stacks[teamId]?.[sprintIdx]);
+  const { done, total, pct } = sprintGoalsCompletionStats(
+    teamId,
+    sprintIdx,
+    cell,
+  );
+  return (
+    <div
+      className="shrink-0 text-right text-xs tabular-nums text-[#172B4D]"
+      aria-label={`${SPRINT_LABELS[sprintIdx]} goals for ${teamLabel}: ${done} of ${total} complete, ${pct} percent`}
+    >
+      <span className="font-medium">{done}/{total}</span>
+      <span className="text-[#626F86]"> {pct}%</span>
+    </div>
+  );
+}
+
 function SwimlaneGoalsTable({ rows }: { rows: SwimlaneGoalTableGroup[] }) {
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(rows.map((row) => row.id)),
@@ -3629,7 +3657,44 @@ export default function MergingBoardGoalsPage() {
               ALL_MENU_TEAMS.filter((t) => allTeamFilter[t.id]).map((team) => (
                 <section key={team.id} className="border-b border-[#DFE1E6]">
                   <div className="bg-white px-4 py-2">
-                    <div className="flex w-full min-w-0 items-center gap-3">
+                    {boardScope.goals ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            aria-expanded={swimlaneExpanded[team.id]}
+                            onClick={() =>
+                              setSwimlaneExpanded((prev) => ({
+                                ...prev,
+                                [team.id]: !prev[team.id],
+                              }))
+                            }
+                            className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
+                          >
+                            {swimlaneExpanded[team.id] ? (
+                              <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
+                            ) : (
+                              <ChevronRight className="size-4 shrink-0 text-[#626F86]" />
+                            )}
+                            {team.label}
+                          </button>
+                          <SwimlaneTeamSprintGoalStat
+                            teamId={team.id}
+                            teamLabel={team.label}
+                            sprintIdx={0}
+                            stacks={swimlaneStacks}
+                          />
+                        </div>
+                        <div className="flex min-w-0 items-center justify-end">
+                          <SwimlaneTeamSprintGoalStat
+                            teamId={team.id}
+                            teamLabel={team.label}
+                            sprintIdx={1}
+                            stacks={swimlaneStacks}
+                          />
+                        </div>
+                      </div>
+                    ) : (
                       <button
                         type="button"
                         aria-expanded={swimlaneExpanded[team.id]}
@@ -3639,7 +3704,7 @@ export default function MergingBoardGoalsPage() {
                             [team.id]: !prev[team.id],
                           }))
                         }
-                        className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
+                        className="inline-flex w-full min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left text-sm font-semibold text-[#172B4D] hover:bg-[#F4F5F7] hover:text-[#0C66E4]"
                       >
                         {swimlaneExpanded[team.id] ? (
                           <ChevronDown className="size-4 shrink-0 text-[#626F86]" />
@@ -3648,38 +3713,7 @@ export default function MergingBoardGoalsPage() {
                         )}
                         {team.label}
                       </button>
-                      {boardScope.goals ? (
-                        <div
-                          className="grid shrink-0 grid-cols-2 gap-x-3 gap-y-0 border-l border-[#DFE1E6] pl-3 text-right sm:gap-x-4 sm:pl-4"
-                          aria-label={`Goals completion by sprint for ${team.label}`}
-                        >
-                          {([0, 1] as const).map((sprintIdx) => {
-                            const cell = normalizeSprintCell(
-                              swimlaneStacks[team.id]?.[sprintIdx],
-                            );
-                            const { done, total, pct } =
-                              sprintGoalsCompletionStats(
-                                team.id,
-                                sprintIdx,
-                                cell,
-                              );
-                            return (
-                              <div key={sprintIdx}>
-                                <div className="text-[10px] font-semibold uppercase leading-none tracking-wide text-[#626F86]">
-                                  {SPRINT_LABELS[sprintIdx]}
-                                </div>
-                                <div className="mt-0.5 text-xs tabular-nums text-[#172B4D]">
-                                  <span className="font-medium">
-                                    {done}/{total}
-                                  </span>
-                                  <span className="text-[#626F86]"> {pct}%</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
+                    )}
                   </div>
                   {swimlaneExpanded[team.id] ? (
                     <div className="grid grid-cols-2 gap-2 bg-white p-4 pt-3">
