@@ -829,33 +829,97 @@ function ReportsSprintTasksReportEmptySplash({ sprintCol }: { sprintCol: number 
   );
 }
 
-const SWIMLANE_GOAL_TITLES = [
-  "Q2 product delivery",
-  "Reduce cycle time 20%",
-  "OKR: customer satisfaction",
-  "Stabilize sprint throughput",
-  "Zero critical blockers",
-  "Time-to-market −15%",
-  "Flow predictability",
-  "NPS & quality target",
+/** Parent outcome goals — unique per team × sprint via pickFromConst seed. */
+const SWIMLANE_GOAL_TEXT_TITLES = [
+  "Ship consolidated PI reporting",
+  "Cut average cycle time by 20%",
+  "Raise NPS on planning workflows",
+  "Deliver AI-assisted roadmap views",
+  "Stabilize cross-team dependency map",
+  "Reduce escaped defects in release train",
+  "Hit quarterly committed value (PBV)",
+  "Improve capacity forecast accuracy",
+  "Finish platform integration milestone",
+  "Expand self-serve board configuration",
 ] as const;
 
-/** One goal per sprint column; stable hash per team + sprint index (1–2). */
-function swimlaneGoalForSprint(
+/** KR / outcome group rows (separator). */
+const SWIMLANE_GOAL_SEPARATOR_TITLES = [
+  'KR-2736 — AI Assistant in BigPicture by 2026',
+  "KR-2810 — Self-serve portfolio setup",
+  "KR-2901 — Enterprise access controls",
+  "KR-2944 — Goals ↔ Jira traceability",
+  "KR-3012 — Executive report under 5 min",
+  "KR-3088 — Mobile-ready planning views",
+  "KR-3155 — Capacity planning at scale",
+  "KR-3202 — Risk heatmap in swimlanes",
+  "KR-3271 — OKR rollup for leadership",
+  "KR-3319 — Automated dependency alerts",
+] as const;
+
+/** Linked Jira work under a goal group. */
+const SWIMLANE_GOAL_JIRA_TITLES = [
+  "[FE] Users can access and continue saved views",
+  "Disallow TEXT custom field without validation",
+  "Handle allowed-value changes in select fields",
+  "FE: display custom fields in side panel",
+  "Cannot open Column Layout in Overview mode",
+  "Sync sprint capacity with team calendars",
+  "Add bulk edit for swimlane assignments",
+  "Improve load time on large boards",
+  "Expose goal progress in team dashboard",
+  "Fix drag-and-drop between sprint columns",
+  "Support read-only guests on shared boards",
+  "Migrate legacy goal keys to new schema",
+  "Validate PBV rollup against child issues",
+  "Surface blockers on dependency edges",
+  "Align status categories with Jira workflow",
+] as const;
+
+/** User-added goals from the + control — separate pool from seeded rows. */
+const SWIMLANE_GOAL_EXTRA_TITLES = [
+  "Adopt quarterly outcome planning",
+  "Pilot value stream mapping",
+  "Standardize definition of done",
+  "Track unplanned work ratio",
+  "Improve sprint commitment reliability",
+  "Document cross-team interfaces",
+  "Reduce WIP limits violations",
+  "Measure flow efficiency weekly",
+] as const;
+
+function swimlaneGoalTextTitle(
   teamId: TeamFilterId,
   sprintIndex: SprintIndex,
-): {
-  title: string;
-  percent: number;
-} {
-  const seed = `${teamId}:sprint${sprintIndex + 1}`;
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i) + 17) >>> 0;
-  }
-  const title = SWIMLANE_GOAL_TITLES[h % SWIMLANE_GOAL_TITLES.length];
-  const percent = 28 + (h % 63);
-  return { title, percent };
+): string {
+  return pickFromConst(
+    SWIMLANE_GOAL_TEXT_TITLES,
+    `${teamId}:goals:text`,
+    sprintIndex,
+  );
+}
+
+function swimlaneGoalSeparatorTitle(
+  teamId: TeamFilterId,
+  sprintIndex: SprintIndex,
+): string {
+  return pickFromConst(
+    SWIMLANE_GOAL_SEPARATOR_TITLES,
+    `${teamId}:goals:sep`,
+    sprintIndex,
+  );
+}
+
+function swimlaneGoalJiraTitle(
+  teamId: TeamFilterId,
+  sprintIndex: SprintIndex,
+  childIndex: number,
+): string {
+  return pickFromConst(
+    SWIMLANE_GOAL_JIRA_TITLES,
+    `${teamId}:goals:jira`,
+    sprintIndex * 10 + childIndex,
+  );
 }
 
 type GoalProgressState = "complete" | "at-risk" | "in-progress";
@@ -1148,14 +1212,6 @@ function createSprintGoalRows(
     (["ACCEPTANCE", "WAITING FOR RELEASE", "DONE", "IN PROGRESS"] as const)[
       (hashSeed(`${s}:wf:${i}`) + i) % 4
     ]!;
-  const jiraTitles = [
-    "[FE] Users can access and contin…",
-    "Disallow creating a TEXT custom field wit…",
-    "Handle changing allowed values in select/…",
-    "FE: display custom fields in side-panel",
-    "Cannot open Column Layout in Overview …",
-  ] as const;
-
   const jira1 = (() => {
     const percent = 0;
     return {
@@ -1163,7 +1219,7 @@ function createSprintGoalRows(
       type: "goal" as const,
       kind: "jira" as const,
       issueKey: `ONE-${257600 + hashSeed(`${s}:1`) % 200}`,
-      title: jiraTitles[0],
+      title: swimlaneGoalJiraTitle(teamId, sprintIndex, 1),
       workflowStatus: pickStatus(1),
       workflowTone: "blue" as const,
       percent,
@@ -1181,7 +1237,7 @@ function createSprintGoalRows(
       type: "goal" as const,
       kind: "jira" as const,
       issueKey: `ONE-${256400 + hashSeed(`${s}:2`) % 200}`,
-      title: jiraTitles[1],
+      title: swimlaneGoalJiraTitle(teamId, sprintIndex, 2),
       workflowStatus: "WAITING FOR RELEASE",
       workflowTone: "lime" as const,
       percent,
@@ -1199,7 +1255,7 @@ function createSprintGoalRows(
       type: "goal" as const,
       kind: "jira" as const,
       issueKey: `ONE-${255000 + hashSeed(`${s}:3`) % 200}`,
-      title: jiraTitles[2],
+      title: swimlaneGoalJiraTitle(teamId, sprintIndex, 3),
       workflowStatus: "DONE",
       workflowTone: "green" as const,
       percent,
@@ -1217,7 +1273,7 @@ function createSprintGoalRows(
       type: "goal" as const,
       kind: "jira" as const,
       issueKey: `ONE-${256600 + hashSeed(`${s}:4`) % 200}`,
-      title: jiraTitles[3],
+      title: swimlaneGoalJiraTitle(teamId, sprintIndex, 4),
       workflowStatus: "IN PROGRESS",
       workflowTone: "dark" as const,
       percent,
@@ -1235,7 +1291,7 @@ function createSprintGoalRows(
       type: "goal" as const,
       kind: "jira" as const,
       issueKey: `ONE-${255200 + hashSeed(`${s}:5`) % 200}`,
-      title: jiraTitles[4],
+      title: swimlaneGoalJiraTitle(teamId, sprintIndex, 5),
       workflowStatus: "ACCEPTANCE",
       workflowTone: "blue" as const,
       percent,
@@ -1252,7 +1308,7 @@ function createSprintGoalRows(
       id: `goal-text-${s}-0`,
       type: "goal",
       kind: "text",
-      title: "Finish DRS v2 integration",
+      title: swimlaneGoalTextTitle(teamId, sprintIndex),
       percent: 100,
       pbv: 0,
       abv: 0,
@@ -1265,7 +1321,7 @@ function createSprintGoalRows(
         id: `goal-sep-${s}`,
         type: "goal" as const,
         kind: "separator" as const,
-        title: `AI Assistant in BP — "KR-2736 — By the end of 2026, i…`,
+        title: swimlaneGoalSeparatorTitle(teamId, sprintIndex),
         children,
         ...separatorMetricsFromChildren(children),
       };
@@ -1402,13 +1458,13 @@ function extraGoalFromSalt(
   sprintIndex: SprintIndex,
   salt: number,
 ): { title: string; percent: number } {
-  const seed = `${teamId}:sprint${sprintIndex + 1}:extra:${salt}`;
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i) + 23) >>> 0;
-  }
+  const h = hashSeed(`${teamId}:${sprintIndex}:extra:${salt}`);
   return {
-    title: SWIMLANE_GOAL_TITLES[h % SWIMLANE_GOAL_TITLES.length],
+    title: pickFromConst(
+      SWIMLANE_GOAL_EXTRA_TITLES,
+      `${teamId}:goals:extra`,
+      salt + sprintIndex * 3,
+    ),
     percent: 12 + (h % 86),
   };
 }
