@@ -40,7 +40,15 @@ import {
 } from "lucide-react";
 import { RadioGroup } from "@atlaskit/radio";
 import { createPortal } from "react-dom";
-import { Fragment, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { Link } from "react-router";
 import { BigPictureAppTile } from "./components/BigPictureAppTile";
 import { BigPictureModuleMark } from "./components/BigPictureModuleMark";
@@ -69,12 +77,19 @@ const SWIMLANES_VIEW_OPTIONS = [
 const ESSENTIALS_CARD_VIEWS = ["Essentials", "Hybrid", "Teams"] as const;
 const CAPACITY_METRIC_OPTIONS = ["Story Points", "Man-days"] as const;
 
-/** View → Tasks board scope (non–Goals-only): top-level rows match product chrome; flyouts are prototype stubs. */
-const VIEW_TASKS_MENU_KEYS = ["reports-type", "aggregation"] as const;
-type ViewTasksMenuKey = (typeof VIEW_TASKS_MENU_KEYS)[number];
+/** View → board scope with Tasks enabled (Swimlanes / Capacity planning). */
+const VIEW_TASKS_BOARD_MENU_KEYS = [
+  "dependencies",
+  "sort",
+  "layout",
+  "aggregation",
+] as const;
+type ViewTasksBoardMenuKey = (typeof VIEW_TASKS_BOARD_MENU_KEYS)[number];
 
-const VIEW_TASKS_MENU_LABEL: Record<ViewTasksMenuKey, string> = {
-  "reports-type": "Reports type",
+const VIEW_TASKS_BOARD_MENU_LABEL: Record<ViewTasksBoardMenuKey, string> = {
+  dependencies: "Dependencies",
+  sort: "Sort",
+  layout: "Layout",
   aggregation: "Aggregation",
 };
 
@@ -239,6 +254,155 @@ function ViewReportsTypeOptionsPanel({
         />
       </ViewFlyoutFieldset>
     </>
+  );
+}
+
+function ViewMenuCheckboxRow({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#172B4D] hover:bg-[#F1F2F4]"
+      onClick={onChange}
+    >
+      <span
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+          checked
+            ? "border-[#0C66E4] bg-[#0C66E4]"
+            : "border-[#DFE1E6] bg-white",
+        )}
+        aria-hidden
+      >
+        {checked ? (
+          <Check className="size-3 text-white" strokeWidth={3} />
+        ) : null}
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function ViewDependenciesOptionsPanel({
+  mode,
+  setMode,
+}: {
+  mode: "expand" | "collapse";
+  setMode: (v: "expand" | "collapse") => void;
+}) {
+  return (
+    <div className="flex flex-col px-2 py-1">
+      <ViewFlyoutRadioRow
+        name="view-deps-mode"
+        label="Expand dependencies"
+        checked={mode === "expand"}
+        onChange={() => setMode("expand")}
+      />
+      <ViewFlyoutRadioRow
+        name="view-deps-mode"
+        label="Collapse dependencies"
+        checked={mode === "collapse"}
+        onChange={() => setMode("collapse")}
+      />
+    </div>
+  );
+}
+
+const VIEW_TASKS_SORT_FIELDS = [
+  { id: "priority", label: "Priority" },
+  { id: "icon", label: "Icon" },
+  { id: "start-date", label: "Start Date" },
+  { id: "sprint", label: "Sprint" },
+  { id: "summary", label: "Summary" },
+  { id: "key", label: "Key" },
+  { id: "end-date", label: "End Date" },
+  { id: "epic-link", label: "Epic Link" },
+  { id: "status", label: "Status" },
+  { id: "assignee", label: "Assignee" },
+] as const;
+
+type ViewTasksSortField = (typeof VIEW_TASKS_SORT_FIELDS)[number]["id"];
+
+function ViewSortOptionsPanel({
+  sortField,
+  setSortField,
+  sortOrder,
+  setSortOrder,
+}: {
+  sortField: ViewTasksSortField;
+  setSortField: (v: ViewTasksSortField) => void;
+  sortOrder: "a-z" | "z-a";
+  setSortOrder: (v: "a-z" | "z-a") => void;
+}) {
+  return (
+    <div className="flex flex-col py-1">
+      <div className="flex flex-col px-2">
+        {VIEW_TASKS_SORT_FIELDS.map(({ id, label }) => (
+          <ViewFlyoutRadioRow
+            key={id}
+            name="view-sort-field"
+            label={label}
+            checked={sortField === id}
+            onChange={() => setSortField(id)}
+          />
+        ))}
+      </div>
+      <div className="my-1 border-t border-[#DFE1E6]" role="separator" />
+      <div className="flex flex-col px-2">
+        <ViewFlyoutRadioRow
+          name="view-sort-order"
+          label="A-Z"
+          checked={sortOrder === "a-z"}
+          onChange={() => setSortOrder("a-z")}
+        />
+        <ViewFlyoutRadioRow
+          name="view-sort-order"
+          label="Z-A"
+          checked={sortOrder === "z-a"}
+          onChange={() => setSortOrder("z-a")}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ViewLayoutOptionsPanel({
+  layout,
+  setLayout,
+}: {
+  layout: "compact" | "regular" | "wide";
+  setLayout: (v: "compact" | "regular" | "wide") => void;
+}) {
+  return (
+    <div className="flex flex-col px-2 py-1">
+      <ViewFlyoutRadioRow
+        name="view-layout"
+        label="Compact"
+        checked={layout === "compact"}
+        onChange={() => setLayout("compact")}
+      />
+      <ViewFlyoutRadioRow
+        name="view-layout"
+        label="Regular"
+        checked={layout === "regular"}
+        onChange={() => setLayout("regular")}
+      />
+      <ViewFlyoutRadioRow
+        name="view-layout"
+        label="Wide"
+        checked={layout === "wide"}
+        onChange={() => setLayout("wide")}
+      />
+    </div>
   );
 }
 
@@ -2031,18 +2195,34 @@ export default function MergingBoardGoalsPage() {
 
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [viewGoalsCompactMode, setViewGoalsCompactMode] = useState(false);
-  const [viewTasksFlyout, setViewTasksFlyout] = useState<ViewTasksMenuKey | null>(
-    null,
-  );
+  const [viewTasksFlyout, setViewTasksFlyout] =
+    useState<ViewTasksBoardMenuKey | null>(null);
   const [viewTasksFlyoutBox, setViewTasksFlyoutBox] = useState<{
     top: number;
     left: number;
   } | null>(null);
   const viewTriggerRef = useRef<HTMLButtonElement>(null);
   const viewMenuRef = useRef<HTMLDivElement>(null);
-  const viewReportsFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
-  const viewAggregationFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewTasksDepsFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewTasksSortFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewTasksLayoutFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
+  const viewTasksAggFlyoutTriggerRef = useRef<HTMLButtonElement>(null);
   const viewTasksFlyoutMenuRef = useRef<HTMLDivElement>(null);
+
+  const viewTasksBoardFlyoutTriggerRef = (
+    key: ViewTasksBoardMenuKey,
+  ): RefObject<HTMLButtonElement | null> => {
+    switch (key) {
+      case "dependencies":
+        return viewTasksDepsFlyoutTriggerRef;
+      case "sort":
+        return viewTasksSortFlyoutTriggerRef;
+      case "layout":
+        return viewTasksLayoutFlyoutTriggerRef;
+      case "aggregation":
+        return viewTasksAggFlyoutTriggerRef;
+    }
+  };
 
   const [viewTasksReportsChartType, setViewTasksReportsChartType] = useState<
     "pie" | "bar"
@@ -2064,6 +2244,18 @@ export default function MergingBoardGoalsPage() {
   const [viewTasksAggAggregateBy, setViewTasksAggAggregateBy] = useState<
     "story-points" | "original-estimates" | "remaining-estimates"
   >("story-points");
+  const [viewTasksDependencies, setViewTasksDependencies] = useState<
+    "expand" | "collapse"
+  >("collapse");
+  const [viewTasksSortField, setViewTasksSortField] =
+    useState<ViewTasksSortField>("summary");
+  const [viewTasksSortOrder, setViewTasksSortOrder] = useState<"a-z" | "z-a">(
+    "a-z",
+  );
+  const [viewTasksLayout, setViewTasksLayout] = useState<
+    "compact" | "regular" | "wide"
+  >("regular");
+  const [viewTasksTaskWarnings, setViewTasksTaskWarnings] = useState(false);
 
   const [viewReportsGoalsFlyout, setViewReportsGoalsFlyout] =
     useState<ViewReportsGoalsMenuKey | null>(null);
@@ -2396,10 +2588,7 @@ export default function MergingBoardGoalsPage() {
       return;
     }
     const update = () => {
-      const el =
-        viewTasksFlyout === "reports-type"
-          ? viewReportsFlyoutTriggerRef.current
-          : viewAggregationFlyoutTriggerRef.current;
+      const el = viewTasksBoardFlyoutTriggerRef(viewTasksFlyout).current;
       if (!el) return;
       const r = el.getBoundingClientRect();
       setViewTasksFlyoutBox({ top: r.top, left: r.right + 4 });
@@ -3677,16 +3866,12 @@ export default function MergingBoardGoalsPage() {
                             </button>
                           </>
                         )
-                      ) : (
+                      ) : boardScope.tasks ? (
                         <>
-                          {VIEW_TASKS_MENU_KEYS.map((key) => (
+                          {VIEW_TASKS_BOARD_MENU_KEYS.map((key) => (
                             <button
                               key={key}
-                              ref={
-                                key === "reports-type"
-                                  ? viewReportsFlyoutTriggerRef
-                                  : viewAggregationFlyoutTriggerRef
-                              }
+                              ref={viewTasksBoardFlyoutTriggerRef(key)}
                               type="button"
                               role="menuitem"
                               aria-expanded={viewTasksFlyout === key}
@@ -3698,7 +3883,7 @@ export default function MergingBoardGoalsPage() {
                                 )
                               }
                             >
-                              <span>{VIEW_TASKS_MENU_LABEL[key]}</span>
+                              <span>{VIEW_TASKS_BOARD_MENU_LABEL[key]}</span>
                               <ChevronRight
                                 className="size-4 shrink-0 text-[#626F86]"
                                 strokeWidth={2}
@@ -3706,35 +3891,66 @@ export default function MergingBoardGoalsPage() {
                               />
                             </button>
                           ))}
+                          <ViewMenuCheckboxRow
+                            checked={viewTasksTaskWarnings}
+                            onChange={() =>
+                              setViewTasksTaskWarnings((v) => !v)
+                            }
+                            label="Task warnings"
+                          />
+                          <ViewMenuCheckboxRow
+                            checked={boardScope.goals}
+                            onChange={() =>
+                              setBoardScope((prev) => {
+                                if (!prev.tasks && prev.goals) return prev;
+                                return { ...prev, goals: !prev.goals };
+                              })
+                            }
+                            label="Goals"
+                          />
                         </>
-                      )}
+                      ) : null}
                     </div>,
                     document.body,
                   )}
-                {!goalsOnlyBoardScope &&
+                {boardScope.tasks &&
+                  !goalsOnlyBoardScope &&
                   viewTasksFlyout &&
                   viewTasksFlyoutBox &&
                   createPortal(
                     <div
                       ref={viewTasksFlyoutMenuRef}
-                      className="fixed z-[250] min-w-[272px] max-w-[320px] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]"
+                      className={cn(
+                        "fixed z-[250] rounded-md border border-[#DFE1E6] bg-white py-2 shadow-[0_4px_8px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.2)]",
+                        viewTasksFlyout === "sort"
+                          ? "min-w-[200px]"
+                          : viewTasksFlyout === "aggregation"
+                            ? "min-w-[272px] max-w-[320px]"
+                            : "min-w-[220px]",
+                      )}
                       style={{
                         top: viewTasksFlyoutBox.top,
                         left: viewTasksFlyoutBox.left,
                       }}
                       role="dialog"
-                      aria-label={VIEW_TASKS_MENU_LABEL[viewTasksFlyout]}
+                      aria-label={VIEW_TASKS_BOARD_MENU_LABEL[viewTasksFlyout]}
                     >
-                      {viewTasksFlyout === "reports-type" ? (
-                        <ViewReportsTypeOptionsPanel
-                          chartType={viewTasksReportsChartType}
-                          setChartType={setViewTasksReportsChartType}
-                          dataSource={viewTasksReportsDataSource}
-                          setDataSource={setViewTasksReportsDataSource}
-                          groupBy={viewTasksReportsGroupBy}
-                          setGroupBy={setViewTasksReportsGroupBy}
-                          countBy={viewTasksReportsCountBy}
-                          setCountBy={setViewTasksReportsCountBy}
+                      {viewTasksFlyout === "dependencies" ? (
+                        <ViewDependenciesOptionsPanel
+                          mode={viewTasksDependencies}
+                          setMode={setViewTasksDependencies}
+                        />
+                      ) : viewTasksFlyout === "sort" ? (
+                        <ViewSortOptionsPanel
+                          sortField={viewTasksSortField}
+                          setSortField={setViewTasksSortField}
+                          sortOrder={viewTasksSortOrder}
+                          setSortOrder={setViewTasksSortOrder}
+                        />
+                      ) : viewTasksFlyout === "layout" ? (
+                        <ViewLayoutOptionsPanel
+                          layout={viewTasksLayout}
+                          setLayout={setViewTasksLayout}
                         />
                       ) : (
                         <ViewAggregationOptionsPanel
