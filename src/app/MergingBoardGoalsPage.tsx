@@ -1769,8 +1769,9 @@ function SwimlaneTeamSprintGoalStat({
   return (
     <div
       className="shrink-0 text-right text-xs tabular-nums text-[#172B4D]"
-      aria-label={`${SPRINT_LABELS[sprintIdx]} goals for ${teamLabel}: ${done} of ${total} complete, ${pct} percent`}
+      aria-label={`${SPRINT_LABELS[sprintIdx]} goals completion for ${teamLabel}: ${done} of ${total}, ${pct} percent`}
     >
+      <span className="font-medium text-[#626F86]">Goals completion </span>
       <span className="font-medium">{done}/{total}</span>
       <span className="text-[#626F86]"> {pct}%</span>
     </div>
@@ -3897,16 +3898,6 @@ export default function MergingBoardGoalsPage() {
                               setViewTasksTaskWarnings((v) => !v)
                             }
                             label="Task warnings"
-                          />
-                          <ViewMenuCheckboxRow
-                            checked={boardScope.goals}
-                            onChange={() =>
-                              setBoardScope((prev) => {
-                                if (!prev.tasks && prev.goals) return prev;
-                                return { ...prev, goals: !prev.goals };
-                              })
-                            }
-                            label="Goals"
                           />
                         </>
                       ) : null}
