@@ -684,6 +684,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   };
 
   const handleNewConversation = () => {
+    if (tokenLimitExceeded) return;
+
     newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
     newChatTimersRef.current = [];
 
@@ -766,6 +768,10 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     }
     setShowHistory(!showHistory);
   };
+
+  const newChatTooltip = tokenLimitExceeded
+    ? "Token limit reached — you cannot start a new chat until your allowance is reset or the end of the month."
+    : "New chat";
 
   if (!isOpen) return null;
 
@@ -956,25 +962,37 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                 <span className="min-w-0 flex-1 truncate text-base font-semibold text-gray-700">
                   Chat history
                 </span>
-                <Tooltip content="New chat">
+                <Tooltip
+                  content={newChatTooltip}
+                  className={tokenLimitExceeded ? "cursor-not-allowed" : undefined}
+                >
                   <button
                     type="button"
                     onClick={handleNewConversation}
-                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                    disabled={tokenLimitExceeded}
+                    className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Start a new conversation"
                     style={{ color: "#505258" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
-                    onMouseDown={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                    }
-                    onMouseUp={(e) =>
-                      (e.currentTarget.style.backgroundColor = "#EBECF0")
-                    }
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = "#EBECF0";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = "#DFE1E6";
+                      }
+                    }}
+                    onMouseUp={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = "#EBECF0";
+                      }
+                    }}
                   >
                     <span
                       className={headerToolbarIconClass}
@@ -1013,20 +1031,30 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     <p className="mt-3 max-w-[320px] text-[14px] leading-[1.4] text-gray-800">
                       Write something in the chat — your first message saves the conversation here.
                     </p>
-                    <button
-                      type="button"
-                      onClick={handleNewConversation}
-                      className="no-drag mt-8 inline-flex h-8 items-center justify-center rounded-lg px-5 text-[14px] font-semibold leading-none text-white transition-colors"
-                      style={{ backgroundColor: "#1868DB" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#0D47A1")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#1868DB")
-                      }
+                    <Tooltip
+                      content={newChatTooltip}
+                      className={tokenLimitExceeded ? "cursor-not-allowed" : undefined}
                     >
-                      <span>Start a new chat</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleNewConversation}
+                        disabled={tokenLimitExceeded}
+                        className="no-drag mt-8 inline-flex h-8 items-center justify-center rounded-lg px-5 text-[14px] font-semibold leading-none text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ backgroundColor: "#1868DB" }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = "#0D47A1";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = "#1868DB";
+                          }
+                        }}
+                      >
+                        <span>Start a new chat</span>
+                      </button>
+                    </Tooltip>
                   </div>
                 ) : filteredConversations.length === 0 ? (
                   <p className="py-8 text-center text-sm text-gray-500">
@@ -1258,25 +1286,37 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                           </Tooltip>
                         )}
                       </div>
-                      <Tooltip content="New chat">
+                      <Tooltip
+                        content={newChatTooltip}
+                        className={tokenLimitExceeded ? "cursor-not-allowed" : undefined}
+                      >
                         <button
                           type="button"
                           onClick={handleNewConversation}
-                          className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors"
+                          disabled={tokenLimitExceeded}
+                          className="no-drag flex size-8 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label="Start a new conversation"
                           style={{ color: "#505258" }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#EBECF0")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor = "transparent")
-                          }
-                          onMouseDown={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                          }
-                          onMouseUp={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#EBECF0")
-                          }
+                          onMouseEnter={(e) => {
+                            if (!e.currentTarget.disabled) {
+                              e.currentTarget.style.backgroundColor = "#EBECF0";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!e.currentTarget.disabled) {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            if (!e.currentTarget.disabled) {
+                              e.currentTarget.style.backgroundColor = "#DFE1E6";
+                            }
+                          }}
+                          onMouseUp={(e) => {
+                            if (!e.currentTarget.disabled) {
+                              e.currentTarget.style.backgroundColor = "#EBECF0";
+                            }
+                          }}
                         >
                           <span
                             className={headerToolbarIconClass}

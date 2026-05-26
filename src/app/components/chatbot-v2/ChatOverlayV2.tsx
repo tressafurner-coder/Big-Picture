@@ -677,6 +677,8 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   };
 
   const handleNewConversation = () => {
+    if (tokenLimitExceeded) return;
+
     newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
     newChatTimersRef.current = [];
 
@@ -753,6 +755,10 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
     setShowHistory((prev) => !prev);
   };
 
+  const newChatTooltip = tokenLimitExceeded
+    ? "Token limit reached — you cannot start a new chat until your allowance is reset or the end of the month."
+    : "New chat";
+
   if (!isOpen) return null;
 
   return (
@@ -812,11 +818,15 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
               </Tooltip>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Tooltip content="New chat">
+              <Tooltip
+                content={newChatTooltip}
+                className={tokenLimitExceeded ? "cursor-not-allowed" : undefined}
+              >
                 <button
                   type="button"
                   onClick={handleNewConversation}
-                  className="flex items-center justify-center rounded transition-colors"
+                  disabled={tokenLimitExceeded}
+                  className="flex items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                   style={{
                     backgroundColor: "rgba(255,255,255,0)",
                     color: "#505258",
@@ -824,18 +834,26 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     height: "32px",
                   }}
                   aria-label="Start a new conversation"
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#EBECF0")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0)")
-                  }
-                  onMouseDown={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#DFE1E6")
-                  }
-                  onMouseUp={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#EBECF0")
-                  }
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#EBECF0";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0)";
+                    }
+                  }}
+                  onMouseDown={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#DFE1E6";
+                    }
+                  }}
+                  onMouseUp={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#EBECF0";
+                    }
+                  }}
                 >
                   <span
                     className={headerToolbarIconClass}
