@@ -32,7 +32,23 @@ const headerToolbarStrokeIconClass =
   "inline-flex size-8 shrink-0 items-center justify-center [&>svg]:block [&>svg]:size-[18px] [&>svg]:origin-center [&_path]:fill-none [&_path]:stroke-current";
 
 /** Shared token budget across all conversations (UI + mock usage). */
-const TOKEN_LIMIT = 1500;
+const TOKEN_LIMIT = 2000;
+
+/** Prototype: exhausted budget after this many user messages in the active conversation. */
+const USER_MESSAGES_TOKEN_LIMIT = 2;
+
+function tokenUsageFromUserMessageCount(userMessagesSent: number): {
+  totalTokensUsed: number;
+  tokenLimitExceeded: boolean;
+} {
+  if (userMessagesSent >= USER_MESSAGES_TOKEN_LIMIT) {
+    return { totalTokensUsed: TOKEN_LIMIT, tokenLimitExceeded: true };
+  }
+  if (userMessagesSent >= 1) {
+    return { totalTokensUsed: Math.floor(TOKEN_LIMIT / 2), tokenLimitExceeded: false };
+  }
+  return { totalTokensUsed: 0, tokenLimitExceeded: false };
+}
 
 const ASSISTANT_GREETING = "Hi! I'm Appfire AI. How can I help you?";
 
@@ -233,8 +249,11 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const newChatTimersRef = useRef<number[]>([]);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
-  const totalTokensUsed = conversations.reduce((sum, conv) => sum + conv.totalTokens, 0);
-  const tokenLimitExceeded = totalTokensUsed >= TOKEN_LIMIT;
+  const userMessagesInActiveChat = activeConversation
+    ? activeConversation.messages.filter((m) => m.role === "user").length
+    : 0;
+  const { totalTokensUsed, tokenLimitExceeded } =
+    tokenUsageFromUserMessageCount(userMessagesInActiveChat);
 
   const showConversationTitleBar =
     !!activeConversation && activeConversation.messages.some((m) => m.role === "user");
@@ -782,8 +801,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
               <Tooltip
                 content={
                   tokenLimitExceeded
-                    ? `Token limit reached (${totalTokensUsed} / ${TOKEN_LIMIT}). You cannot send more messages until usage is reset.`
-                    : `Tokens (all conversations): ${totalTokensUsed} / ${TOKEN_LIMIT}`
+                    ? `Token limit reached (${totalTokensUsed} / ${TOKEN_LIMIT}). You cannot send more messages until usage is reset or the end of the month.`
+                    : `Tokens (this conversation): ${totalTokensUsed} / ${TOKEN_LIMIT}`
                 }
               >
                 <button
@@ -1483,7 +1502,8 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     role="status"
                   >
                     You have used all available tokens ({totalTokensUsed} / {TOKEN_LIMIT}). Sending
-                    messages is disabled until your token allowance is increased or reset.
+                    messages is disabled until your token allowance is increased or reset, or until the
+                    end of the month.
                   </div>
                 )}
                 <div className="flex gap-2 items-center">
