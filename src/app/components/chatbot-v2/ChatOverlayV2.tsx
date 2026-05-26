@@ -50,6 +50,17 @@ function tokenUsageFromUserMessageCount(userMessagesSent: number): {
   return { totalTokensUsed: 0, tokenLimitExceeded: false };
 }
 
+/** Prototype demo: send this message to show organization-wide token pool exhausted. */
+function isCompanyTokenLimitDemoMessage(text: string): boolean {
+  const normalized = text
+    .trim()
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\s+/g, " ");
+  return normalized === "company token limit";
+}
+
 const STARTER_PROMPTS = [
   "How to implement SAFe® in BigPicture",
   "Learn how BigPicture is easy as 1-2-3",
@@ -217,6 +228,8 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   const [editingConvId, setEditingConvId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  /** Prototype: organization shared pool exhausted (user personal usage stays 0). */
+  const [companyTokenLimitDemoActive, setCompanyTokenLimitDemoActive] = useState(false);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   /** Assistant message ids where the inline feedback bar was dismissed or submitted. */
   const [feedbackHiddenIds, setFeedbackHiddenIds] = useState<Set<string>>(() => new Set());
@@ -234,8 +247,11 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   const userMessagesInActiveChat = activeConversation
     ? activeConversation.messages.filter((m) => m.role === "user").length
     : 0;
-  const { totalTokensUsed, tokenLimitExceeded } =
-    tokenUsageFromUserMessageCount(userMessagesInActiveChat);
+  const personalTokenUsage = tokenUsageFromUserMessageCount(userMessagesInActiveChat);
+  const companyTokenLimitExceeded = companyTokenLimitDemoActive;
+  const personalTokenLimitExceeded = personalTokenUsage.tokenLimitExceeded;
+  const tokenLimitExceeded = companyTokenLimitExceeded || personalTokenLimitExceeded;
+  const totalTokensUsed = companyTokenLimitExceeded ? 0 : personalTokenUsage.totalTokensUsed;
 
   const showStarterPrompts =
     !tokenLimitExceeded &&
@@ -599,7 +615,53 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
   const handleSendMessage = async (preset?: string) => {
     // Only treat a string preset as override — React may pass a click event if wired as onClick={handleSendMessage}.
     const text = (typeof preset === "string" ? preset : inputValue).trim();
-    if (tokenLimitExceeded || !text) return;
+    if (!text) return;
+
+    if (isCompanyTokenLimitDemoMessage(text)) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: text,
+        tokens: 0,
+      };
+      const conversationId = activeConversationId || `${Date.now()}-conv`;
+      const isNewConversation = !activeConversation;
+
+      setCompanyTokenLimitDemoActive(true);
+      if (isNewConversation) {
+        const nextIndex = conversations.length + 1;
+        const fallbackTitle = `Conversation ${nextIndex}`;
+        const newConv: Conversation = {
+          id: conversationId,
+          title: summarizeConversationTitle([userMessage], fallbackTitle),
+          messages: [userMessage],
+          totalTokens: 0,
+          createdAt: new Date(),
+        };
+        setConversations((prev) => [...prev, newConv]);
+        setActiveConversationId(conversationId);
+        setShowHistory(false);
+      } else {
+        setConversations((prev) =>
+          prev.map((conv) => {
+            if (conv.id !== conversationId) return conv;
+            const nextMessages = [...conv.messages, userMessage];
+            return {
+              ...conv,
+              messages: nextMessages,
+              totalTokens: 0,
+              title: summarizeConversationTitle(nextMessages, conv.title),
+            };
+          }),
+        );
+      }
+      setInputValue("");
+      setIsThinking(false);
+      onThinkingChange(false);
+      return;
+    }
+
+    if (tokenLimitExceeded) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -682,6 +744,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
     newChatTimersRef.current.forEach((id) => window.clearTimeout(id));
     newChatTimersRef.current = [];
 
+    setCompanyTokenLimitDemoActive(false);
     setActiveConversationId("");
     setShowHistory(false);
     setInputValue("");
@@ -755,9 +818,25 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
     setShowHistory((prev) => !prev);
   };
 
-  const newChatTooltip = tokenLimitExceeded
-    ? "Token limit reached — you cannot start a new chat until your allowance is reset or the end of the month."
-    : "New chat";
+  const newChatTooltip = companyTokenLimitExceeded
+    ? "Organization token limit reached — a new company credit pool is available at the beginning of each month."
+    : personalTokenLimitExceeded
+      ? "Token limit reached — a new credit pool is available at the beginning of each month."
+      : "New chat";
+
+  const tokenLimitBannerMessage = companyTokenLimitExceeded
+    ? `Your organization has used all available tokens (you have used 0 / ${TOKEN_LIMIT}). The shared token pool will reset at the beginning of the month.`
+    : `You have used all available tokens (${totalTokensUsed} / ${TOKEN_LIMIT}). Your token balance will reset at the beginning of each month.`;
+
+  const tokenLimitTooltip = companyTokenLimitExceeded
+    ? `Organization limit reached (0 / ${TOKEN_LIMIT} used by you). Your company's shared tokens are exhausted.`
+    : personalTokenLimitExceeded
+      ? `Token limit reached (${totalTokensUsed} / ${TOKEN_LIMIT}). A new credit pool is available at the beginning of each month.`
+      : `Tokens (this conversation): ${totalTokensUsed} / ${TOKEN_LIMIT}`;
+
+  const tokenLimitPlaceholder = companyTokenLimitExceeded
+    ? "Organization token limit reached"
+    : "Token limit reached";
 
   if (!isOpen) return null;
 
@@ -790,21 +869,17 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
               <h2 className="text-sm font-semibold shrink-0" style={{ color: '#292A2E' }}>
                 AI Assistant
               </h2>
-              <Tooltip
-                content={
-                  tokenLimitExceeded
-                    ? `Token limit reached (${totalTokensUsed} / ${TOKEN_LIMIT}). You cannot send more messages until usage is reset or the end of the month.`
-                    : `Tokens (this conversation): ${totalTokensUsed} / ${TOKEN_LIMIT}`
-                }
-              >
+              <Tooltip content={tokenLimitTooltip}>
                 <button
                   type="button"
                   className="no-drag flex items-center justify-center rounded p-1.5 transition-colors"
                   style={tokenLimitExceeded ? { color: "#DC2626" } : { color: "#505258" }}
                   aria-label={
-                    tokenLimitExceeded
-                      ? "Token limit reached — no messages can be sent"
-                      : "Token usage for entire chat"
+                    companyTokenLimitExceeded
+                      ? "Organization token limit reached — shared pool exhausted"
+                      : tokenLimitExceeded
+                        ? "Token limit reached — no messages can be sent"
+                        : "Token usage for entire chat"
                   }
                   onMouseEnter={(e) => {
                     if (!tokenLimitExceeded) e.currentTarget.style.backgroundColor = "#F4F5F7";
@@ -1343,9 +1418,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     }}
                     role="status"
                   >
-                    You have used all available tokens ({totalTokensUsed} / {TOKEN_LIMIT}). Sending
-                    messages is disabled until your token allowance is increased or reset, or until the
-                    end of the month.
+                    {tokenLimitBannerMessage}
                   </div>
                 )}
                 <div className="flex gap-2 items-center">
@@ -1356,9 +1429,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                     placeholder={
-                      tokenLimitExceeded
-                        ? "Token limit reached"
-                        : "Chat with Appfire AI"
+                      tokenLimitExceeded ? tokenLimitPlaceholder : "Chat with Appfire AI"
                     }
                     className="flex-1 cursor-text rounded-lg px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
                     style={{ 

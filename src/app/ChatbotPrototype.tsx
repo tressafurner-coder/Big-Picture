@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { CircleAlert } from "lucide-react";
 import { Link } from "react-router";
 import { ChatButton } from "./components/ChatButton";
 import { ChatOverlay } from "./components/ChatOverlay";
@@ -76,6 +77,18 @@ export default function ChatbotPrototype() {
           </p>
         </div>
       </div>
+
+      <p className="absolute bottom-6 left-4 flex max-w-xl items-start gap-2 text-left text-sm text-gray-500">
+        <CircleAlert
+          className="mt-0.5 size-4 shrink-0 text-red-600"
+          strokeWidth={2.25}
+          aria-hidden
+        />
+        <span>
+          Type the phrase &ldquo;company token limit&rdquo; in the chat or send two messages to preview
+          the chatbot token-limit messages.
+        </span>
+      </p>
 
       <ChatButton
         onClick={handleChatButtonClick}
