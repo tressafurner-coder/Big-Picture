@@ -406,7 +406,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
         return (
           <code
             key={`${token}-${index}`}
-            className="rounded bg-gray-200 px-1.5 py-0.5 font-mono text-[12px] text-gray-800"
+            className="break-all rounded bg-gray-200 px-1.5 py-0.5 font-mono text-[12px] text-gray-800"
           >
             {token.slice(1, -1)}
           </code>
@@ -454,9 +454,9 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
         if (i < lines.length) i += 1;
 
         blocks.push(
-          <div key={`code-${blocks.length}`} className="my-3 overflow-hidden rounded-lg border border-gray-300 bg-gray-900">
+          <div key={`code-${blocks.length}`} className="my-3 max-w-full overflow-hidden rounded-lg border border-gray-300 bg-gray-900">
             {lang && <div className="border-b border-gray-700 px-3 py-1.5 text-[11px] uppercase tracking-wide text-gray-300">{lang}</div>}
-            <pre className="overflow-x-auto p-3 text-xs leading-relaxed text-gray-100">
+            <pre className="max-w-full overflow-x-auto p-3 text-xs leading-relaxed text-gray-100">
               <code>{codeLines.join("\n")}</code>
             </pre>
           </div>
@@ -528,8 +528,8 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
         const body = hasHeaderSeparator ? rows.slice(2) : rows.slice(1);
 
         blocks.push(
-          <div key={`table-${blocks.length}`} className="my-3 overflow-x-auto">
-            <table className="min-w-full border-collapse rounded-md border border-gray-300 text-left text-xs">
+          <div key={`table-${blocks.length}`} className="my-3 max-w-full overflow-x-auto">
+            <table className="w-full border-collapse rounded-md border border-gray-300 text-left text-xs">
               <thead className="bg-gray-200">
                 <tr>
                   {header.map((cell, cellIdx) => (
@@ -608,7 +608,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
 
       if (paragraphLines.length > 0) {
         blocks.push(
-          <p key={`p-${blocks.length}`} className="my-2 text-sm leading-relaxed text-gray-800">
+          <p key={`p-${blocks.length}`} className="my-2 break-words text-sm leading-relaxed text-gray-800">
             {renderInlineMarkdown(paragraphLines.join(" "))}
           </p>
         );
@@ -1235,10 +1235,10 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                 <DataPolicyDisclaimer />
               </div>
             </div>
-          ) : ( 
-            <>
+          ) : (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               {/* Wiadomości */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 space-y-4">
                 {activeConversation?.messages.map((message, msgIndex) => {
                   const isMarkdownAssistant =
                     message.role === "assistant" && message.contentType === "markdown";
@@ -1262,12 +1262,12 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                       key={message.id}
                       ref={isLatestAssistantBubble ? latestAssistantScrollAnchorRef : undefined}
                       className={cn(
-                        "flex flex-col gap-1",
+                        "flex w-full min-w-0 flex-col gap-1",
                         isLatestAssistantBubble && "scroll-mt-3",
                       )}
                     >
                       <div
-                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        className={`flex w-full min-w-0 gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
                         {message.role === "assistant" && (
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
@@ -1275,9 +1275,9 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                           </div>
                         )}
                         <div
-                          className={`rounded-2xl px-4 py-2.5 ${
+                          className={`min-w-0 break-words rounded-2xl px-4 py-2.5 ${
                             isMarkdownAssistant
-                              ? "max-w-[92%] bg-gray-100 text-gray-900"
+                              ? "max-w-[92%] overflow-hidden bg-gray-100 text-gray-900"
                               : message.role === "user"
                                 ? "max-w-[75%] text-white"
                                 : "max-w-[75%] bg-gray-100 text-gray-900"
@@ -1285,9 +1285,11 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                           style={message.role === "user" ? { backgroundColor: "#1868DB" } : {}}
                         >
                           {isMarkdownAssistant ? (
-                            <div className="space-y-1">{renderMarkdownContent(message.content)}</div>
+                            <div className="min-w-0 max-w-full space-y-1 break-words">
+                              {renderMarkdownContent(message.content)}
+                            </div>
                           ) : (
-                            <p className="text-sm leading-relaxed">{message.content}</p>
+                            <p className="break-words text-sm leading-relaxed">{message.content}</p>
                           )}
                         </div>
                       </div>
@@ -1343,7 +1345,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                 })}
 
                 {showStarterPrompts && (
-                  <div className="flex gap-3 justify-start">
+                  <div className="flex w-full min-w-0 gap-3 justify-start overflow-hidden">
                     <div className="w-8 shrink-0" aria-hidden />
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
                       {STARTER_PROMPTS.map((prompt) => (
@@ -1360,7 +1362,9 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                             strokeWidth={2}
                             aria-hidden
                           />
-                          <span className="text-sm font-normal leading-snug text-gray-900">{prompt}</span>
+                          <span className="break-words text-sm font-normal leading-snug text-gray-900">
+                            {prompt}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -1368,11 +1372,11 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                 )}
 
                 {isThinking && (
-                  <div className="flex gap-3 justify-start">
+                  <div className="flex w-full min-w-0 gap-3 justify-start">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
                       <img src={aiAvatarIcon} alt="AI" className="w-6 h-6 rounded-lg" />
                     </div>
-                    <div className="max-w-[92%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900">
+                    <div className="min-w-0 max-w-[92%] rounded-2xl bg-gray-100 px-4 py-3 text-gray-900">
                       <div className="flex gap-1.5">
                         <motion.div
                           className="w-1.5 h-1.5 bg-gray-300 rounded-full"
@@ -1416,7 +1420,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
               </div>
 
               {/* Input */}
-              <div className="relative border-t border-gray-200 p-4">
+              <div className="relative shrink-0 border-t border-gray-200 p-4">
                 {tokenLimitExceeded && (
                   <div
                     className="mb-3 rounded-lg border px-3 py-2 text-xs leading-snug"
@@ -1430,7 +1434,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     {tokenLimitBannerMessage}
                   </div>
                 )}
-                <div className="flex items-end gap-2">
+                <div className="flex min-w-0 items-end gap-2">
                   <textarea
                     ref={chatInputRef}
                     rows={1}
@@ -1445,7 +1449,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                     placeholder={
                       tokenLimitExceeded ? tokenLimitPlaceholder : "Chat with Appfire AI"
                     }
-                    className="no-drag flex-1 cursor-text select-text resize-none overflow-y-auto rounded-lg px-4 py-2.5 text-sm leading-snug placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="no-drag min-w-0 flex-1 cursor-text select-text resize-none overflow-y-auto rounded-lg px-4 py-2.5 text-sm leading-snug placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
                     style={{
                       "--tw-ring-color": "#1868DB",
                       border: "1px solid #DFE1E6",
@@ -1481,7 +1485,7 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
                 </div>
                 <DataPolicyDisclaimer className="mt-2 text-xs text-gray-500" />
               </div>
-            </>
+            </div>
           )}
         </motion.div>
       </Rnd>
