@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { Rnd } from "react-rnd";
 import {
   Send,
@@ -24,6 +24,7 @@ import iconMoreOptionsSvg from "../../imports/icon-more-options.svg?raw";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Tooltip } from "./Tooltip";
 import { cn } from "./ui/utils";
+import { resizeChatInput } from "./chatInputAutoResize";
 
 const headerToolbarIconClass =
   "inline-flex size-8 shrink-0 [&>svg]:block [&>svg]:size-full [&_path]:fill-current";
@@ -256,7 +257,7 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
   const latestAssistantScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   /** Avoid re-scrolling on every streaming chunk for the same assistant message id. */
   const lastScrolledAssistantMsgIdRef = useRef<string | null>(null);
-  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const newChatTimersRef = useRef<number[]>([]);
@@ -348,6 +349,14 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
     }, delay);
     return () => window.clearTimeout(timer);
   }, [isThinking, thinkingStatusIdx, thinkingTypedLength]);
+
+  const syncChatInputHeight = useCallback(() => {
+    resizeChatInput(chatInputRef.current);
+  }, []);
+
+  useEffect(() => {
+    syncChatInputHeight();
+  }, [inputValue, syncChatInputHeight]);
 
   // Keep focus on the chat input whenever the conversation view is visible (skip while thinking — input is disabled)
   useEffect(() => {
@@ -1619,23 +1628,28 @@ export function ChatOverlay({ isOpen, onClose, onThinkingChange, onNewResponse }
                     {tokenLimitBannerMessage}
                   </div>
                 )}
-                <div className="flex gap-2 items-center">
-                  <input
+                <div className="flex items-end gap-2">
+                  <textarea
                     ref={chatInputRef}
-                    type="text"
+                    rows={1}
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleSendMessage();
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleSendMessage();
+                      }
                     }}
                     placeholder={
                       tokenLimitExceeded ? tokenLimitPlaceholder : "Chat with Appfire AI"
                     }
-                    className="no-drag flex-1 cursor-text select-text rounded-lg px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
-                    style={{ 
-                      '--tw-ring-color': '#1868DB',
-                      border: '1px solid #DFE1E6',
-                      backgroundColor: '#FAFBFC'
+                    className="no-drag flex-1 cursor-text select-text resize-none overflow-y-auto rounded-lg px-4 py-2.5 text-sm leading-snug placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                      "--tw-ring-color": "#1868DB",
+                      border: "1px solid #DFE1E6",
+                      backgroundColor: "#FAFBFC",
+                      minHeight: "42px",
+                      maxHeight: "128px",
                     } as React.CSSProperties}
                     disabled={isThinking || tokenLimitExceeded}
                   />
