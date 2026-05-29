@@ -1,27 +1,33 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
+import slackLogo from "../imports/slack-logo.png";
+import confluenceLogo from "../imports/confluence-logo.png";
+import amplitudeLogo from "../imports/amplitude-logo.png";
+import launchdarklyLogo from "../imports/launchdarkly-logo.png";
+import jiraLogo from "../imports/jira-logo.png";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Plus, X, Save, Trash2, ArrowRight, TrendingUp, TrendingDown,
-  Users, Bug, MessageSquare, Flag, FileText, CheckCircle,
-  Activity, BarChart2, Zap, AlertCircle, LayoutDashboard, RefreshCw,
-  Sun, Moon,
+  Plus, X, Save, Trash2, TrendingUp, TrendingDown,
+  Bug, MessageSquare, Flag, FileText, CheckCircle,
+  Activity, Zap, AlertCircle, RefreshCw,
+  Sun, Moon, Settings, Home, BarChart2, List,
+  Search, Bell, Edit2, ArrowLeft,
 } from "lucide-react";
 
 // ─── Color palettes ──────────────────────────────────────────────────────────
 const DARK_PALETTE = {
-  bgBase: "#071410",
-  bgSurface: "#0D1F19",
-  bgElevated: "#122A22",
-  bgHover: "#163020",
-  border: "rgba(255,255,255,0.10)",
-  borderStrong: "rgba(255,255,255,0.18)",
-  spark: "#FF3D00",
-  sparkBright: "#FF6330",
-  sparkFaint: "rgba(255,61,0,0.12)",
-  sparkGlow: "rgba(255,61,0,0.25)",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#FFFFFF",
-  textMuted: "#9898B8",
+  bgBase: "#0A0F0D",
+  bgSurface: "#111918",
+  bgElevated: "#182420",
+  bgHover: "#1E2E29",
+  border: "rgba(255,255,255,0.09)",
+  borderStrong: "rgba(255,255,255,0.16)",
+  spark: "#E8112A",
+  sparkBright: "#FF3347",
+  sparkFaint: "rgba(232,17,42,0.12)",
+  sparkGlow: "rgba(232,17,42,0.25)",
+  textPrimary: "#F2F2F2",
+  textSecondary: "#D8D8D8",
+  textMuted: "#8A9A96",
   success: "#22C55E",
   successFaint: "rgba(34,197,94,0.12)",
   warning: "#F5A623",
@@ -31,30 +37,31 @@ const DARK_PALETTE = {
   info: "#38BDF8",
   amplitude: "#29C6FA",
   amplitudeFaint: "rgba(41,198,250,0.1)",
-  jira: "#6FA8FF",
-  jiraFaint: "rgba(111,168,255,0.1)",
-  slack: "#D48EDB",
-  slackFaint: "rgba(212,142,219,0.1)",
-  confluence: "#6FA8FF",
-  confluenceFaint: "rgba(111,168,255,0.1)",
-  launchdarkly: "#A5AFFF",
-  launchdarklyFaint: "rgba(165,175,255,0.1)",
+  jira: "#A78BFA",
+  jiraFaint: "rgba(167,139,250,0.1)",
+  slack: "#FB923C",
+  slackFaint: "rgba(251,146,60,0.1)",
+  confluence: "#60A5FA",
+  confluenceFaint: "rgba(96,165,250,0.1)",
+  launchdarkly: "#34D399",
+  launchdarklyFaint: "rgba(52,211,153,0.1)",
+  shadow: "none",
 };
 
 const LIGHT_PALETTE = {
-  bgBase: "#F4F4FA",
+  bgBase: "#EDE6DD",
   bgSurface: "#FFFFFF",
-  bgElevated: "#EEEEF6",
-  bgHover: "#E6E6F2",
-  border: "rgba(0,0,0,0.09)",
-  borderStrong: "rgba(0,0,0,0.16)",
-  spark: "#E83200",
-  sparkBright: "#FF4D1A",
-  sparkFaint: "rgba(232,50,0,0.08)",
-  sparkGlow: "rgba(232,50,0,0.15)",
-  textPrimary: "#0A0A18",
-  textSecondary: "#0A0A18",
-  textMuted: "#5A5A7A",
+  bgElevated: "#F5F0EB",
+  bgHover: "#EAE3D9",
+  border: "rgba(0,0,0,0.07)",
+  borderStrong: "rgba(0,0,0,0.14)",
+  spark: "#D4111F",
+  sparkBright: "#FF2233",
+  sparkFaint: "rgba(212,17,31,0.07)",
+  sparkGlow: "rgba(212,17,31,0.13)",
+  textPrimary: "#1C1614",
+  textSecondary: "#2C2420",
+  textMuted: "#8A7D76",
   success: "#16A34A",
   successFaint: "rgba(22,163,74,0.10)",
   warning: "#B45309",
@@ -62,29 +69,27 @@ const LIGHT_PALETTE = {
   error: "#DC2626",
   errorFaint: "rgba(220,38,38,0.10)",
   info: "#0369A1",
-  amplitude: "#0080B8",
-  amplitudeFaint: "rgba(0,128,184,0.1)",
-  jira: "#1A5FD0",
-  jiraFaint: "rgba(26,95,208,0.1)",
-  slack: "#7A2090",
-  slackFaint: "rgba(122,32,144,0.1)",
-  confluence: "#1A5FD0",
-  confluenceFaint: "rgba(26,95,208,0.1)",
-  launchdarkly: "#3040C8",
-  launchdarklyFaint: "rgba(48,64,200,0.1)",
+  amplitude: "#0284C7",
+  amplitudeFaint: "rgba(2,132,199,0.09)",
+  jira: "#7C3AED",
+  jiraFaint: "rgba(124,58,237,0.09)",
+  slack: "#EA580C",
+  slackFaint: "rgba(234,88,12,0.09)",
+  confluence: "#2563EB",
+  confluenceFaint: "rgba(37,99,235,0.09)",
+  launchdarkly: "#059669",
+  launchdarklyFaint: "rgba(5,150,105,0.09)",
+  shadow: "0 2px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)",
 };
 
-let C: typeof DARK_PALETTE = DARK_PALETTE;
+let C: typeof LIGHT_PALETTE = LIGHT_PALETTE;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SourceId = "amplitude" | "jira" | "slack" | "confluence" | "launchdarkly";
 
 interface SavedDashboard {
-  id: string;
-  name: string;
-  prompt: string;
-  sources: SourceId[];
-  createdAt: Date;
+  id: string; name: string; prompt: string;
+  sources: SourceId[]; createdAt: Date;
 }
 
 // ─── Source config ────────────────────────────────────────────────────────────
@@ -98,30 +103,48 @@ const SOURCE_CONFIG: Record<SourceId, { label: string; color: string; faint: str
 
 const ALL_SOURCES: SourceId[] = ["amplitude", "jira", "slack", "confluence", "launchdarkly"];
 
+// Vibrant card gradients (like the project cards in the reference)
+const SOURCE_GRADIENTS: Record<SourceId, string> = {
+  amplitude:    "linear-gradient(135deg, #0BBFB8 0%, #0095C8 100%)",
+  jira:         "linear-gradient(135deg, #8B5CF6 0%, #5B21B6 100%)",
+  slack:        "linear-gradient(135deg, #F97316 0%, #DC4F0A 100%)",
+  confluence:   "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
+  launchdarkly: "linear-gradient(135deg, #10B981 0%, #047857 100%)",
+};
+
+const SOURCE_CARD_METRICS: Record<SourceId, { metric: string; detail: string; spark: number[] }> = {
+  amplitude:    { metric: "14.8k DAU",    detail: "+8.2% this week",     spark: [42,38,51,47,55,49,58] },
+  jira:         { metric: "68% done",     detail: "Sprint 18 · 4d left", spark: [42,38,51,44,50,48] },
+  slack:        { metric: "9.5k msgs",    detail: "7-day total",         spark: [124,98,142,113,151,72,134] },
+  confluence:   { metric: "1.2k pages",   detail: "72% coverage",        spark: [48,52,45,58,61,55,68] },
+  launchdarkly: { metric: "24 active",    detail: "4.2M evaluations",    spark: [18,20,19,22,21,23,24] },
+};
+
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
   amplitude: {
     dau: 14832, dauChange: 8.2, mau: 52104, mauChange: 3.1,
-    weeklyEvents: [42000, 38000, 51000, 47000, 55000, 49000, 58000],
+    weeklyEvents: [42000,38000,51000,47000,55000,49000,58000],
     topEvents: [
       { name: "dashboard_view", count: 28420 }, { name: "feature_clicked", count: 21840 },
       { name: "report_generated", count: 15660 }, { name: "export_triggered", count: 9230 },
       { name: "integration_added", count: 6410 },
     ],
-    retention: [100, 62, 44, 38, 31, 28, 24],
+    retention: [100,62,44,38,31,28,24],
   },
   jira: {
     sprintName: "Sprint 18", done: 34, total: 50, daysLeft: 4,
     open: 23, inProgress: 14, closed: 58,
     critical: 2, high: 8, medium: 15, low: 22,
-    velocity: [42, 38, 51, 44, 50, 48],
+    velocity: [42,38,51,44,50,48],
   },
   slack: {
-    dailyMessages: [1240, 980, 1420, 1130, 1510, 720, 1340],
+    dailyMessages: [1240,980,1420,1130,1510,720,1340],
     avgResponse: "18m", responseChange: -12,
     channels: [
       { name: "#engineering", messages: 482 }, { name: "#product", messages: 341 },
-      { name: "#design", messages: 228 }, { name: "#general", messages: 195 }, { name: "#data", messages: 163 },
+      { name: "#design", messages: 228 }, { name: "#general", messages: 195 },
+      { name: "#data", messages: 163 },
     ],
   },
   confluence: {
@@ -143,6 +166,19 @@ const MOCK = {
     ],
   },
 };
+
+const QUICK_INSIGHTS = [
+  { date: "Today", events: [
+    { time: "10:00", source: "amplitude" as SourceId, label: "DAU spike detected", detail: "+8.2% vs yesterday" },
+    { time: "13:20", source: "jira" as SourceId, label: "Sprint 18 update", detail: "4 days left, 68% done" },
+    { time: "15:45", source: "launchdarkly" as SourceId, label: "Flag deployed", detail: "ai-copilot → 12% rollout" },
+  ]},
+  { date: "Yesterday", events: [
+    { time: "09:30", source: "slack" as SourceId, label: "#engineering active", detail: "482 messages, peak day" },
+    { time: "11:00", source: "confluence" as SourceId, label: "3 pages updated", detail: "Q2 Roadmap, API Guide…" },
+    { time: "16:15", source: "amplitude" as SourceId, label: "Retention report", detail: "Week 2 retention: 44%" },
+  ]},
+];
 
 const SUGGESTED_PROMPTS = [
   "Show sprint health and deployment readiness",
@@ -182,17 +218,30 @@ function Sparkline({ values, color = C.spark }: { values: number[]; color?: stri
   const W = 120, H = 40;
   const pts = values.map((v, i) => ({ x: (i / (values.length - 1)) * W, y: H - ((v - min) / range) * (H - 6) - 3 }));
   const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const safeId = `sg${color.replace(/[^a-zA-Z0-9]/g, "")}`;
   const fill = `${line} L${W},${H} L0,${H} Z`;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 40 }} preserveAspectRatio="none">
       <defs>
-        <linearGradient id={`sg-${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={safeId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.3" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={fill} fill={`url(#sg-${color.replace("#","")})`} />
+      <path d={fill} fill={`url(#${safeId})`} />
       <path d={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TinySparkline({ values }: { values: number[] }) {
+  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1;
+  const W = 100, H = 22;
+  const pts = values.map((v, i) => ({ x: (i / (values.length - 1)) * W, y: H - ((v - min) / range) * (H - 4) - 2 }));
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }} preserveAspectRatio="none">
+      <path d={line} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -204,7 +253,7 @@ function MiniBar({ values, color = C.spark }: { values: number[]; color?: string
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }} preserveAspectRatio="none">
       {values.map((v, i) => {
         const bh = (v / max) * (H - 6);
-        return <rect key={i} x={i * (bw + gap) + gap * 0.5} y={H - bh - 3} width={bw} height={bh} rx="0" fill={color} opacity={i === values.length - 1 ? 1 : 0.45} />;
+        return <rect key={i} x={i * (bw + gap) + gap * 0.5} y={H - bh - 3} width={bw} height={bh} rx="2" fill={color} opacity={i === values.length - 1 ? 1 : 0.4} />;
       })}
     </svg>
   );
@@ -214,7 +263,7 @@ function DonutRing({ pct, color, size = 64 }: { pct: number; color: string; size
   const r = 24, cx = 32, cy = 32, circ = 2 * Math.PI * r, dash = (pct / 100) * circ;
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(128,128,128,0.12)" strokeWidth="8" />
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="8" strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" />
     </svg>
   );
@@ -231,24 +280,35 @@ function W({ title, source, span = 1, badge, children, delay = 0 }: {
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       style={{
-        background: C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 0,
+        background: C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 16,
         padding: "18px 20px 20px", gridColumn: span > 1 ? `span ${span}` : undefined,
-        position: "relative", overflow: "hidden",
+        position: "relative", overflow: "hidden", boxShadow: C.shadow,
       }}
     >
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: color, opacity: 0.7 }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-        <span style={{ color, display: "flex" }}><Icon size={13} /></span>
-        <span style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.09em", fontWeight: 600 }}>{label}</span>
-        {badge && <span style={{ marginLeft: "auto", fontSize: 11, color, background: `${color}20`, padding: "2px 8px", borderRadius: 0, fontWeight: 600 }}>{badge}</span>}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14, gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }}>
+          <span style={{ fontSize: 13, color: C.textSecondary, fontWeight: 600 }}>{title}</span>
+          {badge && <span style={{ fontSize: 11, color, background: `${color}18`, padding: "2px 10px", borderRadius: 20, fontWeight: 600 }}>{badge}</span>}
+        </div>
+        <div className={`w-tooltip-wrap-${source}`} style={{ position: "relative", flexShrink: 0 }}
+          onMouseEnter={e => { const t = e.currentTarget.querySelector<HTMLElement>(".w-tooltip"); if (t) t.style.opacity = "1"; }}
+          onMouseLeave={e => { const t = e.currentTarget.querySelector<HTMLElement>(".w-tooltip"); if (t) t.style.opacity = "0"; }}>
+          <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default", fontSize: 10, color: C.textMuted, fontWeight: 700, userSelect: "none" }}>?</div>
+          <div className="w-tooltip" style={{ position: "absolute", right: 0, top: 22, background: C.bgSurface, border: `1px solid ${C.borderStrong}`, borderRadius: 10, padding: "8px 12px", minWidth: 160, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", opacity: 0, transition: "opacity 0.15s", pointerEvents: "none", zIndex: 50 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <span style={{ color, display: "flex" }}><Icon size={12} /></span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{label}</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>Data sourced from <strong style={{ color: C.textSecondary }}>{label}</strong> integration.</div>
+          </div>
+        </div>
       </div>
-      <div style={{ fontSize: 13, color: C.textSecondary, fontWeight: 500, marginBottom: 14 }}>{title}</div>
       {children}
     </motion.div>
   );
 }
 
-// ─── Individual widgets ───────────────────────────────────────────────────────
+// ─── Widget components ────────────────────────────────────────────────────────
 function WidgetAmplitudeDAU({ delay }: { delay: number }) {
   const d = MOCK.amplitude;
   return (
@@ -257,16 +317,16 @@ function WidgetAmplitudeDAU({ delay }: { delay: number }) {
         {[{ v: d.dau, ch: d.dauChange, label: "DAU" }, { v: d.mau, ch: d.mauChange, label: "MAU" }].map(item => (
           <div key={item.label}>
             <div style={{ fontSize: 28, fontWeight: 700, color: C.textPrimary, letterSpacing: "-1px" }}>{fmt(item.v)}</div>
-            <div style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>{item.label}</div>
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{item.label}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
               <TrendingUp size={11} color={C.success} />
-              <span style={{ fontSize: 13, color: C.success }}>{item.ch}%</span>
+              <span style={{ fontSize: 12, color: C.success }}>{item.ch}%</span>
             </div>
           </div>
         ))}
       </div>
       <Sparkline values={d.retention} color={C.amplitude} />
-      <div style={{ fontSize: 13, color: C.textMuted, marginTop: 4 }}>7-day retention curve</div>
+      <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>7-day retention curve</div>
     </W>
   );
 }
@@ -278,16 +338,16 @@ function WidgetAmplitudeEvents({ delay }: { delay: number }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(d.weeklyEvents.reduce((a, b) => a + b))}</div>
-          <div style={{ fontSize: 13, color: C.textMuted }}>total this week</div>
+          <div style={{ fontSize: 12, color: C.textMuted }}>total this week</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, paddingBottom: 4 }}>
           <TrendingUp size={12} color={C.success} />
-          <span style={{ fontSize: 13, color: C.success }}>+11.2% vs last week</span>
+          <span style={{ fontSize: 12, color: C.success }}>+11.2% vs last week</span>
         </div>
       </div>
       <MiniBar values={d.weeklyEvents} color={C.amplitude} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => <span key={d} style={{ fontSize: 13, color: C.textMuted }}>{d}</span>)}
+        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => <span key={d} style={{ fontSize: 11, color: C.textMuted }}>{d}</span>)}
       </div>
     </W>
   );
@@ -302,11 +362,11 @@ function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
         {d.topEvents.map((e, i) => (
           <div key={e.name}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13, color: C.textSecondary, fontFamily: "monospace" }}>{e.name}</span>
-              <span style={{ fontSize: 13, color: C.textMuted }}>{fmt(e.count)}</span>
+              <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{e.name}</span>
+              <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(e.count)}</span>
             </div>
-            <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
-              <div style={{ height: "100%", width: `${(e.count / max) * 100}%`, background: C.amplitude, borderRadius: 0, opacity: i === 0 ? 1 : 0.5 }} />
+            <div style={{ height: 3, background: "rgba(128,128,128,0.1)", borderRadius: 2 }}>
+              <div style={{ height: "100%", width: `${(e.count / max) * 100}%`, background: C.amplitude, borderRadius: 2, opacity: i === 0 ? 1 : 0.5 }} />
             </div>
           </div>
         ))}
@@ -324,12 +384,12 @@ function WidgetJiraSprint({ delay }: { delay: number }) {
         <DonutRing pct={pct} color={C.jira} size={60} />
         <div>
           <div style={{ fontSize: 26, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{pct}%</div>
-          <div style={{ fontSize: 13, color: C.textMuted }}>{d.done} / {d.total} pts</div>
+          <div style={{ fontSize: 12, color: C.textMuted }}>{d.done} / {d.total} pts</div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
         {[{ label: "Open", val: d.open, color: C.warning }, { label: "In Progress", val: d.inProgress, color: C.jira }, { label: "Done", val: d.closed, color: C.success }].map(item => (
-          <div key={item.label} style={{ background: C.bgElevated, borderRadius: 0, padding: "8px 10px", textAlign: "center" }}>
+          <div key={item.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: item.color }}>{item.val}</div>
             <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{item.label}</div>
           </div>
@@ -349,16 +409,16 @@ function WidgetJiraBugs({ delay }: { delay: number }) {
         {bugs.map(b => (
           <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 11, color: C.textMuted, width: 52 }}>{b.label}</span>
-            <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
+            <div style={{ flex: 1, height: 6, background: "rgba(128,128,128,0.1)", borderRadius: 3 }}>
               <div style={{ height: "100%", width: `${(b.val / total) * 100}%`, background: b.color, borderRadius: 3 }} />
             </div>
-            <span style={{ fontSize: 13, color: b.color, fontWeight: 600, width: 20, textAlign: "right" }}>{b.val}</span>
+            <span style={{ fontSize: 12, color: b.color, fontWeight: 600, width: 20, textAlign: "right" }}>{b.val}</span>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 12, padding: "8px 10px", background: d.critical > 0 ? C.errorFaint : C.successFaint, borderRadius: 0, display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ marginTop: 12, padding: "8px 10px", background: d.critical > 0 ? C.errorFaint : C.successFaint, borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
         {d.critical > 0
-          ? <><AlertCircle size={12} color={C.error} /><span style={{ fontSize: 11, color: C.error }}>{d.critical} critical bug{d.critical > 1 ? "s" : ""} need immediate attention</span></>
+          ? <><AlertCircle size={12} color={C.error} /><span style={{ fontSize: 11, color: C.error }}>{d.critical} critical bugs need immediate attention</span></>
           : <><CheckCircle size={12} color={C.success} /><span style={{ fontSize: 11, color: C.success }}>No critical bugs</span></>}
       </div>
     </W>
@@ -412,11 +472,11 @@ function WidgetSlackChannels({ delay }: { delay: number }) {
         {d.channels.map((ch, i) => (
           <div key={ch.name}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13, color: C.textSecondary, fontFamily: "monospace" }}>{ch.name}</span>
-              <span style={{ fontSize: 13, color: C.textMuted }}>{fmt(ch.messages)}</span>
+              <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{ch.name}</span>
+              <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(ch.messages)}</span>
             </div>
-            <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
-              <div style={{ height: "100%", width: `${(ch.messages / max) * 100}%`, background: C.slack, borderRadius: 0, opacity: i === 0 ? 1 : 0.5 }} />
+            <div style={{ height: 3, background: "rgba(128,128,128,0.1)", borderRadius: 2 }}>
+              <div style={{ height: "100%", width: `${(ch.messages / max) * 100}%`, background: C.slack, borderRadius: 2, opacity: i === 0 ? 1 : 0.5 }} />
             </div>
           </div>
         ))}
@@ -438,7 +498,7 @@ function WidgetConfluenceOverview({ delay }: { delay: number }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {[{ v: fmt(d.totalPages), label: "total pages" }, { v: fmt(d.weeklyViews), label: "weekly views", change: d.viewsChange }].map(item => (
-          <div key={item.label} style={{ background: C.bgElevated, borderRadius: 0, padding: "8px 10px" }}>
+          <div key={item.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "8px 10px" }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary }}>{item.v}</div>
             <div style={{ fontSize: 10, color: C.textMuted }}>{item.label}</div>
             {"change" in item && item.change && (
@@ -479,18 +539,18 @@ function WidgetLDOverview({ delay }: { delay: number }) {
   return (
     <W title="Feature Flag Status" source="launchdarkly" delay={delay}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-        <div style={{ background: C.bgElevated, borderRadius: 0, padding: "10px 12px" }}>
+        <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.success }}>{d.active}</div>
           <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>active flags</div>
         </div>
-        <div style={{ background: C.bgElevated, borderRadius: 0, padding: "10px 12px" }}>
+        <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.textMuted }}>{d.inactive}</div>
           <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>inactive</div>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <Activity size={12} color={C.launchdarkly} />
-        <span style={{ fontSize: 13, color: C.textSecondary }}>{d.evaluations} evaluations this week</span>
+        <span style={{ fontSize: 12, color: C.textSecondary }}>{d.evaluations} evaluations this week</span>
         <TrendingUp size={11} color={C.success} />
         <span style={{ fontSize: 11, color: C.success }}>+{d.evalChange}%</span>
       </div>
@@ -505,12 +565,12 @@ function WidgetLDFlags({ delay }: { delay: number }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {d.flags.map(f => (
           <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 28, height: 16, borderRadius: 0, background: f.on ? C.success : "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", padding: "0 3px", transition: "background 0.2s" }}>
+            <div style={{ width: 28, height: 16, borderRadius: 8, background: f.on ? C.success : "rgba(128,128,128,0.2)", display: "flex", alignItems: "center", padding: "0 3px", transition: "background 0.2s" }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "white", marginLeft: f.on ? "auto" : 0 }} />
             </div>
-            <span style={{ fontSize: 13, color: C.textSecondary, fontFamily: "monospace", flex: 1 }}>{f.key}</span>
+            <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace", flex: 1 }}>{f.key}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 80, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+              <div style={{ width: 80, height: 4, background: "rgba(128,128,128,0.1)", borderRadius: 2 }}>
                 <div style={{ height: "100%", width: `${f.rollout}%`, background: f.on ? C.launchdarkly : C.textMuted, borderRadius: 2 }} />
               </div>
               <span style={{ fontSize: 11, color: f.on ? C.launchdarkly : C.textMuted, width: 32, textAlign: "right" }}>{f.rollout}%</span>
@@ -523,120 +583,434 @@ function WidgetLDFlags({ delay }: { delay: number }) {
 }
 
 const WIDGETS_BY_SOURCE: Record<SourceId, Array<{ id: string; node: (d: number) => React.ReactNode }>> = {
-  amplitude:    [{ id: "amp-dau",    node: d => <WidgetAmplitudeDAU key="amp-dau" delay={d} /> }, { id: "amp-ev",  node: d => <WidgetAmplitudeEvents key="amp-ev" delay={d} /> }, { id: "amp-top", node: d => <WidgetAmplitudeTopEvents key="amp-top" delay={d} /> }],
-  jira:         [{ id: "jira-sprint",node: d => <WidgetJiraSprint key="jira-sprint" delay={d} /> }, { id: "jira-bugs",node: d => <WidgetJiraBugs key="jira-bugs" delay={d} /> }, { id: "jira-vel", node: d => <WidgetJiraVelocity key="jira-vel" delay={d} /> }],
-  slack:        [{ id: "slack-msg",  node: d => <WidgetSlackMessages key="slack-msg" delay={d} /> }, { id: "slack-ch", node: d => <WidgetSlackChannels key="slack-ch" delay={d} /> }],
-  confluence:   [{ id: "conf-ov",    node: d => <WidgetConfluenceOverview key="conf-ov" delay={d} /> }, { id: "conf-pg", node: d => <WidgetConfluencePages key="conf-pg" delay={d} /> }],
-  launchdarkly: [{ id: "ld-ov",      node: d => <WidgetLDOverview key="ld-ov" delay={d} /> }, { id: "ld-flags",node: d => <WidgetLDFlags key="ld-flags" delay={d} /> }],
+  amplitude:    [{ id: "amp-dau", node: d => <WidgetAmplitudeDAU key="amp-dau" delay={d} /> }, { id: "amp-ev", node: d => <WidgetAmplitudeEvents key="amp-ev" delay={d} /> }, { id: "amp-top", node: d => <WidgetAmplitudeTopEvents key="amp-top" delay={d} /> }],
+  jira:         [{ id: "jira-sprint", node: d => <WidgetJiraSprint key="jira-sprint" delay={d} /> }, { id: "jira-bugs", node: d => <WidgetJiraBugs key="jira-bugs" delay={d} /> }, { id: "jira-vel", node: d => <WidgetJiraVelocity key="jira-vel" delay={d} /> }],
+  slack:        [{ id: "slack-msg", node: d => <WidgetSlackMessages key="slack-msg" delay={d} /> }, { id: "slack-ch", node: d => <WidgetSlackChannels key="slack-ch" delay={d} /> }],
+  confluence:   [{ id: "conf-ov", node: d => <WidgetConfluenceOverview key="conf-ov" delay={d} /> }, { id: "conf-pg", node: d => <WidgetConfluencePages key="conf-pg" delay={d} /> }],
+  launchdarkly: [{ id: "ld-ov", node: d => <WidgetLDOverview key="ld-ov" delay={d} /> }, { id: "ld-flags", node: d => <WidgetLDFlags key="ld-flags" delay={d} /> }],
 };
 
-// ─── Background animation ─────────────────────────────────────────────────────
-type FallItem =
-  | { kind: "dot";  cx: number; startY: number; r: number;   dur: number }
-  | { kind: "line"; cx: number; startY: number; len: number; dur: number };
-
-const FALL_ITEMS: FallItem[] = Array.from({ length: 80 }, (_, i) => {
-  const cx    = Math.round(20 + (i * 47 + i * i * 11) % 1570);
-  const startY = Math.round((i * 137) % 1100) - 120;
-  const dur   = 9 + (i * 1.7) % 16;
-  const kind  = (["dot", "dot", "dot", "line", "line", "line"] as const)[i % 6];
-  if (kind === "dot") return { kind, cx, startY, r: [1, 1.5, 2][i % 3], dur };
-  return { kind: "line", cx, startY, len: 6 + (i * 7 + i * i * 2) % 22, dur };
+// ─── Shooting stars (dark mode only) ─────────────────────────────────────────
+const SHOOTING_STARS = Array.from({ length: 14 }, (_, i) => {
+  const r = (i + 1) * 241.73 + i * i * 37.31 + i * 113.7;
+  return { id: i, left: 5 + (r % 85), top: -3 + ((r * 1.37) % 35), angle: 22 + ((r * 0.17) % 42), length: 70 + ((r * 0.43) % 130), dur: 0.45 + ((r * 0.023) % 0.7), cycle: 6 + ((r * 0.19) % 18), delay: (r * 0.07) % 25 };
 });
 
-function BackgroundAnimation() {
+function BackgroundAnimation({ isDark }: { isDark: boolean }) {
+  if (!isDark) return null;
+  const keyframesCss = SHOOTING_STARS.map(s => {
+    const td = 380 + s.length, vP = ((s.dur / s.cycle) * 100).toFixed(2), fP = ((s.dur / s.cycle) * 100 * 0.6).toFixed(2), sP = (parseFloat(vP) + 0.4).toFixed(2);
+    return `@keyframes ss-${s.id}{0%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}0.4%{opacity:1;transform:rotate(${s.angle}deg) translateX(0px)}${fP}%{opacity:.9}${vP}%{opacity:0;transform:rotate(${s.angle}deg) translateX(${td}px)}${sP}%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}100%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}}`;
+  }).join('');
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-      <svg width="100%" height="100%" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
-        {FALL_ITEMS.map((item, i) => {
-          const common = {
-            animate: { opacity: [0, 0.45, 0.45, 0] } as { opacity: number[] },
-            transition: { duration: item.dur, repeat: Infinity, ease: "linear" as const, times: [0, 0.08, 0.92, 1] },
-          };
-          if (item.kind === "dot") return (
-            <motion.circle key={i} cx={item.cx} r={item.r} fill="rgba(160,190,255,1)"
-              animate={{ cy: [item.startY, item.startY + 1150], ...common.animate }}
-              transition={common.transition} />
-          );
-          if (item.kind === "line") return (
-            <motion.line key={i} x1={item.cx} x2={item.cx} stroke="rgba(140,175,255,0.9)" strokeWidth="1"
-              animate={{ y1: [item.startY, item.startY + 1150], y2: [item.startY + item.len, item.startY + item.len + 1150], ...common.animate }}
-              transition={common.transition} />
-          );
-          return null;
-        })}
-      </svg>
+      <style>{keyframesCss}</style>
+      {SHOOTING_STARS.map(s => (
+        <div key={s.id} style={{ position: "absolute", left: `${s.left}%`, top: `${s.top}%`, width: s.length, height: 1.5, background: "linear-gradient(to right, rgba(200,220,255,0), rgba(210,230,255,1))", borderRadius: 2, transformOrigin: "left center", animation: `ss-${s.id} ${s.cycle}s ${s.delay}s linear infinite`, opacity: 0 }} />
+      ))}
     </div>
   );
 }
 
-// ─── Logo ─────────────────────────────────────────────────────────────────────
+// ─── Iskra Logo ───────────────────────────────────────────────────────────────
 function IskraLogo() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-      <motion.svg viewBox="0 0 30 30" width="26" height="26" fill="none"
-        animate={{ rotate: [0,18,-14,8,0], scale: [1,1.12,0.96,1.06,1] }}
-        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-        style={{ filter: "drop-shadow(0 0 6px rgba(255,80,10,0.7))" }}>
+    <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 10, padding: "4px 12px" }}>
+      <motion.svg viewBox="0 0 30 30" width="42" height="42" fill="none"
+        animate={{ rotate: [0, 22, -18, 12, 0], scale: [1, 1.18, 0.93, 1.10, 1] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.6))" }}>
         <defs>
           <linearGradient id="lg1" x1="15" y1="0" x2="15" y2="30" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FF6B30" /><stop offset="1" stopColor="#FF1800" />
+            <stop stopColor="#FFFFFF" />
+            <stop offset="1" stopColor="rgba(255,255,255,0.75)" />
           </linearGradient>
         </defs>
         <path d="M15 0 L16.6 12 L28 15 L16.6 18 L15 30 L13.4 18 L2 15 L13.4 12 Z" fill="url(#lg1)" />
-        <path d="M15 5 L16 12.5 L22 15 L16 17.5 L15 25 L14 17.5 L8 15 L14 12.5 Z" fill="white" opacity="0.18" />
       </motion.svg>
-      <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.textPrimary, fontFamily: "'Rubik', system-ui, sans-serif" }}>Iskra</span>
+      <div>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "white", fontFamily: "'Rubik', system-ui, sans-serif", display: "block" }}>Iskra</span>
+        <span style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.55)", fontFamily: "'Rubik', system-ui, sans-serif", letterSpacing: "0.02em", marginTop: -1, display: "block" }}>Appfire's data in one place</span>
+      </div>
     </div>
   );
 }
 
-// ─── Dashboard sidebar ────────────────────────────────────────────────────────
-function DashboardSidebar({ dashboards, activeId, onSelect, onDelete, onClose }: {
-  dashboards: SavedDashboard[]; activeId: string | null;
-  onSelect: (id: string) => void; onDelete: (id: string) => void; onClose: () => void;
-}) {
+// ─── Left Sidebar ─────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id: "dashboard", label: "Dashboards", Icon: Home },
+  { id: "sources",   label: "Sources",   Icon: List },
+  { id: "settings",  label: "Settings",  Icon: Settings },
+];
+
+// ─── Sources panel ────────────────────────────────────────────────────────────
+const SOURCE_DETAILS: Record<SourceId, { workspace: string; description: string }> = {
+  amplitude:    { workspace: "Appfire Analytics",  description: "Tracks user behaviour, product events, funnels, and retention across all Appfire surfaces. Used to monitor DAU/MAU, feature adoption, and session quality in real time." },
+  jira:         { workspace: "Appfire Jira (APF)", description: "Connected to the main engineering project board. Provides sprint progress, velocity trends, bug distribution by priority, and backlog health across all active teams." },
+  slack:        { workspace: "Appfire HQ",         description: "Reads message volume and response time metrics across team channels. Helps surface communication bottlenecks and identify the most active collaboration threads." },
+  confluence:   { workspace: "Appfire Docs",       description: "Indexes internal documentation pages, wiki coverage, and recent edits. Enables tracking of documentation health and highlights knowledge gaps across product areas." },
+  launchdarkly: { workspace: "appfire-prod",       description: "Manages feature flags and gradual rollouts for the production environment. Exposes flag state, targeting rules, evaluation volume, and kill-switch status per release." },
+};
+
+function SourcesPanel({ isDark }: { isDark: boolean }) {
+  const [connected, setConnected] = useState<Record<SourceId, boolean>>(
+    Object.fromEntries(ALL_SOURCES.map(s => [s, true])) as Record<SourceId, boolean>
+  );
+
   return (
-    <motion.div initial={{ x: -320, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -320, opacity: 0 }} transition={{ duration: 0.28, ease: [0.22,1,0.36,1] }}
-      style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: 280, zIndex: 90, background: C.bgSurface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <LayoutDashboard size={16} color={C.textMuted} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>Saved Dashboards</span>
-        </div>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, lineHeight: 1 }}><X size={16} /></button>
+    <div style={{ padding: "28px 28px 40px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", letterSpacing: "-0.3px" }}>Data Sources</h2>
+        <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>{ALL_SOURCES.filter(s => connected[s]).length} of {ALL_SOURCES.length} sources configured</p>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-        {dashboards.length === 0
-          ? <div style={{ padding: "24px 8px", textAlign: "center", color: C.textMuted, fontSize: 13 }}>No saved dashboards yet.</div>
-          : dashboards.map(d => (
-            <div key={d.id} onClick={() => onSelect(d.id)}
-              style={{ display: "flex", alignItems: "center", padding: "10px", borderRadius: 0, background: activeId === d.id ? C.bgHover : "transparent", border: `1px solid ${activeId === d.id ? C.borderStrong : "transparent"}`, cursor: "pointer", gap: 8, marginBottom: 4 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
-                <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }}>
-                  {d.sources.map(s => (
-                    <span key={s} style={{ fontSize: 9, padding: "1px 6px", borderRadius: 0, background: `${SOURCE_CONFIG[s].color}20`, color: SOURCE_CONFIG[s].color, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      {SOURCE_CONFIG[s].label.slice(0, 3)}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {ALL_SOURCES.map(s => {
+          const { label, Icon } = SOURCE_CONFIG[s];
+          const { workspace, description } = SOURCE_DETAILS[s];
+          const gradient = SOURCE_GRADIENTS[s];
+          const isOn = connected[s];
+          return (
+            <div key={s} style={{
+              background: C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 16,
+              overflow: "hidden", boxShadow: C.shadow,
+              opacity: isOn ? 1 : 0.55, transition: "opacity 0.2s",
+            }}>
+              <div style={{ padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 16 }}>
+                {/* Icon */}
+                {(() => {
+                  const logoMap: Partial<Record<SourceId, string>> = { slack: slackLogo, confluence: confluenceLogo, amplitude: amplitudeLogo, launchdarkly: launchdarklyLogo, jira: jiraLogo };
+                  const logo = logoMap[s];
+                  return (
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: logo ? "white" : gradient, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: logo ? `1px solid ${C.border}` : "none" }}>
+                      {logo ? <img src={logo} alt={label} style={{ width: 26, height: 26, objectFit: "contain" }} /> : <Icon size={18} />}
+                    </div>
+                  );
+                })()}
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{label}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: isOn ? C.success : C.textMuted, background: isOn ? C.successFaint : (isDark ? "rgba(255,255,255,0.06)" : C.bgElevated), padding: "2px 8px", borderRadius: 20, fontWeight: 500 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: isOn ? C.success : C.textMuted, flexShrink: 0 }} />
+                      {isOn ? "Connected" : "Disconnected"}
                     </span>
-                  ))}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>
+                    Workspace: <span style={{ color: C.textSecondary, fontWeight: 500 }}>{workspace}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>{description}</div>
+                </div>
+                {/* Actions */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <button style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: "'Rubik', system-ui, sans-serif", fontWeight: 500 }}>
+                    Configure
+                  </button>
+                  <button
+                    onClick={() => setConnected(prev => ({ ...prev, [s]: !prev[s] }))}
+                    style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${isOn ? C.errorFaint : C.successFaint}`, background: isOn ? C.errorFaint : C.successFaint, cursor: "pointer", color: isOn ? C.error : C.success, fontFamily: "'Rubik', system-ui, sans-serif", fontWeight: 600 }}>
+                    {isOn ? "Disconnect" : "Connect"}
+                  </button>
                 </div>
               </div>
-              <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
-                style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, lineHeight: 1, opacity: 0.6, padding: 4, borderRadius: 4 }}>
-                <Trash2 size={13} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, onNewDashboard, activeNav, setActiveNav }: {
+  savedDashboards: SavedDashboard[]; activeId: string | null;
+  onSelect: (id: string) => void; onDelete: (id: string) => void;
+  isDark: boolean; setIsDark: (v: (p: boolean) => boolean) => void;
+  onNewDashboard: () => void; activeNav: string; setActiveNav: (v: string) => void;
+}) {
+  return (
+    <div style={{
+      width: 300, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
+      background: isDark ? C.bgBase : C.bgBase,
+      display: "flex", flexDirection: "column",
+      padding: "35px 0px 35px 29px",
+      zIndex: 20,
+    }}>
+      {/* Inner card */}
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
+        background: isDark ? "linear-gradient(160deg, #474E7A 0%, #353B64 100%)" : "linear-gradient(160deg, #474E7A 0%, #353B64 100%)",
+        borderRadius: 18,
+        boxShadow: isDark ? "0 4px 32px rgba(0,0,0,0.5)" : "0 4px 24px rgba(53,59,100,0.35)",
+        overflow: "hidden",
+      }}>
+        {/* Logo */}
+        <div style={{ padding: "20px 20px 14px 14px" }}>
+          <IskraLogo />
+        </div>
+        <div style={{ margin: "0 14px", height: 1, background: "rgba(255,255,255,0.15)", borderRadius: 1 }} />
+
+        {/* User profile */}
+        <div style={{ padding: "14px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, fontFamily: "'Rubik', system-ui, sans-serif", border: "1.5px solid rgba(255,255,255,0.35)" }}>
+                AK
+              </div>
+              <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#4AE87A", border: "2px solid #3D4472" }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: "0.01em" }}>Alex Kim</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>alex@company.com</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div style={{ padding: "10px 10px 4px", flex: 1, overflowY: "auto" }}>
+          {NAV_ITEMS.map(item => (
+            <div key={item.id}>
+              <button onClick={() => setActiveNav(item.id === "dashboard" ? "dashboard" : item.id)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: activeNav === item.id ? "rgba(255,255,255,0.18)" : "transparent", border: "none", cursor: "pointer", color: activeNav === item.id ? "white" : "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: activeNav === item.id ? 600 : 400, fontFamily: "'Rubik', system-ui, sans-serif", marginBottom: 2, transition: "all 0.12s", textAlign: "left" }}>
+                <item.Icon size={15} />
+                {item.label}
+                {item.id === "sources" && (
+                  <span style={{ marginLeft: "auto", fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 400 }}>(5 of 5)</span>
+                )}
+                {item.id === "dashboard" && savedDashboards.length > 0 && (
+                  <span style={{ marginLeft: "auto", background: "rgba(255,255,255,0.25)", color: "white", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "0 6px", lineHeight: "16px" }}>{savedDashboards.length}</span>
+                )}
+              </button>
+
+              {/* Dashboard sub-list */}
+              {item.id === "dashboard" && savedDashboards.length > 0 && (
+                <div style={{ marginTop: 6, marginBottom: 4 }}>
+                  {savedDashboards.map(d => (
+                    <div key={d.id} onClick={() => onSelect(d.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: 10, background: activeId === d.id ? "rgba(255,255,255,0.18)" : "transparent", cursor: "pointer", marginBottom: 1, transition: "background 0.12s" }}>
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id ? "white" : "rgba(255,255,255,0.4)", flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id ? "white" : "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
+                      <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: 2, display: "flex", flexShrink: 0 }}>
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Source Card ──────────────────────────────────────────────────────────────
+// ─── Settings Panel ───────────────────────────────────────────────────────────
+function SettingsPanel({ isDark }: { isDark: boolean }) {
+  const [email, setEmail] = useState("alex@appfire.com");
+  const [name, setName] = useState("Alex Kim");
+  const [role, setRole] = useState("Product Manager");
+  const [emailNotifs, setEmailNotifs] = useState(true);
+  const [slackNotifs, setSlackNotifs] = useState(false);
+  const [weeklyDigest, setWeeklyDigest] = useState(true);
+  const [defaultView, setDefaultView] = useState("dashboard");
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${C.border}`,
+    background: isDark ? "rgba(255,255,255,0.05)" : C.bgSurface, color: C.textPrimary,
+    fontSize: 13, fontFamily: "'Rubik', system-ui, sans-serif", outline: "none",
+    boxSizing: "border-box",
+  };
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 600, color: C.textMuted, letterSpacing: "0.06em",
+    textTransform: "uppercase", marginBottom: 6, display: "block",
+  };
+  const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
+    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? "#474E7A" : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? "#353B64" : C.border}` }}>
+      <div style={{ position: "absolute", top: 2, left: on ? 17 : 2, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "35px 40px 40px" }}>
+      <h2 style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", letterSpacing: "-0.3px" }}>Settings</h2>
+      <p style={{ margin: "0 0 32px", fontSize: 13, color: C.textMuted }}>Manage your profile and preferences.</p>
+
+      {/* Profile */}
+      <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, borderRadius: 16, padding: "24px", marginBottom: 20, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Profile</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #474E7A, #353B64)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>AK</div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>Alex Kim</div>
+            <div style={{ fontSize: 12, color: C.textMuted }}>Appfire · Product Manager</div>
+          </div>
+          <button style={{ marginLeft: "auto", fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: "'Rubik', system-ui, sans-serif" }}>Change photo</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div>
+            <label style={labelStyle}>Full name</label>
+            <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Email</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Role</label>
+            <input value={role} onChange={e => setRole(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Default view</label>
+            <select value={defaultView} onChange={e => setDefaultView(e.target.value)} style={{ ...inputStyle, appearance: "none" }}>
+              <option value="dashboard">Dashboard</option>
+              <option value="sources">Sources</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, borderRadius: 16, padding: "24px", marginBottom: 20, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Notifications</div>
+        {[
+          { label: "Email notifications", sub: "Receive dashboard updates and alerts by email", on: emailNotifs, toggle: () => setEmailNotifs(v => !v) },
+          { label: "Slack notifications", sub: "Get notified in Slack when key metrics change", on: slackNotifs, toggle: () => setSlackNotifs(v => !v) },
+          { label: "Weekly digest", sub: "Summary of your most important metrics every Monday", on: weeklyDigest, toggle: () => setWeeklyDigest(v => !v) },
+        ].map(({ label, sub, on, toggle }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 16, marginBottom: 16, borderBottom: `1px solid ${C.border}` }} onClick={toggle}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary, marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>{sub}</div>
+            </div>
+            <Toggle on={on} onToggle={toggle} />
+          </div>
+        ))}
+      </div>
+
+      {/* Save */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #474E7A 0%, #353B64 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(53,59,100,0.4)" }}>
+          Save changes
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SourceCard({ sourceId, onGenerate }: { sourceId: SourceId; onGenerate: (s: SourceId) => void }) {
+  const { label } = SOURCE_CONFIG[sourceId];
+  const { metric, detail, spark } = SOURCE_CARD_METRICS[sourceId];
+  const gradient = SOURCE_GRADIENTS[sourceId];
+  return (
+    <motion.div
+      whileHover={{ y: -3, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}
+      transition={{ duration: 0.18 }}
+      onClick={() => onGenerate(sourceId)}
+      style={{ background: gradient, borderRadius: 18, padding: "18px 18px 16px", cursor: "pointer", position: "relative", overflow: "hidden", minWidth: 0 }}
+    >
+      {/* Decorative shine */}
+      <div style={{ position: "absolute", top: -30, right: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.1)" }} />
+      {/* Three dots menu indicator */}
+      <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 3 }}>
+        {[0,1,2].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.5)" }} />)}
+      </div>
+      {/* Top: avatars placeholder (connected status) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14 }}>
+        <div style={{ display: "flex" }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(255,255,255,${0.3 + i * 0.15})`, border: "1.5px solid rgba(255,255,255,0.6)", marginLeft: i > 0 ? -6 : 0 }} />
+          ))}
+        </div>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginLeft: 4 }}>Connected</span>
+      </div>
+      {/* Label */}
+      <div style={{ fontSize: 16, fontWeight: 700, color: "white", marginBottom: 6, letterSpacing: "-0.2px" }}>{label}</div>
+      {/* Metric */}
+      <div style={{ fontSize: 22, fontWeight: 700, color: "white", letterSpacing: "-0.5px", marginBottom: 2 }}>{metric}</div>
+      {/* Sparkline */}
+      <div style={{ margin: "6px 0 8px" }}>
+        <TinySparkline values={spark} />
+      </div>
+      {/* Detail */}
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>{detail}</div>
+    </motion.div>
+  );
+}
+
+// ─── Right Panel ──────────────────────────────────────────────────────────────
+function RightPanel({ isDark }: { isDark: boolean }) {
+  const QUICK_STATS = [
+    { label: "DAU", value: "14.8k", sub: "active users", color: "#0BBFB8" },
+    { label: "Sprint", value: "68%", sub: "completion", color: "#8B5CF6" },
+    { label: "Flags", value: "24", sub: "active", color: "#10B981" },
+  ];
+  return (
+    <div style={{
+      width: 272, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
+      background: isDark ? "rgba(13,25,24,0.98)" : C.bgSurface,
+      borderLeft: `1px solid ${C.border}`,
+      display: "flex", flexDirection: "column",
+      boxShadow: isDark ? "none" : "-2px 0 12px rgba(0,0,0,0.04)",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "22px 20px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, fontFamily: "'Rubik', system-ui, sans-serif" }}>Live Stats</span>
+        <button style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, display: "flex" }}>
+          <Bell size={16} />
+        </button>
+      </div>
+
+      {/* Quick stats row */}
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {QUICK_STATS.map(s => (
+            <div key={s.label} style={{ background: isDark ? "rgba(255,255,255,0.05)" : C.bgElevated, borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: s.color, letterSpacing: "-0.5px" }}>{s.value}</div>
+              <div style={{ fontSize: 9, color: C.textMuted, marginTop: 2, lineHeight: 1.3 }}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity feed */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+        {QUICK_INSIGHTS.map(group => (
+          <div key={group.date} style={{ marginBottom: 16 }}>
+            <div style={{ padding: "4px 20px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary }}>{group.date}</span>
+              <button style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, display: "flex", padding: 0 }}>
+                <span style={{ fontSize: 18, lineHeight: 1, letterSpacing: 2 }}>···</span>
               </button>
             </div>
-          ))
-        }
+            {group.events.map((ev, i) => {
+              const src = SOURCE_CONFIG[ev.source];
+              const grad = SOURCE_GRADIENTS[ev.source];
+              return (
+                <div key={i} style={{ padding: "8px 20px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ flexShrink: 0, paddingTop: 2 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, minWidth: 36 }}>{ev.time}</div>
+                  </div>
+                  <div style={{ width: 3, flexShrink: 0, alignSelf: "stretch", borderRadius: 2, background: grad, minHeight: 32 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>{src.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 1, lineHeight: 1.3 }}>{ev.label}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted }}>{ev.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function IgniteIskraPage() {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
+  const [activeNav, setActiveNav] = useState("dashboard");
   C = isDark ? DARK_PALETTE : LIGHT_PALETTE;
 
   const [prompt, setPrompt] = useState("");
@@ -647,36 +1021,74 @@ export default function IgniteIskraPage() {
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const [savedDashboards, setSavedDashboards] = useState<SavedDashboard[]>([]);
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(null);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const idRef = useRef(0);
 
   const handleGenerate = useCallback((overridePrompt?: string) => {
     const p = (overridePrompt ?? prompt).trim();
     if (!p) return;
     setGenerating(true);
-    setActiveDashboardId(null);
+    setActiveDashboardId(prev => { setIsDirty(!!prev); return prev; });
     setTimeout(() => {
       const sources = detectSources(p).filter(s => activeSources.includes(s));
       setCurrentSources(sources.length > 0 ? sources : activeSources);
-      setCurrentName(dashboardName(p));
+      setCurrentName(prev => prev ?? dashboardName(p));
       setCurrentPrompt(p);
+      setPromptHistory(prev => [...prev, p]);
       setGenerating(false);
     }, 900);
   }, [prompt, activeSources]);
 
+  const handleGenerateSource = useCallback((sourceId: SourceId) => {
+    const sourceName = SOURCE_CONFIG[sourceId].label;
+    const p = `Show me ${sourceName} insights and key metrics`;
+    setPrompt(p);
+    setActiveSources([sourceId]);
+    setGenerating(true);
+    setActiveDashboardId(null);
+    setTimeout(() => {
+      setCurrentSources([sourceId]);
+      setCurrentName(`${sourceName} Overview`);
+      setCurrentPrompt(p);
+      setGenerating(false);
+    }, 900);
+  }, []);
+
   const handleSave = useCallback(() => {
     if (!currentSources || !currentName || !currentPrompt) return;
     const id = `d-${++idRef.current}`;
-    setSavedDashboards(prev => [{ id, name: currentName, prompt: currentPrompt, sources: currentSources, createdAt: new Date() }, ...prev]);
+    setSavedDashboards(prev => [{ id, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }, ...prev]);
     setActiveDashboardId(id);
+    setIsDirty(false);
+  }, [currentSources, currentName, currentPrompt]);
+
+  const handleUpdate = useCallback(() => {
+    if (!activeDashboardId || !currentSources || !currentName || !currentPrompt) return;
+    setSavedDashboards(prev => prev.map(d => d.id === activeDashboardId
+      ? { ...d, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }
+      : d
+    ));
+    setIsDirty(false);
+  }, [activeDashboardId, currentSources, currentName, currentPrompt]);
+
+  const handleSaveAsNew = useCallback(() => {
+    if (!currentSources || !currentName || !currentPrompt) return;
+    const id = `d-${++idRef.current}`;
+    setSavedDashboards(prev => [{ id, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }, ...prev]);
+    setActiveDashboardId(id);
+    setIsDirty(false);
   }, [currentSources, currentName, currentPrompt]);
 
   const handleSelectDashboard = useCallback((id: string) => {
     const d = savedDashboards.find(x => x.id === id);
     if (!d) return;
     setCurrentSources(d.sources); setCurrentName(d.name); setCurrentPrompt(d.prompt);
-    setPrompt(d.prompt); setActiveDashboardId(id); setShowSidebar(false);
+    setPrompt(d.prompt); setActiveDashboardId(id); setIsDirty(false);
   }, [savedDashboards]);
 
   const handleDeleteDashboard = useCallback((id: string) => {
@@ -684,179 +1096,221 @@ export default function IgniteIskraPage() {
     if (activeDashboardId === id) { setActiveDashboardId(null); setCurrentSources(null); }
   }, [activeDashboardId]);
 
+  const handleNewDashboard = useCallback(() => {
+    setCurrentSources(null); setCurrentName(null); setCurrentPrompt(null);
+    setPrompt(""); setActiveDashboardId(null); setActiveSources([...ALL_SOURCES]); setPromptHistory([]); setHistoryOpen(false); setIsDirty(false);
+  }, []);
+
   const toggleSource = (s: SourceId) => setActiveSources(prev => prev.includes(s) ? (prev.length > 1 ? prev.filter(x => x !== s) : prev) : [...prev, s]);
 
   const hasDashboard = currentSources !== null && !generating;
 
+
   return (
-    <div style={{
-      minHeight: "100dvh",
-      background: C.bgBase,
-      color: C.textPrimary,
-      fontFamily: "'Rubik', system-ui, sans-serif",
-    }}>
-      <BackgroundAnimation />
+    <div style={{ minHeight: "100dvh", background: C.bgBase, color: C.textPrimary, fontFamily: "'Rubik', system-ui, sans-serif", display: "flex" }}>
+      <BackgroundAnimation isDark={isDark} />
 
-      {/* Header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: isDark ? "rgba(7,20,16,0.88)" : "rgba(244,244,250,0.85)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", gap: 16 }}>
-        <IskraLogo />
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {savedDashboards.length > 0 && (
-            <button onClick={() => setShowSidebar(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: showSidebar ? C.bgElevated : "transparent", border: `1px solid ${showSidebar ? C.borderStrong : C.border}`, borderRadius: 0, padding: "6px 12px", cursor: "pointer", color: C.textSecondary, fontSize: 13 }}>
-              <LayoutDashboard size={13} />
-              <span>Dashboards</span>
-              <span style={{ marginLeft: 2, background: C.spark, color: "white", fontSize: 13, fontWeight: 700, borderRadius: 0, padding: "0 5px", lineHeight: "16px" }}>{savedDashboards.length}</span>
-            </button>
-          )}
-          {hasDashboard && activeDashboardId === null && (
-            <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSave}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: C.spark, border: "none", borderRadius: 0, padding: "6px 14px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600 }}>
-              <Save size={13} /><span>Save Dashboard</span>
-            </motion.button>
-          )}
-          <button onClick={() => { setCurrentSources(null); setCurrentName(null); setCurrentPrompt(null); setPrompt(""); setActiveDashboardId(null); }}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 0, padding: "6px 12px", cursor: "pointer", color: C.textSecondary, fontSize: 13 }}>
-            <Plus size={13} /><span>New Dashboard</span>
-          </button>
-          <motion.button onClick={() => setIsDark(v => !v)} whileTap={{ scale: 0.92 }}
-            style={{ width: 36, height: 36, borderRadius: 0, border: `1px solid ${C.border}`, background: C.bgElevated, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.textMuted }}>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span key={isDark ? "sun" : "moon"} initial={{ opacity: 0, rotate: -30, scale: 0.7 }} animate={{ opacity: 1, rotate: 0, scale: 1 }} exit={{ opacity: 0, rotate: 30, scale: 0.7 }} transition={{ duration: 0.18 }} style={{ display: "flex" }}>
-                {isDark ? <Sun size={15} /> : <Moon size={15} />}
-              </motion.span>
-            </AnimatePresence>
-          </motion.button>
-        </div>
-      </header>
+      {/* Left Sidebar */}
+      <LeftSidebar
+        savedDashboards={savedDashboards} activeId={activeDashboardId}
+        onSelect={handleSelectDashboard} onDelete={handleDeleteDashboard}
+        isDark={isDark} setIsDark={setIsDark} onNewDashboard={handleNewDashboard}
+        activeNav={activeNav} setActiveNav={setActiveNav}
+      />
 
-      {/* Sidebar */}
-      <AnimatePresence>
-        {showSidebar && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSidebar(false)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,0.5)" }} />
-            <DashboardSidebar dashboards={savedDashboards} activeId={activeDashboardId} onSelect={handleSelectDashboard} onDelete={handleDeleteDashboard} onClose={() => setShowSidebar(false)} />
-          </>
-        )}
-      </AnimatePresence>
+      {/* Main Content */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative", zIndex: 10 }}>
 
-      {/* Main */}
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px 120px", position: "relative", zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        {/* Sources view */}
+        {activeNav === "sources" && <SourcesPanel isDark={isDark} />}
 
-        {/* Prompt area */}
-        <div style={{ maxWidth: 680, margin: "0 auto 48px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {!hasDashboard && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", marginBottom: 36, width: "100%" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                <motion.svg
-                  viewBox="0 0 100 100" width="96" height="96"
-                  animate={{ rotate: [0, 22, -18, 10, 0], scale: [1, 1.18, 0.94, 1.08, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  style={{ filter: isDark ? "drop-shadow(0 0 6px #FF6030) drop-shadow(0 0 18px #FF3D00) drop-shadow(0 0 40px #CC2A00)" : "drop-shadow(0 0 4px #FF6030) drop-shadow(0 0 10px #FF3D00)", overflow: "visible" }}
-                >
-                  {/* Sharp 4-pointed star: long vertical + horizontal points, tiny diagonal notches */}
-                  <path d="M50 2 L54 46 L98 50 L54 54 L50 98 L46 54 L2 50 L46 46 Z" fill={C.spark} />
-                  <defs>
-                    <radialGradient id="starg" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor={isDark ? "#FFFFFF" : "#CC2200"} stopOpacity={isDark ? 0.6 : 0.5} />
-                      <stop offset="100%" stopColor="#FF3D00" stopOpacity="0" />
-                    </radialGradient>
-                  </defs>
-                  <path d="M50 2 L54 46 L98 50 L54 54 L50 98 L46 54 L2 50 L46 46 Z" fill="url(#starg)" />
-                </motion.svg>
-              </div>
-              <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-1px", color: C.textPrimary, marginBottom: 10, lineHeight: 1.2 }}>Ask me anything.</h1>
-              <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6 }}>
-                I pull from our internal tools like Amplitude, Jira, Slack, Confluence, and LaunchDarkly<br />and I can build dashboards around your questions.
-              </p>
-            </motion.div>
-          )}
+        {/* Settings view */}
+        {activeNav === "settings" && <SettingsPanel isDark={isDark} />}
 
-          {/* Prompt input */}
-          <div style={{ position: "relative", width: "100%" }}>
-            <motion.div
-              whileFocusWithin={{ boxShadow: `0 0 0 1px ${C.spark}60, 0 0 40px ${C.spark}18` } as never}
-              style={{
-                background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface,
-                backdropFilter: "blur(16px)",
-                border: `1px solid ${isDark ? "rgba(255,90,20,0.18)" : C.border}`,
-                boxShadow: isDark ? `0 0 60px rgba(255,61,0,0.07), inset 0 1px 0 rgba(255,255,255,0.05)` : "none",
-                overflow: "hidden",
-                transition: "box-shadow 0.2s",
-              }}
-            >
-              {/* Input row */}
-              <div style={{ display: "flex", alignItems: "flex-start", padding: "16px 18px 0", gap: 10 }}>
-                <span style={{ color: C.spark, fontFamily: "monospace", fontWeight: 700, fontSize: 16, marginTop: 3, flexShrink: 0, userSelect: "none" }}>▸</span>
-                <textarea ref={inputRef} value={prompt} onChange={e => setPrompt(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-                  placeholder="Show me sprint health and user retention…" rows={2}
-                  style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.textPrimary, fontSize: 15, resize: "none", fontFamily: "inherit", lineHeight: 1.5, boxSizing: "border-box" }} />
+        {/* Dashboard view */}
+        {activeNav !== "sources" && activeNav !== "settings" && <>
+        {/* Top bar */}
+        <div style={{ padding: "35px 28px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, minHeight: 56 }}>
+          {hasDashboard ? (
+            <>
+              {/* Left: New Dashboard */}
+              <motion.button onClick={handleNewDashboard} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 10, background: "transparent", border: `1px solid ${C.border}`, cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>
+                <ArrowLeft size={14} /><span>New Dashboard</span>
+              </motion.button>
+
+              {/* Center: Editable name */}
+              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                {isEditingName ? (
+                  <input
+                    ref={nameInputRef}
+                    value={currentName ?? ""}
+                    onChange={e => setCurrentName(e.target.value)}
+                    onBlur={() => setIsEditingName(false)}
+                    onKeyDown={e => { if (e.key === "Enter") setIsEditingName(false); }}
+                    autoFocus
+                    style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, background: "transparent", border: "none", borderBottom: `2px solid ${C.spark}`, outline: "none", textAlign: "center", fontFamily: "'Rubik', system-ui, sans-serif", letterSpacing: "-0.3px", minWidth: 200, maxWidth: 480 }}
+                  />
+                ) : (
+                  <button onClick={() => { setIsEditingName(true); setTimeout(() => nameInputRef.current?.select(), 30); }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "text", padding: "4px 8px", borderRadius: 8 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgElevated; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                    <h1 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.3px", fontFamily: "'Rubik', system-ui, sans-serif" }}>{currentName}</h1>
+                    <Edit2 size={13} color={C.textMuted} style={{ opacity: 0.6, flexShrink: 0 }} />
+                    {activeDashboardId && !isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: C.successFaint, color: C.success, fontWeight: 600, marginLeft: 2 }}>SAVED</span>}
+                    {activeDashboardId && isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: isDark ? "rgba(255,180,0,0.15)" : "#FFF8E6", color: "#B07800", fontWeight: 600, marginLeft: 2 }}>UNSAVED CHANGES</span>}
+                  </button>
+                )}
               </div>
 
-              {/* Bottom bar */}
-              <div style={{ display: "flex", alignItems: "center", padding: "10px 14px 14px", gap: 8, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : C.border}`, marginTop: 10 }}>
-                <div style={{ display: "flex", gap: 5, flex: 1, flexWrap: "wrap" }}>
-                  {ALL_SOURCES.map(s => {
-                    const { label } = SOURCE_CONFIG[s];
-                    const active = activeSources.includes(s);
-                    return (
-                      <button key={s} onClick={() => toggleSource(s)}
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 10px 3px 7px", borderRadius: 0, border: `1px solid ${active ? `${C.success}50` : C.border}`, background: active ? `${C.success}0D` : "transparent", cursor: "pointer", fontSize: 12, fontWeight: 500, color: active ? C.textPrimary : C.textMuted, transition: "all 0.12s", letterSpacing: "0.01em" }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", flexShrink: 0, background: active ? C.success : C.textMuted, boxShadow: active ? `0 0 6px ${C.success}` : "none", transition: "all 0.12s" }} />
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Right: Save buttons */}
+              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                {!activeDashboardId ? (
+                  <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSave}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #474E7A 0%, #353B64 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(53,59,100,0.4)" }}>
+                    <Save size={13} /><span>Save Dashboard</span>
+                  </motion.button>
+                ) : isDirty ? (
+                  <>
+                    <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSaveAsNew}
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 16px", cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "'Rubik', system-ui, sans-serif" }}>
+                      <Save size={13} /><span>Save as new</span>
+                    </motion.button>
+                    <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleUpdate}
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #474E7A 0%, #353B64 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(53,59,100,0.4)" }}>
+                      <RefreshCw size={13} /><span>Update</span>
+                    </motion.button>
+                  </>
+                ) : (
+                  <div style={{ width: 8 }} />
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", letterSpacing: "-0.3px" }}>What's on your radar today?</h1>
+                <p style={{ margin: 0, fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>Analysing all connected sources — <span style={{ color: C.textSecondary }}>Amplitude, Jira, Slack, Confluence & LaunchDarkly</span></p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <motion.button
-                  onClick={() => handleGenerate()} disabled={!prompt.trim() || generating}
-                  whileHover={prompt.trim() && !generating ? { scale: 1.03 } : {}}
-                  whileTap={prompt.trim() && !generating ? { scale: 0.97 } : {}}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 7, padding: "9px 22px",
-                    borderRadius: 0, border: "none", flexShrink: 0,
-                    background: !prompt.trim() || generating ? C.bgElevated : `linear-gradient(135deg, #FF5A1A 0%, #FF2000 100%)`,
-                    color: !prompt.trim() || generating ? C.textMuted : "white",
-                    cursor: !prompt.trim() || generating ? "default" : "pointer",
-                    fontSize: 13, fontWeight: 700, letterSpacing: "0.04em",
-                    boxShadow: prompt.trim() && !generating ? "0 0 24px rgba(255,61,0,0.35)" : "none",
-                    transition: "all 0.15s",
-                  }}>
-                  {generating
-                    ? <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /><span>Building…</span></>
-                    : <><Zap size={13} /><span>Generate</span></>}
+                  onClick={handleNewDashboard}
+                  disabled={currentSources === null && !generating}
+                  whileHover={currentSources !== null || generating ? { scale: 1.02 } : {}}
+                  whileTap={currentSources !== null || generating ? { scale: 0.97 } : {}}
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 10, background: (currentSources === null && !generating) ? (isDark ? "rgba(255,255,255,0.05)" : C.bgElevated) : (isDark ? C.textPrimary : "#1C1614"), border: `1px solid ${(currentSources === null && !generating) ? C.border : "transparent"}`, cursor: (currentSources === null && !generating) ? "default" : "pointer", color: (currentSources === null && !generating) ? C.textMuted : (isDark ? C.bgBase : "white"), fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: (currentSources === null && !generating) ? "none" : "0 2px 12px rgba(0,0,0,0.15)", opacity: (currentSources === null && !generating) ? 0.5 : 1, transition: "all 0.15s" }}>
+                  <Plus size={14} /><span>New Dashboard</span>
                 </motion.button>
               </div>
-            </motion.div>
-          </div>
+            </>
+          )}
+        </div>
+
+        {/* Prompt input */}
+        <div style={{ padding: "20px 28px 0" }}>
+          <motion.div
+            whileFocusWithin={{ boxShadow: `0 0 0 2px ${C.spark}40, ${C.shadow}` } as never}
+            style={{
+              background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface,
+              border: `1px solid ${isDark ? "rgba(255,90,20,0.2)" : C.border}`,
+              borderRadius: 18,
+              boxShadow: isDark ? `0 0 40px rgba(255,61,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05)` : C.shadow,
+              overflow: "hidden",
+              transition: "box-shadow 0.2s",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "14px 16px 0", gap: 10 }}>
+              <motion.svg viewBox="0 0 30 30" width="16" height="16" fill="none" flexShrink={0}
+                animate={{ rotate: [0, 18, -14, 8, 0], scale: [1, 1.15, 0.94, 1.08, 1] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                style={{ marginTop: 3, flexShrink: 0, filter: `drop-shadow(0 0 4px ${C.sparkGlow})` }}>
+                <defs>
+                  <linearGradient id="si1" x1="15" y1="0" x2="15" y2="30" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#FF2233" /><stop offset="1" stopColor="#CC001A" />
+                  </linearGradient>
+                </defs>
+                <path d="M15 0 L16.6 12 L28 15 L16.6 18 L15 30 L13.4 18 L2 15 L13.4 12 Z" fill="url(#si1)" />
+              </motion.svg>
+              <textarea ref={inputRef} value={prompt} onChange={e => setPrompt(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+                placeholder={hasDashboard ? "Modify or extend this dashboard…" : "Ask me anything — sprint health, user retention, flag rollout…"} rows={2}
+                style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.textPrimary, fontSize: 14, resize: "none", fontFamily: "inherit", lineHeight: 1.5, boxSizing: "border-box" }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", padding: "8px 12px 12px", gap: 6, marginTop: 8 }}>
+              <div style={{ flex: 1 }} />
+              <motion.button
+                onClick={() => handleGenerate()} disabled={!prompt.trim() || generating}
+                whileHover={prompt.trim() && !generating ? { scale: 1.03 } : {}}
+                whileTap={prompt.trim() && !generating ? { scale: 0.97 } : {}}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
+                  borderRadius: 12, border: "none", flexShrink: 0,
+                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : "linear-gradient(135deg, #474E7A 0%, #353B64 100%)",
+                  color: !prompt.trim() || generating ? C.textMuted : "white",
+                  cursor: !prompt.trim() || generating ? "default" : "pointer",
+                  fontSize: 13, fontWeight: 700, fontFamily: "'Rubik', system-ui, sans-serif",
+                  boxShadow: prompt.trim() && !generating ? "0 2px 20px rgba(212,17,31,0.3)" : "none",
+                  transition: "all 0.15s",
+                }}>
+                {generating
+                  ? <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /><span>Building…</span></>
+                  : <><Zap size={13} /><span>Generate</span></>}
+              </motion.button>
+            </div>
+          </motion.div>
+
+          {/* Prompt history */}
+          {promptHistory.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <button onClick={() => setHistoryOpen(o => !o)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: C.textMuted, fontSize: 11, fontFamily: "'Rubik', system-ui, sans-serif", padding: "2px 0" }}>
+                <motion.span animate={{ rotate: historyOpen ? 90 : 0 }} transition={{ duration: 0.18 }} style={{ display: "flex" }}>▶</motion.span>
+                <span>{promptHistory.length} prompt{promptHistory.length > 1 ? "s" : ""} sent in this session</span>
+              </button>
+              {historyOpen && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
+                  style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                  {promptHistory.map((p, i) => (
+                    <div key={i} onClick={() => setPrompt(p)}
+                      style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 12px", borderRadius: 10, background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, border: `1px solid ${C.border}`, cursor: "pointer", transition: "background 0.12s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = isDark ? "rgba(255,255,255,0.07)" : C.bgHover; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = isDark ? "rgba(255,255,255,0.04)" : C.bgSurface; }}>
+                      <span style={{ fontSize: 10, color: C.textMuted, marginTop: 1, flexShrink: 0 }}>#{i + 1}</span>
+                      <span style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.4 }}>{p}</span>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+          )}
 
           {/* Suggested prompts */}
           {!hasDashboard && !generating && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.3 } }} style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, textAlign: "center", marginBottom: 10 }}>Prompt examples</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                {SUGGESTED_PROMPTS.map(p => (
-                  <button key={p} onClick={() => { setPrompt(p); handleGenerate(p); }}
-                    style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 0, padding: "6px 14px", cursor: "pointer", color: C.textMuted, fontSize: 13, transition: "all 0.15s" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderStrong; e.currentTarget.style.color = C.textSecondary; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}>
-                    {p}
-                  </button>
-                ))}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.25 } }} style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, paddingLeft: 2 }}>…or use a prompt example to start</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {SUGGESTED_PROMPTS.map(p => (
+                <button key={p} onClick={() => { setPrompt(p); handleGenerate(p); }}
+                  style={{ background: isDark ? "rgba(255,255,255,0.05)" : C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 14px", cursor: "pointer", color: C.textMuted, fontSize: 12, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: C.shadow, transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.borderColor = C.borderStrong; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.border; }}>
+                  {p}
+                </button>
+              ))}
               </div>
             </motion.div>
           )}
         </div>
 
-        {/* Generating state */}
+        {/* Generating indicator */}
         <AnimatePresence>
           {generating && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ textAlign: "center", padding: "48px 0", alignSelf: "stretch" }}>
-              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: "32px 28px", textAlign: "center" }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
                 {[0, 0.2, 0.4].map((d, i) => (
                   <motion.div key={i} animate={{ scale: [1,1.5,1], opacity: [0.4,1,0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }}
-                    style={{ width: 6, height: 6, borderRadius: "50%", background: C.spark }} />
+                    style={{ width: 7, height: 7, borderRadius: "50%", background: C.spark }} />
                 ))}
               </div>
               <div style={{ fontSize: 13, color: C.textMuted }}>Pulling data and building your dashboard…</div>
@@ -864,30 +1318,48 @@ export default function IgniteIskraPage() {
           )}
         </AnimatePresence>
 
-        {/* Dashboard header */}
-        {hasDashboard && currentName && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, alignSelf: "stretch" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{currentName}</h2>
-                {activeDashboardId && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 0, background: C.successFaint, color: C.success, fontWeight: 600 }}>SAVED</span>}
-              </div>
-              <div style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>{currentPrompt}</div>
-            </div>
-          </motion.div>
-        )}
 
         {/* Widget grid */}
         {hasDashboard && currentSources && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, width: "100%" }}>
-            {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
+          <div style={{ padding: "16px 28px 40px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+              {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
+            </div>
           </div>
         )}
-      </main>
+
+        {/* Empty state */}
+        {!hasDashboard && !generating && (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 28px", position: "relative", overflow: "hidden" }}>
+            {/* Falling stars */}
+            {[...Array(18)].map((_, i) => {
+              const left = (i * 57 + 13) % 100;
+              const delay = (i * 0.37) % 4;
+              const duration = 3 + (i * 0.29) % 3;
+              const size = 1 + (i % 3) * 0.7;
+              return (
+                <motion.div key={i}
+                  style={{ position: "absolute", top: -10, left: `${left}%`, width: size, height: size * 5, borderRadius: 99, background: isDark ? "rgba(255,255,255,0.25)" : "rgba(28,22,20,0.1)", pointerEvents: "none" }}
+                  animate={{ y: ["0vh", "110vh"], opacity: [0, 0.7, 0.7, 0] }}
+                  transition={{ duration, delay, repeat: Infinity, ease: "linear" }}
+                />
+              );
+            })}
+            <div style={{ textAlign: "center", maxWidth: 360, position: "relative", zIndex: 1 }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>✦</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: C.textPrimary, marginBottom: 6 }}>Your data is ready. Ask anything.</div>
+              <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>Type a question below or pick a prompt example to instantly generate a dashboard from your connected sources.</div>
+            </div>
+          </div>
+        )}
+        </> }
+      </div>
+
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        textarea::placeholder { color: ${isDark ? "rgba(255,255,255,0.35)" : "rgba(10,10,24,0.4)"}; }
+        textarea::placeholder { color: ${isDark ? "rgba(255,255,255,0.3)" : "rgba(28,22,20,0.35)"}; }
+        * { box-sizing: border-box; }
       `}</style>
     </div>
   );
