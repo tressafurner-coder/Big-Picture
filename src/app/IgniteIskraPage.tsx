@@ -84,6 +84,46 @@ const LIGHT_PALETTE = {
 };
 
 let C: typeof LIGHT_PALETTE = LIGHT_PALETTE;
+let isDarkMode = false;
+
+function glassPanel(dark = isDarkMode): React.CSSProperties {
+  return dark
+    ? {
+        background: "rgba(255,255,255,0.07)",
+        backdropFilter: "blur(28px) saturate(160%)",
+        WebkitBackdropFilter: "blur(28px) saturate(160%)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.12)",
+      }
+    : {
+        background: "rgba(255,255,255,0.38)",
+        backdropFilter: "blur(32px) saturate(190%)",
+        WebkitBackdropFilter: "blur(32px) saturate(190%)",
+        border: "1px solid rgba(255,255,255,0.78)",
+        boxShadow: "0 10px 40px rgba(70,86,125,0.16), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.3)",
+      };
+}
+
+function glassActiveNav(): React.CSSProperties {
+  return {
+    background: "rgba(255,255,255,0.32)",
+    backdropFilter: "blur(22px) saturate(170%)",
+    WebkitBackdropFilter: "blur(22px) saturate(170%)",
+    border: "1px solid rgba(255,255,255,0.45)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.4)",
+  };
+}
+
+function pageTitleStyle(): React.CSSProperties {
+  return {
+    fontSize: 22,
+    fontWeight: 700,
+    color: C.textPrimary,
+    margin: "0 0 4px",
+    letterSpacing: "-0.3px",
+    fontFamily: "'Rubik', system-ui, sans-serif",
+  };
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SourceId = "amplitude" | "jira" | "slack" | "confluence" | "launchdarkly";
@@ -281,9 +321,10 @@ function W({ title, source, span = 1, badge, children, delay = 0 }: {
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       style={{
-        background: C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 16,
+        ...glassPanel(),
+        borderRadius: 16,
         padding: "18px 20px 20px", gridColumn: span > 1 ? `span ${span}` : undefined,
-        position: "relative", overflow: "hidden", boxShadow: C.shadow,
+        position: "relative", overflow: "hidden",
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14, gap: 8 }}>
@@ -659,9 +700,9 @@ function SourcesPanel({ isDark }: { isDark: boolean }) {
   );
 
   return (
-    <div style={{ padding: "28px 28px 40px" }}>
+    <div style={{ padding: "35px 28px 40px" }}>
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", letterSpacing: "-0.3px" }}>Data Sources</h2>
+        <h2 style={pageTitleStyle()}>Data Sources</h2>
         <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>{ALL_SOURCES.filter(s => connected[s]).length} of {ALL_SOURCES.length} sources configured</p>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -672,8 +713,8 @@ function SourcesPanel({ isDark }: { isDark: boolean }) {
           const isOn = connected[s];
           return (
             <div key={s} style={{
-              background: C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 16,
-              overflow: "hidden", boxShadow: C.shadow,
+              ...glassPanel(isDark), borderRadius: 16,
+              overflow: "hidden",
               opacity: isOn ? 1 : 0.55, transition: "opacity 0.2s",
             }}>
               <div style={{ padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 16 }}>
@@ -721,11 +762,12 @@ function SourcesPanel({ isDark }: { isDark: boolean }) {
   );
 }
 
-function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, onNewDashboard, activeNav, setActiveNav }: {
+function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, onNewDashboard, activeNav, setActiveNav, mousePos, onMouseMove }: {
   savedDashboards: SavedDashboard[]; activeId: string | null;
   onSelect: (id: string) => void; onDelete: (id: string) => void;
   isDark: boolean; setIsDark: (v: (p: boolean) => boolean) => void;
   onNewDashboard: () => void; activeNav: string; setActiveNav: (v: string) => void;
+  mousePos: { x: number; y: number }; onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
 }) {
   return (
     <div style={{
@@ -738,14 +780,17 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
       {/* Inner card */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
-        background: isDark ? "transparent" : "linear-gradient(160deg, rgba(70,86,125,0.78) 0%, rgba(51,66,104,0.88) 100%)",
-        backdropFilter: isDark ? "none" : "blur(20px)",
-        WebkitBackdropFilter: isDark ? "none" : "blur(20px)",
+        background: isDark ? "transparent" : `radial-gradient(circle 540px at ${mousePos.x}px ${mousePos.y}px, rgba(30,42,72,0.96) 0%, rgba(51,66,104,0.90) 55%, rgba(75,92,135,0.88) 100%)`,
+        backdropFilter: isDark ? "none" : "blur(28px) saturate(160%)",
+        WebkitBackdropFilter: isDark ? "none" : "blur(28px) saturate(160%)",
         borderRadius: isDark ? 0 : 18,
         boxShadow: isDark ? "none" : "0 8px 32px rgba(50,65,100,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
         border: isDark ? "none" : "1px solid rgba(255,255,255,0.15)",
         overflow: "hidden",
-      }}>
+        position: "relative",
+        transition: "background 0.15s ease",
+      }}
+      onMouseMove={onMouseMove}>
         {/* Logo */}
         <div style={{ padding: "20px 20px 14px 14px" }}>
           <IskraLogo />
@@ -773,7 +818,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
           {NAV_ITEMS.map(item => (
             <div key={item.id}>
               <button onClick={() => setActiveNav(item.id === "dashboard" ? "dashboard" : item.id)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: activeNav === item.id ? "rgba(255,255,255,0.18)" : "transparent", border: "none", cursor: "pointer", color: activeNav === item.id ? "white" : "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: activeNav === item.id ? 600 : 400, fontFamily: "'Rubik', system-ui, sans-serif", marginBottom: 2, transition: "all 0.12s", textAlign: "left" }}>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, ...(activeNav === item.id ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", color: activeNav === item.id ? "white" : "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: activeNav === item.id ? 600 : 400, fontFamily: "'Rubik', system-ui, sans-serif", marginBottom: 2, transition: "all 0.12s", textAlign: "left" }}>
                 <item.Icon size={15} />
                 {item.label}
                 {item.id === "sources" && (
@@ -789,8 +834,8 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
                 <div style={{ marginTop: 6, marginBottom: 4 }}>
                   {savedDashboards.map(d => (
                     <div key={d.id} onClick={() => onSelect(d.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: 10, background: activeId === d.id ? "rgba(255,255,255,0.18)" : "transparent", cursor: "pointer", marginBottom: 1, transition: "background 0.12s" }}>
-                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id ? "white" : "rgba(255,255,255,0.4)", flexShrink: 0 }} />
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: 10, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}>
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id && activeNav === "dashboard" ? "white" : "rgba(255,255,255,0.4)", flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id ? "white" : "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
                       <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: 2, display: "flex", flexShrink: 0 }}>
@@ -836,12 +881,12 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
   );
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "35px 40px 40px" }}>
-      <h2 style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", letterSpacing: "-0.3px" }}>Settings</h2>
+    <div style={{ flex: 1, overflowY: "auto", padding: "35px 28px 40px" }}>
+      <h2 style={pageTitleStyle()}>Settings</h2>
       <p style={{ margin: "0 0 32px", fontSize: 13, color: C.textMuted }}>Manage your profile and preferences.</p>
 
       {/* Profile */}
-      <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, borderRadius: 16, padding: "24px", marginBottom: 20, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+      <div style={{ ...glassPanel(isDark), borderRadius: 16, padding: "24px", marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Profile</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #46567D, #334268)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>AK</div>
@@ -875,7 +920,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
       </div>
 
       {/* Notifications */}
-      <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, borderRadius: 16, padding: "24px", marginBottom: 20, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+      <div style={{ ...glassPanel(isDark), borderRadius: 16, padding: "24px", marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Notifications</div>
         {[
           { label: "Email notifications", sub: "Receive dashboard updates and alerts by email", on: emailNotifs, toggle: () => setEmailNotifs(v => !v) },
@@ -1016,6 +1061,7 @@ export default function IgniteIskraPage() {
   const [isDark, setIsDark] = useState(false);
   const [activeNav, setActiveNav] = useState("dashboard");
   C = isDark ? DARK_PALETTE : LIGHT_PALETTE;
+  isDarkMode = isDark;
 
   const [prompt, setPrompt] = useState("");
   const [activeSources, setActiveSources] = useState<SourceId[]>([...ALL_SOURCES]);
@@ -1029,9 +1075,11 @@ export default function IgniteIskraPage() {
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [sidebarMouse, setSidebarMouse] = useState({ x: 50, y: 30 });
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const idRef = useRef(0);
+
 
   const handleGenerate = useCallback((overridePrompt?: string) => {
     const p = (overridePrompt ?? prompt).trim();
@@ -1092,7 +1140,7 @@ export default function IgniteIskraPage() {
     const d = savedDashboards.find(x => x.id === id);
     if (!d) return;
     setCurrentSources(d.sources); setCurrentName(d.name); setCurrentPrompt(d.prompt);
-    setPrompt(d.prompt); setActiveDashboardId(id); setIsDirty(false);
+    setPrompt(d.prompt); setActiveDashboardId(id); setIsDirty(false); setActiveNav("dashboard");
   }, [savedDashboards]);
 
   const handleDeleteDashboard = useCallback((id: string) => {
@@ -1120,6 +1168,11 @@ export default function IgniteIskraPage() {
         onSelect={handleSelectDashboard} onDelete={handleDeleteDashboard}
         isDark={isDark} setIsDark={setIsDark} onNewDashboard={handleNewDashboard}
         activeNav={activeNav} setActiveNav={setActiveNav}
+        mousePos={sidebarMouse}
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          setSidebarMouse({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        }}
       />
 
       {/* Main Content */}
@@ -1153,14 +1206,14 @@ export default function IgniteIskraPage() {
                     onBlur={() => setIsEditingName(false)}
                     onKeyDown={e => { if (e.key === "Enter") setIsEditingName(false); }}
                     autoFocus
-                    style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, background: "transparent", border: "none", borderBottom: `2px solid ${C.spark}`, outline: "none", textAlign: "center", fontFamily: "'Rubik', system-ui, sans-serif", letterSpacing: "-0.3px", minWidth: 200, maxWidth: 480 }}
+                    style={{ ...pageTitleStyle(), margin: 0, background: "transparent", border: "none", borderBottom: `2px solid ${C.spark}`, outline: "none", textAlign: "center", minWidth: 200, maxWidth: 480 }}
                   />
                 ) : (
                   <button onClick={() => { setIsEditingName(true); setTimeout(() => nameInputRef.current?.select(), 30); }}
                     style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "text", padding: "4px 8px", borderRadius: 8 }}
                     onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgElevated; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                    <h1 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: 0, letterSpacing: "-0.3px", fontFamily: "'Rubik', system-ui, sans-serif" }}>{currentName}</h1>
+                    <h1 style={{ ...pageTitleStyle(), margin: 0 }}>{currentName}</h1>
                     <Edit2 size={13} color={C.textMuted} style={{ opacity: 0.6, flexShrink: 0 }} />
                     {activeDashboardId && !isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: C.successFaint, color: C.success, fontWeight: 600, marginLeft: 2 }}>SAVED</span>}
                     {activeDashboardId && isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: isDark ? "rgba(255,180,0,0.15)" : "#FFF8E6", color: "#B07800", fontWeight: 600, marginLeft: 2 }}>UNSAVED CHANGES</span>}
@@ -1194,7 +1247,7 @@ export default function IgniteIskraPage() {
           ) : (
             <>
               <div>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: "0 0 4px", letterSpacing: "-0.3px" }}>What's on your radar today?</h1>
+                <h1 style={pageTitleStyle()}>What's on your radar today?</h1>
                 <p style={{ margin: 0, fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>Analysing all connected sources — <span style={{ color: C.textSecondary }}>Amplitude, Jira, Slack, Confluence & LaunchDarkly</span></p>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1216,10 +1269,8 @@ export default function IgniteIskraPage() {
           <motion.div
             whileFocusWithin={{ boxShadow: `0 0 0 2px ${C.spark}40, ${C.shadow}` } as never}
             style={{
-              background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface,
-              border: `1px solid ${isDark ? "rgba(255,90,20,0.2)" : C.border}`,
+              ...glassPanel(isDark),
               borderRadius: 18,
-              boxShadow: isDark ? `0 0 40px rgba(255,61,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05)` : C.shadow,
               overflow: "hidden",
               transition: "box-shadow 0.2s",
             }}
@@ -1296,9 +1347,9 @@ export default function IgniteIskraPage() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SUGGESTED_PROMPTS.map(p => (
                 <button key={p} onClick={() => { setPrompt(p); handleGenerate(p); }}
-                  style={{ background: isDark ? "rgba(255,255,255,0.05)" : C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 14px", cursor: "pointer", color: C.textMuted, fontSize: 12, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: C.shadow, transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.borderColor = C.borderStrong; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.border; }}>
+                  style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.45)", backdropFilter: "blur(16px) saturate(160%)", WebkitBackdropFilter: "blur(16px) saturate(160%)", border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(255,255,255,0.7)", borderRadius: 20, padding: "5px 14px", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.85)" : "#334268", fontSize: 12, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: isDark ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(70,86,125,0.1)", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.58)"; e.currentTarget.style.borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.9)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = isDark ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.7)"; }}>
                   {p}
                 </button>
               ))}
@@ -1336,17 +1387,20 @@ export default function IgniteIskraPage() {
         {!hasDashboard && !generating && (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 28px", position: "relative", overflow: "hidden" }}>
             {/* Falling stars */}
-            {[...Array(18)].map((_, i) => {
-              const left = (i * 57 + 13) % 100;
-              const delay = (i * 0.37) % 4;
-              const duration = 3 + (i * 0.29) % 3;
-              const size = 1 + (i % 3) * 0.7;
+            {[...Array(14)].map((_, i) => {
+              const left = (i * 67 + 7) % 98;
+              const delay = (i * 0.53) % 5;
+              const duration = 4 + (i * 0.41) % 4;
+              const size = 6 + (i % 4) * 3;
+              const rotate = (i * 37) % 360;
+              const color = isDark ? `rgba(255,255,255,${0.12 + (i % 3) * 0.06})` : `rgba(70,86,125,${0.1 + (i % 3) * 0.05})`;
               return (
-                <motion.div key={i}
-                  style={{ position: "absolute", top: -10, left: `${left}%`, width: size, height: size * 5, borderRadius: 99, background: isDark ? "rgba(255,255,255,0.25)" : "rgba(28,22,20,0.1)", pointerEvents: "none" }}
-                  animate={{ y: ["0vh", "110vh"], opacity: [0, 0.7, 0.7, 0] }}
-                  transition={{ duration, delay, repeat: Infinity, ease: "linear" }}
-                />
+                <motion.svg key={i} viewBox="0 0 20 20" fill="none"
+                  style={{ position: "absolute", top: -20, left: `${left}%`, width: size, height: size, pointerEvents: "none", rotate: `${rotate}deg` }}
+                  animate={{ y: ["0vh", "110vh"], opacity: [0, 1, 1, 0], rotate: [`${rotate}deg`, `${rotate + 180}deg`] }}
+                  transition={{ duration, delay, repeat: Infinity, ease: "linear" }}>
+                  <path d="M10 0 L11.2 8 L20 10 L11.2 12 L10 20 L8.8 12 L0 10 L8.8 8 Z" fill={color} />
+                </motion.svg>
               );
             })}
             <div style={{ textAlign: "center", maxWidth: 360, position: "relative", zIndex: 1 }}>
