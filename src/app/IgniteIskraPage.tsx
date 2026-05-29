@@ -1028,16 +1028,17 @@ export default function IgniteIskraPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const idRef = useRef(0);
+  const activeDashboardIdRef = useRef<string | null>(null);
 
   const handleGenerate = useCallback((overridePrompt?: string) => {
     const p = (overridePrompt ?? prompt).trim();
     if (!p) return;
+    const wasSaved = !!activeDashboardIdRef.current;
     setGenerating(true);
-    setActiveDashboardId(prev => { setIsDirty(!!prev); return prev; });
+    if (wasSaved) setIsDirty(true);
     setTimeout(() => {
       const sources = detectSources(p).filter(s => activeSources.includes(s));
       setCurrentSources(sources.length > 0 ? sources : activeSources);
-      setCurrentName(prev => prev ?? dashboardName(p));
       setCurrentPrompt(p);
       setPromptHistory(prev => [...prev, p]);
       setGenerating(false);
@@ -1050,7 +1051,6 @@ export default function IgniteIskraPage() {
     setPrompt(p);
     setActiveSources([sourceId]);
     setGenerating(true);
-    setActiveDashboardId(null);
     setTimeout(() => {
       setCurrentSources([sourceId]);
       setCurrentName(`${sourceName} Overview`);
@@ -1101,9 +1101,12 @@ export default function IgniteIskraPage() {
     setPrompt(""); setActiveDashboardId(null); setActiveSources([...ALL_SOURCES]); setPromptHistory([]); setHistoryOpen(false); setIsDirty(false);
   }, []);
 
+  useEffect(() => { activeDashboardIdRef.current = activeDashboardId; }, [activeDashboardId]);
+
   const toggleSource = (s: SourceId) => setActiveSources(prev => prev.includes(s) ? (prev.length > 1 ? prev.filter(x => x !== s) : prev) : [...prev, s]);
 
-  const hasDashboard = currentSources !== null && !generating;
+  const hasDashboard = currentSources !== null;
+  const isRegenerating = generating && currentSources !== null;
 
 
   return (
@@ -1196,10 +1199,10 @@ export default function IgniteIskraPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <motion.button
                   onClick={handleNewDashboard}
-                  disabled={currentSources === null && !generating}
-                  whileHover={currentSources !== null || generating ? { scale: 1.02 } : {}}
-                  whileTap={currentSources !== null || generating ? { scale: 0.97 } : {}}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 10, background: (currentSources === null && !generating) ? (isDark ? "rgba(255,255,255,0.05)" : C.bgElevated) : (isDark ? C.textPrimary : "#1C1614"), border: `1px solid ${(currentSources === null && !generating) ? C.border : "transparent"}`, cursor: (currentSources === null && !generating) ? "default" : "pointer", color: (currentSources === null && !generating) ? C.textMuted : (isDark ? C.bgBase : "white"), fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: (currentSources === null && !generating) ? "none" : "0 2px 12px rgba(0,0,0,0.15)", opacity: (currentSources === null && !generating) ? 0.5 : 1, transition: "all 0.15s" }}>
+                  disabled={currentSources === null}
+                  whileHover={currentSources !== null ? { scale: 1.02 } : {}}
+                  whileTap={currentSources !== null ? { scale: 0.97 } : {}}
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 10, background: currentSources === null ? (isDark ? "rgba(255,255,255,0.05)" : C.bgElevated) : (isDark ? C.textPrimary : "#1C1614"), border: `1px solid ${currentSources === null ? C.border : "transparent"}`, cursor: currentSources === null ? "default" : "pointer", color: currentSources === null ? C.textMuted : (isDark ? C.bgBase : "white"), fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: currentSources !== null ? "0 2px 12px rgba(0,0,0,0.15)" : "none", opacity: currentSources === null ? 0.5 : 1, transition: "all 0.15s" }}>
                   <Plus size={14} /><span>New Dashboard</span>
                 </motion.button>
               </div>
@@ -1303,13 +1306,44 @@ export default function IgniteIskraPage() {
           )}
         </div>
 
-        {/* Generating indicator */}
+        {/* Widget grid + regenerating overlay */}
+        {hasDashboard && currentSources && (
+          <div style={{ position: "relative" }}>
+            <div style={{ padding: "16px 28px 40px", transition: "opacity 0.2s", opacity: isRegenerating ? 0.35 : 1, filter: isRegenerating ? "blur(1.5px)" : "none", pointerEvents: isRegenerating ? "none" : "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+                {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
+              </div>
+            </div>
+
+            {/* Regenerating overlay */}
+            <AnimatePresence>
+              {isRegenerating && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, pointerEvents: "none" }}>
+                  <motion.div initial={{ opacity: 0, scale: 0.88, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ type: "spring", stiffness: 320, damping: 28 }}
+                    style={{ background: isDark ? "rgba(10,15,13,0.96)" : "rgba(255,255,255,0.96)", borderRadius: 22, padding: "32px 48px", textAlign: "center", boxShadow: "0 16px 60px rgba(0,0,0,0.18)", border: `1px solid ${C.border}`, backdropFilter: "blur(12px)" }}>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 16 }}>
+                      {[0, 0.18, 0.36].map((d, i) => (
+                        <motion.div key={i} animate={{ scale: [1, 1.7, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 0.85, repeat: Infinity, delay: d }}
+                          style={{ width: 10, height: 10, borderRadius: "50%", background: "#474E7A" }} />
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 5 }}>Regenerating dashboard…</div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>Pulling fresh data from your sources</div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* First-time generating (no existing widgets) */}
         <AnimatePresence>
-          {generating && (
+          {generating && !currentSources && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: "32px 28px", textAlign: "center" }}>
               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
                 {[0, 0.2, 0.4].map((d, i) => (
-                  <motion.div key={i} animate={{ scale: [1,1.5,1], opacity: [0.4,1,0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }}
+                  <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }}
                     style={{ width: 7, height: 7, borderRadius: "50%", background: C.spark }} />
                 ))}
               </div>
@@ -1317,16 +1351,6 @@ export default function IgniteIskraPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-
-        {/* Widget grid */}
-        {hasDashboard && currentSources && (
-          <div style={{ padding: "16px 28px 40px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-              {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
-            </div>
-          </div>
-        )}
 
         {/* Empty state */}
         {!hasDashboard && !generating && (
