@@ -870,9 +870,9 @@ export function ChatOverlayV2({ isOpen, onClose, onThinkingChange, onNewResponse
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          className="relative w-full h-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg flex flex-col"
+          className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg"
         >
-          <div className="chat-drag-handle flex cursor-move items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 py-3">
+          <div className="chat-drag-handle flex shrink-0 cursor-move items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 py-3">
             <span className="sr-only">Drag the header to move this window</span>
             <div className="flex min-w-0 flex-1 items-center gap-2 pr-2">
               <h2 className="text-sm font-semibold shrink-0" style={{ color: '#292A2E' }}>

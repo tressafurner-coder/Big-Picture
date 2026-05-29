@@ -10,6 +10,7 @@ import {
 import ChatbotPrototype from "./app/ChatbotPrototype.tsx";
 import ChatbotPrototypeV2 from "./app/ChatbotPrototypeV2.tsx";
 import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
+import IgniteIskraPage from "./app/IgniteIskraPage.tsx";
 import MergingBoardGoalsPage from "./app/MergingBoardGoalsPage.tsx";
 import ShowOnlyValidApiTokensPage from "./app/ShowOnlyValidApiTokensPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
@@ -92,6 +93,8 @@ const hubRoutes = (
       path="/merging-board-goals/"
       element={<MergingBoardGoalsPage />}
     />
+    <Route path="/ignite-iskra" element={<IgniteIskraPage />} />
+    <Route path="/ignite-iskra/" element={<IgniteIskraPage />} />
     <Route
       path="/show-only-valid-api-tokens"
       element={<ShowOnlyValidApiTokensPage />}

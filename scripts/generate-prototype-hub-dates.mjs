@@ -47,6 +47,7 @@ const PROTOTYPES = {
   SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY: [
     "src/app/ShowOnlyValidApiTokensPage.tsx",
   ],
+  IGNITE_ISKRA_LAST_UPDATE_DISPLAY: ["src/app/IgniteIskraPage.tsx"],
 };
 
 /** Always UTC so GitHub Actions (UTC) and local dev show the same hub stamps. */
@@ -112,10 +113,11 @@ export const RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY = ${JSON.stringify
 export const TEST_PROTOTYPE_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.TEST_PROTOTYPE_LAST_UPDATE_DISPLAY)};
 export const MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY)};
 export const SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY)};
+export const IGNITE_ISKRA_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.IGNITE_ISKRA_LAST_UPDATE_DISPLAY)};
 `;
 
 mkdirSync(outDir, { recursive: true });
 writeFileSync(outFile, body, "utf8");
 console.log(
-  `generate-prototype-hub-dates: wrote ${stamps.TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY} (teams), ${stamps.CHATBOT_LAST_UPDATE_DISPLAY} (chatbot), ${stamps.RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY} (risk jira), ${stamps.TEST_PROTOTYPE_LAST_UPDATE_DISPLAY} (test), ${stamps.MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY} (merging board goals), ${stamps.SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY} (api tokens) → src/app/generated/prototypeHubDates.ts`,
+  `generate-prototype-hub-dates: wrote ${stamps.IGNITE_ISKRA_LAST_UPDATE_DISPLAY} (ignite iskra), ${stamps.TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY} (teams), ${stamps.CHATBOT_LAST_UPDATE_DISPLAY} (chatbot), ${stamps.RISK_MANAGEMENT_JIRA_MAPPING_LAST_UPDATE_DISPLAY} (risk jira), ${stamps.TEST_PROTOTYPE_LAST_UPDATE_DISPLAY} (test), ${stamps.MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY} (merging board goals), ${stamps.SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY} (api tokens) → src/app/generated/prototypeHubDates.ts`,
 );

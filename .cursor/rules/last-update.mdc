@@ -28,6 +28,10 @@ Tracked paths include `RiskManagementJiraMappingPage.tsx`.
 
 Tracked paths include `ShowOnlyValidApiTokensPage.tsx`.
 
+## Ignite — Iskra prototype
+
+Tracked paths include `IgniteIskraPage.tsx`.
+
 ## Independent prototype (`prototypes/independent/`)
 
 Still uses **`prototypes/independent/src/prototypeLastEdited.ts`** for its own bundle/hub link if re-added; hub rows are generated as above for app routes.

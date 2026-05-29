@@ -1,5 +1,6 @@
 import {
   CHATBOT_LAST_UPDATE_DISPLAY,
+  IGNITE_ISKRA_LAST_UPDATE_DISPLAY,
   MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
   SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
@@ -26,6 +27,16 @@ export type PrototypeEntry = {
 
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
+  {
+    id: "ignite-iskra",
+    name: "Ignite - Iskra",
+    status: "In Development",
+    summary:
+      "Exploration of Ignite - Iskra capabilities and how they fit into the BigPicture product experience.",
+    lastEdited: IGNITE_ISKRA_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "ignite-iskra",
+  },
   {
     id: "show-only-valid-api-tokens",
     name: "Show only valid API tokens",

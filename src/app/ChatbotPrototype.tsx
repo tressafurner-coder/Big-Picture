@@ -1,37 +1,15 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CircleAlert } from "lucide-react";
 import { Link } from "react-router";
 import { ChatButton } from "./components/ChatButton";
 import { ChatOverlay } from "./components/ChatOverlay";
 import { Notification } from "./components/Notification";
+import { CHATBOT_LAST_UPDATE_DISPLAY } from "./lastUpdate";
 
 export default function ChatbotPrototype() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  const localLastUpdateDisplay = useMemo(() => {
-    const d = new Date();
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const day = d.getDate();
-    const mon = months[d.getMonth()];
-    const year = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${day} ${mon} ${year}, ${hh}:${mm}`;
-  }, []);
 
   const handleNewResponse = () => {
     setIsChatOpen((currentChatOpen) => {
@@ -61,7 +39,7 @@ export default function ChatbotPrototype() {
         ← All prototypes
       </Link>
 
-      <div className="flex min-h-dvh w-full items-center justify-center px-4">
+      <div className="flex min-h-dvh w-full items-center justify-center px-4 pb-24">
         <div className="max-w-2xl text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             AI Chatbot for BigPicture
@@ -73,7 +51,7 @@ export default function ChatbotPrototype() {
             className="mt-3 text-sm text-gray-500"
             title="Release stamp — regenerated with npm run dev/build from git (see generated/prototypeHubDates.ts)"
           >
-            Last update: {localLastUpdateDisplay}
+            Last update: {CHATBOT_LAST_UPDATE_DISPLAY}
           </p>
         </div>
       </div>
