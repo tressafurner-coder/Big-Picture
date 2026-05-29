@@ -1391,13 +1391,13 @@ export default function IgniteIskraPage() {
               const left = (i * 67 + 7) % 98;
               const delay = (i * 0.53) % 5;
               const duration = 4 + (i * 0.41) % 4;
-              const size = 6 + (i % 4) * 3;
+              const size = 8 + (i % 4) * 3;
               const rotate = (i * 37) % 360;
-              const color = isDark ? `rgba(255,255,255,${0.12 + (i % 3) * 0.06})` : `rgba(70,86,125,${0.1 + (i % 3) * 0.05})`;
+              const color = isDark ? `rgba(255,255,255,${0.22 + (i % 3) * 0.08})` : `rgba(70,86,125,${0.2 + (i % 3) * 0.07})`;
               return (
                 <motion.svg key={i} viewBox="0 0 20 20" fill="none"
-                  style={{ position: "absolute", top: -20, left: `${left}%`, width: size, height: size, pointerEvents: "none", rotate: `${rotate}deg` }}
-                  animate={{ y: ["0vh", "110vh"], opacity: [0, 1, 1, 0], rotate: [`${rotate}deg`, `${rotate + 180}deg`] }}
+                  style={{ position: "absolute", top: -20, left: `${left}%`, width: size, height: size, pointerEvents: "none", rotate: `${rotate}deg`, filter: isDark ? "drop-shadow(0 0 3px rgba(255,255,255,0.25))" : "drop-shadow(0 0 2px rgba(70,86,125,0.35))" }}
+                  animate={{ y: ["0vh", "110vh"], opacity: [0, 0.85, 0.85, 0], rotate: [`${rotate}deg`, `${rotate + 180}deg`] }}
                   transition={{ duration, delay, repeat: Infinity, ease: "linear" }}>
                   <path d="M10 0 L11.2 8 L20 10 L11.2 12 L10 20 L8.8 12 L0 10 L8.8 8 Z" fill={color} />
                 </motion.svg>
