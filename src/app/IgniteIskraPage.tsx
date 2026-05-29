@@ -729,17 +729,17 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
   return (
     <div style={{
       width: 300, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
-      background: isDark ? C.bgBase : C.bgBase,
+      background: isDark ? "rgba(13,25,24,0.98)" : C.bgBase,
       display: "flex", flexDirection: "column",
-      padding: "35px 0px 35px 29px",
+      padding: isDark ? 0 : "35px 0px 35px 29px",
       zIndex: 20,
     }}>
       {/* Inner card */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
-        background: isDark ? "linear-gradient(160deg, #474E7A 0%, #353B64 100%)" : "linear-gradient(160deg, #474E7A 0%, #353B64 100%)",
-        borderRadius: 18,
-        boxShadow: isDark ? "0 4px 32px rgba(0,0,0,0.5)" : "0 4px 24px rgba(53,59,100,0.35)",
+        background: isDark ? "transparent" : "linear-gradient(160deg, #474E7A 0%, #353B64 100%)",
+        borderRadius: isDark ? 0 : 18,
+        boxShadow: isDark ? "none" : "0 4px 24px rgba(53,59,100,0.35)",
         overflow: "hidden",
       }}>
         {/* Logo */}
@@ -755,7 +755,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, fontFamily: "'Rubik', system-ui, sans-serif", border: "1.5px solid rgba(255,255,255,0.35)" }}>
                 AK
               </div>
-              <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#4AE87A", border: "2px solid #3D4472" }} />
+              <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#4AE87A", border: "2px solid #353B64" }} />
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: "0.01em" }}>Alex Kim</div>
@@ -826,7 +826,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
     textTransform: "uppercase", marginBottom: 6, display: "block",
   };
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
-    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? "#474E7A" : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? "#353B64" : C.border}` }}>
+    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? "#5C2233" : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? "#3E1422" : C.border}` }}>
       <div style={{ position: "absolute", top: 2, left: on ? 17 : 2, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
     </div>
   );
@@ -840,7 +840,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
       <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, borderRadius: 16, padding: "24px", marginBottom: 20, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Profile</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #474E7A, #353B64)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>AK</div>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #5C2233, #3E1422)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>AK</div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>Alex Kim</div>
             <div style={{ fontSize: 12, color: C.textMuted }}>Appfire · Product Manager</div>
@@ -890,7 +890,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
 
       {/* Save */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #474E7A 0%, #353B64 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(53,59,100,0.4)" }}>
+        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #5C2233 0%, #3E1422 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(62,20,34,0.3)" }}>
           Save changes
         </button>
       </div>
@@ -1028,17 +1028,16 @@ export default function IgniteIskraPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const idRef = useRef(0);
-  const activeDashboardIdRef = useRef<string | null>(null);
 
   const handleGenerate = useCallback((overridePrompt?: string) => {
     const p = (overridePrompt ?? prompt).trim();
     if (!p) return;
-    const wasSaved = !!activeDashboardIdRef.current;
     setGenerating(true);
-    if (wasSaved) setIsDirty(true);
+    setActiveDashboardId(prev => { setIsDirty(!!prev); return prev; });
     setTimeout(() => {
       const sources = detectSources(p).filter(s => activeSources.includes(s));
       setCurrentSources(sources.length > 0 ? sources : activeSources);
+      setCurrentName(prev => prev ?? dashboardName(p));
       setCurrentPrompt(p);
       setPromptHistory(prev => [...prev, p]);
       setGenerating(false);
@@ -1051,6 +1050,7 @@ export default function IgniteIskraPage() {
     setPrompt(p);
     setActiveSources([sourceId]);
     setGenerating(true);
+    setActiveDashboardId(null);
     setTimeout(() => {
       setCurrentSources([sourceId]);
       setCurrentName(`${sourceName} Overview`);
@@ -1101,12 +1101,9 @@ export default function IgniteIskraPage() {
     setPrompt(""); setActiveDashboardId(null); setActiveSources([...ALL_SOURCES]); setPromptHistory([]); setHistoryOpen(false); setIsDirty(false);
   }, []);
 
-  useEffect(() => { activeDashboardIdRef.current = activeDashboardId; }, [activeDashboardId]);
-
   const toggleSource = (s: SourceId) => setActiveSources(prev => prev.includes(s) ? (prev.length > 1 ? prev.filter(x => x !== s) : prev) : [...prev, s]);
 
-  const hasDashboard = currentSources !== null;
-  const isRegenerating = generating && currentSources !== null;
+  const hasDashboard = currentSources !== null && !generating;
 
 
   return (
@@ -1171,7 +1168,7 @@ export default function IgniteIskraPage() {
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 {!activeDashboardId ? (
                   <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSave}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #474E7A 0%, #353B64 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(53,59,100,0.4)" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #5C2233 0%, #3E1422 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(62,20,34,0.3)" }}>
                     <Save size={13} /><span>Save Dashboard</span>
                   </motion.button>
                 ) : isDirty ? (
@@ -1181,7 +1178,7 @@ export default function IgniteIskraPage() {
                       <Save size={13} /><span>Save as new</span>
                     </motion.button>
                     <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleUpdate}
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #474E7A 0%, #353B64 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(53,59,100,0.4)" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #5C2233 0%, #3E1422 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(62,20,34,0.3)" }}>
                       <RefreshCw size={13} /><span>Update</span>
                     </motion.button>
                   </>
@@ -1199,10 +1196,10 @@ export default function IgniteIskraPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <motion.button
                   onClick={handleNewDashboard}
-                  disabled={currentSources === null}
-                  whileHover={currentSources !== null ? { scale: 1.02 } : {}}
-                  whileTap={currentSources !== null ? { scale: 0.97 } : {}}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 10, background: currentSources === null ? (isDark ? "rgba(255,255,255,0.05)" : C.bgElevated) : (isDark ? C.textPrimary : "#1C1614"), border: `1px solid ${currentSources === null ? C.border : "transparent"}`, cursor: currentSources === null ? "default" : "pointer", color: currentSources === null ? C.textMuted : (isDark ? C.bgBase : "white"), fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: currentSources !== null ? "0 2px 12px rgba(0,0,0,0.15)" : "none", opacity: currentSources === null ? 0.5 : 1, transition: "all 0.15s" }}>
+                  disabled={currentSources === null && !generating}
+                  whileHover={currentSources !== null || generating ? { scale: 1.02 } : {}}
+                  whileTap={currentSources !== null || generating ? { scale: 0.97 } : {}}
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 10, background: (currentSources === null && !generating) ? (isDark ? "rgba(255,255,255,0.05)" : C.bgElevated) : (isDark ? C.textPrimary : "#1C1614"), border: `1px solid ${(currentSources === null && !generating) ? C.border : "transparent"}`, cursor: (currentSources === null && !generating) ? "default" : "pointer", color: (currentSources === null && !generating) ? C.textMuted : (isDark ? C.bgBase : "white"), fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: (currentSources === null && !generating) ? "none" : "0 2px 12px rgba(0,0,0,0.15)", opacity: (currentSources === null && !generating) ? 0.5 : 1, transition: "all 0.15s" }}>
                   <Plus size={14} /><span>New Dashboard</span>
                 </motion.button>
               </div>
@@ -1249,7 +1246,7 @@ export default function IgniteIskraPage() {
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
                   borderRadius: 12, border: "none", flexShrink: 0,
-                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : "linear-gradient(135deg, #474E7A 0%, #353B64 100%)",
+                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : "linear-gradient(135deg, #5C2233 0%, #3E1422 100%)",
                   color: !prompt.trim() || generating ? C.textMuted : "white",
                   cursor: !prompt.trim() || generating ? "default" : "pointer",
                   fontSize: 13, fontWeight: 700, fontFamily: "'Rubik', system-ui, sans-serif",
@@ -1306,44 +1303,13 @@ export default function IgniteIskraPage() {
           )}
         </div>
 
-        {/* Widget grid + regenerating overlay */}
-        {hasDashboard && currentSources && (
-          <div style={{ position: "relative" }}>
-            <div style={{ padding: "16px 28px 40px", transition: "opacity 0.2s", opacity: isRegenerating ? 0.35 : 1, filter: isRegenerating ? "blur(1.5px)" : "none", pointerEvents: isRegenerating ? "none" : "auto" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-                {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
-              </div>
-            </div>
-
-            {/* Regenerating overlay */}
-            <AnimatePresence>
-              {isRegenerating && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, pointerEvents: "none" }}>
-                  <motion.div initial={{ opacity: 0, scale: 0.88, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ type: "spring", stiffness: 320, damping: 28 }}
-                    style={{ background: isDark ? "rgba(10,15,13,0.96)" : "rgba(255,255,255,0.96)", borderRadius: 22, padding: "32px 48px", textAlign: "center", boxShadow: "0 16px 60px rgba(0,0,0,0.18)", border: `1px solid ${C.border}`, backdropFilter: "blur(12px)" }}>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 16 }}>
-                      {[0, 0.18, 0.36].map((d, i) => (
-                        <motion.div key={i} animate={{ scale: [1, 1.7, 1], opacity: [0.3, 1, 0.3] }} transition={{ duration: 0.85, repeat: Infinity, delay: d }}
-                          style={{ width: 10, height: 10, borderRadius: "50%", background: "#474E7A" }} />
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 5 }}>Regenerating dashboard…</div>
-                    <div style={{ fontSize: 12, color: C.textMuted }}>Pulling fresh data from your sources</div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* First-time generating (no existing widgets) */}
+        {/* Generating indicator */}
         <AnimatePresence>
-          {generating && !currentSources && (
+          {generating && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: "32px 28px", textAlign: "center" }}>
               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
                 {[0, 0.2, 0.4].map((d, i) => (
-                  <motion.div key={i} animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }}
+                  <motion.div key={i} animate={{ scale: [1,1.5,1], opacity: [0.4,1,0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }}
                     style={{ width: 7, height: 7, borderRadius: "50%", background: C.spark }} />
                 ))}
               </div>
@@ -1351,6 +1317,16 @@ export default function IgniteIskraPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+
+        {/* Widget grid */}
+        {hasDashboard && currentSources && (
+          <div style={{ padding: "16px 28px 40px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+              {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
+            </div>
+          </div>
+        )}
 
         {/* Empty state */}
         {!hasDashboard && !generating && (
