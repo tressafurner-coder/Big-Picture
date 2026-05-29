@@ -70,16 +70,16 @@ const LIGHT_PALETTE = {
   error: "#DC2626",
   errorFaint: "rgba(220,38,38,0.10)",
   info: "#0369A1",
-  amplitude: "#0284C7",
-  amplitudeFaint: "rgba(2,132,199,0.09)",
-  jira: "#7C3AED",
-  jiraFaint: "rgba(124,58,237,0.09)",
-  slack: "#EA580C",
-  slackFaint: "rgba(234,88,12,0.09)",
-  confluence: "#2563EB",
-  confluenceFaint: "rgba(37,99,235,0.09)",
-  launchdarkly: "#059669",
-  launchdarklyFaint: "rgba(5,150,105,0.09)",
+  amplitude: "#2E6A9A",
+  amplitudeFaint: "rgba(46,106,154,0.09)",
+  jira: "#46567D",
+  jiraFaint: "rgba(70,86,125,0.09)",
+  slack: "#A55A3A",
+  slackFaint: "rgba(165,90,58,0.09)",
+  confluence: "#3A6BAA",
+  confluenceFaint: "rgba(58,107,170,0.09)",
+  launchdarkly: "#3A7A65",
+  launchdarklyFaint: "rgba(58,122,101,0.09)",
   shadow: "0 2px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)",
 };
 
@@ -106,11 +106,11 @@ const ALL_SOURCES: SourceId[] = ["amplitude", "jira", "slack", "confluence", "la
 
 // Vibrant card gradients (like the project cards in the reference)
 const SOURCE_GRADIENTS: Record<SourceId, string> = {
-  amplitude:    "linear-gradient(135deg, #0BBFB8 0%, #0095C8 100%)",
-  jira:         "linear-gradient(135deg, #8B5CF6 0%, #5B21B6 100%)",
-  slack:        "linear-gradient(135deg, #F97316 0%, #DC4F0A 100%)",
-  confluence:   "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
-  launchdarkly: "linear-gradient(135deg, #10B981 0%, #047857 100%)",
+  amplitude:    "linear-gradient(135deg, #4E8FBF 0%, #2E6A9A 100%)",
+  jira:         "linear-gradient(135deg, #6B7FC4 0%, #46567D 100%)",
+  slack:        "linear-gradient(135deg, #C97B5A 0%, #A55A3A 100%)",
+  confluence:   "linear-gradient(135deg, #5B8FD4 0%, #3A6BAA 100%)",
+  launchdarkly: "linear-gradient(135deg, #5BA88A 0%, #3A7A65 100%)",
 };
 
 const SOURCE_CARD_METRICS: Record<SourceId, { metric: string; detail: string; spark: number[] }> = {
@@ -738,9 +738,12 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
       {/* Inner card */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
-        background: isDark ? "transparent" : "linear-gradient(160deg, #C9613B 0%, #C9613B 100%)",
+        background: isDark ? "transparent" : "linear-gradient(160deg, rgba(70,86,125,0.78) 0%, rgba(51,66,104,0.88) 100%)",
+        backdropFilter: isDark ? "none" : "blur(20px)",
+        WebkitBackdropFilter: isDark ? "none" : "blur(20px)",
         borderRadius: isDark ? 0 : 18,
-        boxShadow: isDark ? "none" : "0 4px 24px rgba(201,97,59,0.35)",
+        boxShadow: isDark ? "none" : "0 8px 32px rgba(50,65,100,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
+        border: isDark ? "none" : "1px solid rgba(255,255,255,0.15)",
         overflow: "hidden",
       }}>
         {/* Logo */}
@@ -756,7 +759,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, fontFamily: "'Rubik', system-ui, sans-serif", border: "1.5px solid rgba(255,255,255,0.35)" }}>
                 AK
               </div>
-              <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#4AE87A", border: "2px solid #C9613B" }} />
+              <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#4AE87A", border: "2px solid #46567D" }} />
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: "0.01em" }}>Alex Kim</div>
@@ -827,7 +830,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
     textTransform: "uppercase", marginBottom: 6, display: "block",
   };
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
-    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? "#C9613B" : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? "#A34D2E" : C.border}` }}>
+    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? "#46567D" : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? "#334268" : C.border}` }}>
       <div style={{ position: "absolute", top: 2, left: on ? 17 : 2, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
     </div>
   );
@@ -841,7 +844,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
       <div style={{ background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, borderRadius: 16, padding: "24px", marginBottom: 20, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Profile</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #C9613B, #A34D2E)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>AK</div>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #46567D, #334268)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "'Rubik', system-ui, sans-serif", flexShrink: 0 }}>AK</div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>Alex Kim</div>
             <div style={{ fontSize: 12, color: C.textMuted }}>Appfire · Product Manager</div>
@@ -891,7 +894,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
 
       {/* Save */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #C9613B 0%, #C9613B 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(201,97,59,0.35)" }}>
+        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #46567D 0%, #46567D 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(70,86,125,0.35)" }}>
           Save changes
         </button>
       </div>
@@ -1169,7 +1172,7 @@ export default function IgniteIskraPage() {
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 {!activeDashboardId ? (
                   <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSave}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #C9613B 0%, #C9613B 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(201,97,59,0.35)" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #46567D 0%, #46567D 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(70,86,125,0.35)" }}>
                     <Save size={13} /><span>Save Dashboard</span>
                   </motion.button>
                 ) : isDirty ? (
@@ -1179,7 +1182,7 @@ export default function IgniteIskraPage() {
                       <Save size={13} /><span>Save as new</span>
                     </motion.button>
                     <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleUpdate}
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #C9613B 0%, #C9613B 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(201,97,59,0.35)" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #46567D 0%, #46567D 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "'Rubik', system-ui, sans-serif", boxShadow: "0 2px 14px rgba(70,86,125,0.35)" }}>
                       <RefreshCw size={13} /><span>Update</span>
                     </motion.button>
                   </>
@@ -1247,7 +1250,7 @@ export default function IgniteIskraPage() {
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
                   borderRadius: 12, border: "none", flexShrink: 0,
-                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : "linear-gradient(135deg, #C9613B 0%, #C9613B 100%)",
+                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : "linear-gradient(135deg, #46567D 0%, #46567D 100%)",
                   color: !prompt.trim() || generating ? C.textMuted : "white",
                   cursor: !prompt.trim() || generating ? "default" : "pointer",
                   fontSize: 13, fontWeight: 700, fontFamily: "'Rubik', system-ui, sans-serif",
