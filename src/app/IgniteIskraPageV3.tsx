@@ -7,7 +7,7 @@ import jiraLogo from "../imports/jira-logo.png";
 import iskraWordmark from "../imports/iskra-wordmark.png";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Plus, X, Save, Trash2, TrendingUp, TrendingDown,
+  X, Save, Trash2, TrendingUp, TrendingDown,
   Bug, MessageSquare, Flag, FileText, CheckCircle,
   Activity, Zap, AlertCircle, RefreshCw,
   Sun, Moon, Settings, Home, BarChart2, List,
@@ -130,9 +130,34 @@ function navActiveColor(active: boolean): string {
   return isDarkMode ? C.sparkBright : C.spark;
 }
 
-/** Static warm sidebar fill — same stops as the original sidebar gradient, without the cursor hotspot. */
+function primaryCtaFill(dark = isDarkMode): string {
+  return dark
+    ? "linear-gradient(135deg, #FB923C 0%, #F97316 100%)"
+    : "linear-gradient(135deg, #7C5CE7 0%, #7C5CE7 100%)";
+}
+
+function primaryCtaShadow(dark = isDarkMode): string {
+  return dark ? "0 2px 14px rgba(249,115,22,0.35)" : "0 2px 14px rgba(124,92,231,0.35)";
+}
+
+function primaryCtaTextColor(dark = isDarkMode): string {
+  return dark ? "#0F0A07" : "#FFFFFF";
+}
+
+/** Shared rounded-rectangle shape for all action buttons across the app. */
+const BUTTON_RADIUS = 10;
+const BUTTON_FONT =
+  "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+function profileAvatarBg(dark = isDarkMode): string {
+  return dark
+    ? "linear-gradient(135deg, #FB923C, #F97316)"
+    : "linear-gradient(135deg, #7C5CE7, #5B4BD4)";
+}
+
+/** Flat sidebar base — close to bgSurface so the cursor spotlight does not fight a loud wash. */
 const SIDEBAR_DARK_BASE_BG =
-  "radial-gradient(circle 1200px at 50% 40%, rgba(234,88,12,0.16) 0%, rgba(38,26,20,0.96) 66%, rgba(26,17,13,1) 100%)";
+  "linear-gradient(180deg, #1C120E 0%, #1A110D 55%, #18100C 100%)";
 
 function mainContentNotebookBg(isDark: boolean): React.CSSProperties {
   return {
@@ -146,8 +171,8 @@ function mainContentNotebookBg(isDark: boolean): React.CSSProperties {
 
 function sidebarSpotlightBackground(mousePos: { x: number; y: number }): string {
   const { x, y } = mousePos;
-  // Cursor hotspot only: one bright falloff over the unchanged base layer.
-  return `radial-gradient(circle 1100px at ${x}px ${y}px, rgba(251, 146, 60, 0.48) 0%, transparent 62%), ${SIDEBAR_DARK_BASE_BG}`;
+  // Cursor hotspot only — orange tint, low contrast against the flat base.
+  return `radial-gradient(circle 1000px at ${x}px ${y}px, rgba(251, 146, 60, 0.23) 0%, transparent 58%), ${SIDEBAR_DARK_BASE_BG}`;
 }
 
 function pageTitleStyle(): React.CSSProperties {
@@ -186,14 +211,42 @@ interface SavedDashboard {
   sources: SourceId[]; createdAt: Date;
 }
 
-// ─── Source config ────────────────────────────────────────────────────────────
-const SOURCE_CONFIG: Record<SourceId, { label: string; color: string; faint: string; Icon: React.FC<{ size?: number }> }> = {
-  amplitude:    { label: "Amplitude",    color: C.amplitude,    faint: C.amplitudeFaint,    Icon: ({ size = 14 }) => <Activity size={size} /> },
-  jira:         { label: "Jira",         color: C.jira,         faint: C.jiraFaint,         Icon: ({ size = 14 }) => <Bug size={size} /> },
-  slack:        { label: "Slack",        color: C.slack,        faint: C.slackFaint,        Icon: ({ size = 14 }) => <MessageSquare size={size} /> },
-  confluence:   { label: "Confluence",   color: C.confluence,   faint: C.confluenceFaint,   Icon: ({ size = 14 }) => <FileText size={size} /> },
-  launchdarkly: { label: "LaunchDarkly", color: C.launchdarkly, faint: C.launchdarklyFaint, Icon: ({ size = 14 }) => <Flag size={size} /> },
+// ─── Source config (colors read from C at call time — palette switches with theme) ───
+const SOURCE_ICONS: Record<SourceId, React.FC<{ size?: number }>> = {
+  amplitude:    ({ size = 14 }) => <Activity size={size} />,
+  jira:         ({ size = 14 }) => <Bug size={size} />,
+  slack:        ({ size = 14 }) => <MessageSquare size={size} />,
+  confluence:   ({ size = 14 }) => <FileText size={size} />,
+  launchdarkly: ({ size = 14 }) => <Flag size={size} />,
 };
+
+const SOURCE_LABELS: Record<SourceId, string> = {
+  amplitude: "Amplitude",
+  jira: "Jira",
+  slack: "Slack",
+  confluence: "Confluence",
+  launchdarkly: "LaunchDarkly",
+};
+
+function getSourceConfig(source: SourceId): {
+  label: string;
+  color: string;
+  faint: string;
+  Icon: React.FC<{ size?: number }>;
+} {
+  const colors: Record<SourceId, { color: string; faint: string }> = {
+    amplitude: { color: C.amplitude, faint: C.amplitudeFaint },
+    jira: { color: C.jira, faint: C.jiraFaint },
+    slack: { color: C.slack, faint: C.slackFaint },
+    confluence: { color: C.confluence, faint: C.confluenceFaint },
+    launchdarkly: { color: C.launchdarkly, faint: C.launchdarklyFaint },
+  };
+  return {
+    label: SOURCE_LABELS[source],
+    Icon: SOURCE_ICONS[source],
+    ...colors[source],
+  };
+}
 
 const ALL_SOURCES: SourceId[] = ["amplitude", "jira", "slack", "confluence", "launchdarkly"];
 
@@ -379,7 +432,7 @@ function W({ title, source, span = 1, badge, children, delay = 0 }: {
   title: string; source: SourceId; span?: 1 | 2 | 3;
   badge?: string; children: React.ReactNode; delay?: number;
 }) {
-  const { color, label, Icon } = SOURCE_CONFIG[source];
+  const { color, label, Icon } = getSourceConfig(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
@@ -771,7 +824,7 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {ALL_SOURCES.map(s => {
-          const { label, Icon } = SOURCE_CONFIG[s];
+          const { label, Icon } = getSourceConfig(s);
           const { workspace, description } = SOURCE_DETAILS[s];
           const gradient = sourceGradient(s);
           const isOn = activeSources.includes(s);
@@ -808,13 +861,13 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
                 </div>
                 {/* Actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <button style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 500 }}>
+                  <button style={{ fontSize: 12, padding: "8px 16px", borderRadius: BUTTON_RADIUS, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: BUTTON_FONT, fontWeight: 500 }}>
                     Configure
                   </button>
                   {!isOn && (
                     <button
                       onClick={() => onToggleSource(s)}
-                      style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.successFaint}`, background: C.successFaint, cursor: "pointer", color: C.success, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}>
+                      style={{ fontSize: 12, padding: "8px 16px", borderRadius: BUTTON_RADIUS, border: `1px solid ${C.successFaint}`, background: C.successFaint, cursor: "pointer", color: C.success, fontFamily: BUTTON_FONT, fontWeight: 600 }}>
                       Connect
                     </button>
                   )}
@@ -828,11 +881,11 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
   );
 }
 
-function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, onNewDashboard, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount }: {
+function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount }: {
   savedDashboards: SavedDashboard[]; activeId: string | null;
   onSelect: (id: string) => void; onDelete: (id: string) => void;
   isDark: boolean; setIsDark: (v: (p: boolean) => boolean) => void;
-  onNewDashboard: () => void; activeNav: string; setActiveNav: (v: string) => void;
+  activeNav: string; setActiveNav: (v: string) => void;
   mousePos: { x: number; y: number }; onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
   enabledSourceCount: number;
 }) {
@@ -863,7 +916,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
           {NAV_ITEMS.map(item => (
             <div key={item.id}>
               <button onClick={() => setActiveNav(item.id === "dashboard" ? "dashboard" : item.id)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 12, ...(activeNav === item.id ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", color: navActiveColor(activeNav === item.id), fontSize: 13, fontWeight: activeNav === item.id ? 600 : 400, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 2, transition: "all 0.12s", textAlign: "left" }}>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: BUTTON_RADIUS, ...(activeNav === item.id ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", color: navActiveColor(activeNav === item.id), fontSize: 13, fontWeight: activeNav === item.id ? 600 : 400, fontFamily: BUTTON_FONT, marginBottom: 2, transition: "all 0.12s", textAlign: "left" }}>
                 <item.Icon size={15} />
                 <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 5 }}>
                   {item.label}
@@ -889,7 +942,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
                 <div style={{ marginTop: 6, marginBottom: 4 }}>
                   {savedDashboards.map(d => (
                     <div key={d.id} onClick={() => onSelect(d.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: 10, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: BUTTON_RADIUS, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}>
                       <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, flexShrink: 0, opacity: activeId === d.id && activeNav === "dashboard" ? 1 : 0.5 }} />
                       <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
                       <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
@@ -914,14 +967,14 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
               alignItems: "center",
               gap: 10,
               padding: "9px 12px",
-              borderRadius: 12,
+              borderRadius: BUTTON_RADIUS,
               background: "transparent",
               border: `1px solid ${C.border}`,
               cursor: "pointer",
               color: C.textSecondary,
               fontSize: 13,
               fontWeight: 500,
-              fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontFamily: BUTTON_FONT,
               transition: "all 0.12s",
             }}
             onMouseEnter={e => {
@@ -1020,12 +1073,12 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
       <div style={{ ...glassPanel(isDark), borderRadius: 16, padding: "24px", marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Profile</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #7C5CE7, #5B4BD4)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", flexShrink: 0 }}>AK</div>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: profileAvatarBg(isDark), display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", flexShrink: 0 }}>AK</div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>Alex Kim</div>
             <div style={{ fontSize: 12, color: C.textMuted }}>Appfire · Product Manager</div>
           </div>
-          <button style={{ marginLeft: "auto", fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>Change photo</button>
+          <button style={{ marginLeft: "auto", fontSize: 12, padding: "8px 16px", borderRadius: BUTTON_RADIUS, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: BUTTON_FONT }}>Change photo</button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
@@ -1070,7 +1123,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
 
       {/* Save */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #7C5CE7 0%, #7C5CE7 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: "0 2px 14px rgba(124,92,231,0.35)" }}>
+        <button style={{ padding: "9px 24px", borderRadius: BUTTON_RADIUS, background: primaryCtaFill(isDark), border: "none", color: primaryCtaTextColor(isDark), fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: BUTTON_FONT, boxShadow: primaryCtaShadow(isDark) }}>
           Save changes
         </button>
       </div>
@@ -1079,7 +1132,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
 }
 
 function SourceCard({ sourceId, onGenerate }: { sourceId: SourceId; onGenerate: (s: SourceId) => void }) {
-  const { label } = SOURCE_CONFIG[sourceId];
+  const { label } = getSourceConfig(sourceId);
   const { metric, detail, spark } = SOURCE_CARD_METRICS[sourceId];
   const gradient = sourceGradient(sourceId);
   return (
@@ -1121,9 +1174,9 @@ function SourceCard({ sourceId, onGenerate }: { sourceId: SourceId; onGenerate: 
 // ─── Right Panel ──────────────────────────────────────────────────────────────
 function RightPanel({ isDark }: { isDark: boolean }) {
   const QUICK_STATS = [
-    { label: "DAU", value: "14.8k", sub: "active users", color: "#0BBFB8" },
-    { label: "Sprint", value: "68%", sub: "completion", color: "#8B5CF6" },
-    { label: "Flags", value: "24", sub: "active", color: "#10B981" },
+    { label: "DAU", value: "14.8k", sub: "active users", color: C.amplitude },
+    { label: "Sprint", value: "68%", sub: "completion", color: C.jira },
+    { label: "Flags", value: "24", sub: "active", color: C.launchdarkly },
   ];
   return (
     <div style={{
@@ -1164,7 +1217,7 @@ function RightPanel({ isDark }: { isDark: boolean }) {
               </button>
             </div>
             {group.events.map((ev, i) => {
-              const src = SOURCE_CONFIG[ev.source];
+              const src = getSourceConfig(ev.source);
               const grad = sourceGradient(ev.source);
               return (
                 <div key={i} style={{ padding: "8px 20px", display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -1228,7 +1281,7 @@ export default function IgniteIskraPageV3() {
   }, [prompt, activeSources]);
 
   const handleGenerateSource = useCallback((sourceId: SourceId) => {
-    const sourceName = SOURCE_CONFIG[sourceId].label;
+    const sourceName = getSourceConfig(sourceId).label;
     const p = `Show me ${sourceName} insights and key metrics`;
     setPrompt(p);
     setActiveSources([sourceId]);
@@ -1303,7 +1356,7 @@ export default function IgniteIskraPageV3() {
       <LeftSidebar
         savedDashboards={savedDashboards} activeId={activeDashboardId}
         onSelect={handleSelectDashboard} onDelete={handleDeleteDashboard}
-        isDark={isDark} setIsDark={setIsDark} onNewDashboard={handleNewDashboard}
+        isDark={isDark} setIsDark={setIsDark}
         activeNav={activeNav} setActiveNav={setActiveNav}
         enabledSourceCount={activeSources.length}
         mousePos={sidebarMouse}
@@ -1338,7 +1391,7 @@ export default function IgniteIskraPageV3() {
             <>
               {/* Left: New Dashboard */}
               <motion.button onClick={handleNewDashboard} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 10, background: "transparent", border: `1px solid ${C.border}`, cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", flexShrink: 0 }}>
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: BUTTON_RADIUS, background: "transparent", border: `1px solid ${C.border}`, cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: BUTTON_FONT, flexShrink: 0 }}>
                 <ArrowLeft size={14} /><span>New Dashboard</span>
               </motion.button>
 
@@ -1356,7 +1409,7 @@ export default function IgniteIskraPageV3() {
                   />
                 ) : (
                   <button onClick={() => { setIsEditingName(true); setTimeout(() => nameInputRef.current?.select(), 30); }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "text", padding: "4px 8px", borderRadius: 8 }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "text", padding: "4px 8px", borderRadius: BUTTON_RADIUS }}
                     onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgElevated; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
                     <h1 style={{ ...pageTitleStyle(), margin: 0 }}>{currentName}</h1>
@@ -1371,17 +1424,17 @@ export default function IgniteIskraPageV3() {
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 {!activeDashboardId ? (
                   <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSave}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #7C5CE7 0%, #7C5CE7 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: "0 2px 14px rgba(124,92,231,0.35)" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: primaryCtaFill(isDark), border: "none", borderRadius: BUTTON_RADIUS, padding: "8px 18px", cursor: "pointer", color: primaryCtaTextColor(isDark), fontSize: 13, fontWeight: 600, fontFamily: BUTTON_FONT, boxShadow: primaryCtaShadow(isDark) }}>
                     <Save size={13} /><span>Save Dashboard</span>
                   </motion.button>
                 ) : isDirty ? (
                   <>
                     <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSaveAsNew}
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 16px", cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${C.border}`, borderRadius: BUTTON_RADIUS, padding: "8px 16px", cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: BUTTON_FONT }}>
                       <Save size={13} /><span>Save as new</span>
                     </motion.button>
                     <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleUpdate}
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #7C5CE7 0%, #7C5CE7 100%)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: "0 2px 14px rgba(124,92,231,0.35)" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: primaryCtaFill(isDark), border: "none", borderRadius: BUTTON_RADIUS, padding: "8px 18px", cursor: "pointer", color: primaryCtaTextColor(isDark), fontSize: 13, fontWeight: 600, fontFamily: BUTTON_FONT, boxShadow: primaryCtaShadow(isDark) }}>
                       <RefreshCw size={13} /><span>Update</span>
                     </motion.button>
                   </>
@@ -1391,22 +1444,10 @@ export default function IgniteIskraPageV3() {
               </div>
             </>
           ) : (
-            <>
-              <div>
-                <h1 style={heroGradientTitleStyle()}>What's on your radar today?</h1>
-                <p style={{ margin: 0, fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>Analysing all connected sources — <span style={{ color: C.textSecondary }}>Amplitude, Jira, Slack, Confluence & LaunchDarkly</span></p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <motion.button
-                  onClick={handleNewDashboard}
-                  disabled={currentSources === null && !generating}
-                  whileHover={currentSources !== null || generating ? { scale: 1.02 } : {}}
-                  whileTap={currentSources !== null || generating ? { scale: 0.97 } : {}}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: (currentSources === null && !generating) ? (isDark ? "rgba(255,255,255,0.05)" : C.bgSurface) : C.spark, border: `1px solid ${(currentSources === null && !generating) ? C.border : "transparent"}`, cursor: (currentSources === null && !generating) ? "default" : "pointer", color: (currentSources === null && !generating) ? C.textMuted : "white", fontSize: 13, fontWeight: 600, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: (currentSources === null && !generating) ? "none" : `0 4px 14px ${C.sparkGlow}`, opacity: (currentSources === null && !generating) ? 0.5 : 1, transition: "all 0.15s" }}>
-                  <Plus size={14} /><span>New Dashboard</span>
-                </motion.button>
-              </div>
-            </>
+            <div>
+              <h1 style={heroGradientTitleStyle()}>What's on your radar today?</h1>
+              <p style={{ margin: 0, fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>Analysing all connected sources — <span style={{ color: C.textSecondary }}>Amplitude, Jira, Slack, Confluence & LaunchDarkly</span></p>
+            </div>
           )}
         </div>
 
@@ -1445,18 +1486,18 @@ export default function IgniteIskraPageV3() {
                 whileHover={prompt.trim() && !generating ? { scale: 1.03 } : {}}
                 whileTap={prompt.trim() && !generating ? { scale: 0.97 } : {}}
                 style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
-                  borderRadius: 999, border: "none", flexShrink: 0,
-                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : C.spark,
-                  color: !prompt.trim() || generating ? C.textMuted : "white",
+                  display: "flex", alignItems: "center", gap: 6, padding: "8px 18px",
+                  borderRadius: BUTTON_RADIUS, border: "none", flexShrink: 0,
+                  background: !prompt.trim() || generating ? (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated) : (isDark ? primaryCtaFill(true) : C.spark),
+                  color: !prompt.trim() || generating ? C.textMuted : (isDark ? primaryCtaTextColor(true) : "white"),
                   cursor: !prompt.trim() || generating ? "default" : "pointer",
-                  fontSize: 13, fontWeight: 700, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  boxShadow: prompt.trim() && !generating ? `0 4px 16px ${C.sparkGlow}` : "none",
+                  fontSize: 13, fontWeight: 600, fontFamily: BUTTON_FONT,
+                  boxShadow: prompt.trim() && !generating ? (isDark ? primaryCtaShadow(true) : `0 4px 14px ${C.sparkGlow}`) : "none",
                   transition: "all 0.15s",
                 }}>
                 {generating
-                  ? <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /><span>Building…</span></>
-                  : <><Zap size={13} /><span>Generate</span></>}
+                  ? <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /><span>{hasDashboard ? "Re-building…" : "Building…"}</span></>
+                  : <><Zap size={13} /><span>{hasDashboard ? "Re-generate" : "Generate"}</span></>}
               </motion.button>
             </div>
           </motion.div>
@@ -1493,7 +1534,7 @@ export default function IgniteIskraPageV3() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SUGGESTED_PROMPTS.map(p => (
                 <button key={p} onClick={() => { setPrompt(p); handleGenerate(p); }}
-                  style={{ background: isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)", backdropFilter: "blur(16px) saturate(160%)", WebkitBackdropFilter: "blur(16px) saturate(160%)", border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid rgba(255,255,255,0.7)", borderRadius: 20, padding: "5px 14px", cursor: "pointer", color: isDark ? C.sparkBright : "#5B4BD4", fontSize: 12, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: isDark ? "inset 0 1px 0 rgba(251,146,60,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(124,92,231,0.1)", transition: "all 0.15s" }}
+                  style={{ background: isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)", backdropFilter: "blur(16px) saturate(160%)", WebkitBackdropFilter: "blur(16px) saturate(160%)", border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid rgba(255,255,255,0.7)", borderRadius: BUTTON_RADIUS, padding: "8px 16px", cursor: "pointer", color: isDark ? C.sparkBright : "#5B4BD4", fontSize: 12, fontWeight: 500, fontFamily: BUTTON_FONT, boxShadow: isDark ? "inset 0 1px 0 rgba(251,146,60,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(124,92,231,0.1)", transition: "all 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.22)" : "rgba(255,255,255,0.58)"; e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.4)" : "rgba(255,255,255,0.9)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.28)" : "rgba(255,255,255,0.7)"; }}>
                   {p}
