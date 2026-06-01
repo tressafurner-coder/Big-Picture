@@ -924,7 +924,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
             }}
           >
             {isDark ? <Moon size={15} color={C.spark} /> : <Sun size={15} color={C.spark} />}
-            <span>{isDark ? "Dark mode on" : "Switch to light mode"}</span>
+            <span>{isDark ? "Switch to light mode" : "Switch to dark mode"}</span>
           </button>
         </div>
       </div>
