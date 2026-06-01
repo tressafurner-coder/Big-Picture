@@ -13,7 +13,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Label } from "./components/ui/label";
 import {
@@ -36,16 +36,24 @@ const JIRA_VALUE_NAME_TOOLTIP =
 const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
   "You can't use the same Jira custom field for more than one metric in a single framework";
 
+/** Shown when the Jira field has no default context available for BigPicture. */
+const JIRA_FIELD_NO_DEFAULT_CONTEXT_TOOLTIP =
+  "This Jira custom field does not have an available default context, so it cannot be used in BigPicture. Choose a field with a default context in Jira for correct display and sync.";
+
 /** Context selector is fixed to default. */
 const JIRA_CONTEXT_FIXED_TOOLTIP =
   "Only the default Jira field context is supported.";
 
+/** Shown when a default context has no option values in Jira. */
+const JIRA_CONTEXT_NO_VALUES_TOOLTIP =
+  "This default context has no values in Jira, so it cannot be used for this metric in BigPicture.";
+
 /** Demo Jira custom fields — prototype ids; labels numbered for clarity. */
 const JIRA_CUSTOM_FIELD_OPTIONS = [
-  { id: "customfield_10042", label: "Jira custom field 1" },
-  { id: "customfield_10058", label: "Jira custom field 2" },
-  { id: "customfield_10102", label: "Jira custom field 3" },
-  { id: "customfield_10117", label: "Jira custom field 4" },
+  { id: "customfield_10042", label: "Jira custom field 1", hasDefaultContext: true },
+  { id: "customfield_10058", label: "Jira custom field 2", hasDefaultContext: true },
+  { id: "customfield_10102", label: "Jira custom field 3", hasDefaultContext: false },
+  { id: "customfield_10117", label: "Jira custom field 4", hasDefaultContext: true },
 ] as const;
 
 function getJiraCustomFieldLabel(fieldId: string): string {
@@ -54,7 +62,14 @@ function getJiraCustomFieldLabel(fieldId: string): string {
 }
 
 /** Prototype: contexts per field (as returned from Jira for that custom field). */
-type JiraFieldContext = { id: string; label: string };
+type JiraFieldContext = {
+  id: string;
+  label: string;
+  /** Shown in the Context picker; omit or false for scoped / non-default contexts. */
+  isDefaultContext?: boolean;
+  /** When false on a default context, the option cannot be selected (no values in Jira). */
+  hasValues?: boolean;
+};
 
 type MetricRow = { label: string; value: number; swatch: string };
 
@@ -76,26 +91,45 @@ const CONSEQUENCE_ROWS_TEMPLATE = [
 
 const JIRA_FIELD_CONTEXTS: Record<string, JiraFieldContext[]> = {
   customfield_10042: [
-    { id: "ctx_default", label: "Default (globally available)" },
-    { id: "ctx_bp_prog", label: "BigPicture · Program Epic" },
-    { id: "ctx_issue_types", label: "Issue types: Bug, Story, Task" },
+    { id: "ctx_default", label: "Default (globally available)", isDefaultContext: true, hasValues: true },
+    { id: "ctx_bp_prog", label: "BigPicture · Program Epic", isDefaultContext: false },
+    { id: "ctx_issue_types", label: "Issue types: Bug, Story, Task", isDefaultContext: false },
   ],
   customfield_10058: [
-    { id: "ctx_default", label: "Default" },
-    { id: "ctx_risk_proj", label: "Risk register (PROJ-42)" },
+    { id: "ctx_default", label: "Default", isDefaultContext: true, hasValues: true },
+    {
+      id: "ctx_default_empty",
+      label: "Default · Service desk",
+      isDefaultContext: true,
+      hasValues: false,
+    },
+    { id: "ctx_risk_proj", label: "Risk register (PROJ-42)", isDefaultContext: false },
   ],
   customfield_10102: [
-    { id: "ctx_default", label: "All projects" },
-    { id: "ctx_jsw", label: "Jira Software · Scrum template" },
+    { id: "ctx_default", label: "All projects", isDefaultContext: true, hasValues: true },
+    { id: "ctx_jsw", label: "Jira Software · Scrum template", isDefaultContext: false },
   ],
   customfield_10117: [
-    { id: "ctx_default", label: "Default" },
-    { id: "ctx_portfolio", label: "Portfolio · PI planning" },
+    { id: "ctx_default", label: "Default", isDefaultContext: true, hasValues: true },
+    { id: "ctx_portfolio", label: "Portfolio · PI planning", isDefaultContext: false },
   ],
 };
 
 function getContextsForJiraField(fieldId: string): JiraFieldContext[] {
-  return JIRA_FIELD_CONTEXTS[fieldId] ?? [{ id: "ctx_default", label: "Default" }];
+  return JIRA_FIELD_CONTEXTS[fieldId] ?? [{ id: "ctx_default", label: "Default", isDefaultContext: true, hasValues: true }];
+}
+
+function getDefaultContextOptions(fieldId: string): JiraFieldContext[] {
+  return getContextsForJiraField(fieldId).filter((c) => c.isDefaultContext !== false);
+}
+
+function usesMultiDefaultContextPicker(fieldId: string): boolean {
+  return getDefaultContextOptions(fieldId).length > 1;
+}
+
+function firstSelectableDefaultContextId(fieldId: string): string {
+  const options = getDefaultContextOptions(fieldId);
+  return options.find((c) => c.hasValues !== false)?.id ?? options[0]?.id ?? "ctx_default";
 }
 
 function likelihoodRowsStorageKey(fieldId: string, contextId: string) {
@@ -173,8 +207,8 @@ function ManualMetricCard({
   onValueChange,
   selectedJiraFieldId,
   onJiraFieldChange,
-  /** First (default) context id for the selected Jira field — used for table row keys. */
-  defaultContextId,
+  selectedJiraContextId,
+  onJiraContextChange,
   peerSelectedFieldId,
   onAddRow,
 }: {
@@ -190,7 +224,8 @@ function ManualMetricCard({
   onAddRow: () => void;
   selectedJiraFieldId: string;
   onJiraFieldChange: (fieldId: string) => void;
-  defaultContextId: string;
+  selectedJiraContextId: string;
+  onJiraContextChange: (contextId: string) => void;
   /** Other metric's Jira field id when that metric also maps to Jira; otherwise null (no overlap rule). */
   peerSelectedFieldId: string | null;
 }) {
@@ -199,6 +234,9 @@ function ManualMetricCard({
   const metricNameInputId = `metric-display-name-${cardSlug}`;
   const fieldSelectId = `test-metric-jira-field-${slug}`;
   const contextSelectId = `test-metric-jira-context-${slug}`;
+  const defaultContextOptions = mapToJira ? getDefaultContextOptions(selectedJiraFieldId) : [];
+  const multiDefaultContextPicker = mapToJira && usesMultiDefaultContextPicker(selectedJiraFieldId);
+  const fixedDefaultContext = defaultContextOptions[0];
   return (
     <div
       className={cn(
@@ -271,6 +309,25 @@ function ManualMetricCard({
                         const takenByPeer =
                           peerSelectedFieldId != null &&
                           opt.id === peerSelectedFieldId;
+                        const noDefaultContext = !opt.hasDefaultContext;
+                        if (noDefaultContext) {
+                          return (
+                            <Tooltip
+                              key={opt.id}
+                              content={JIRA_FIELD_NO_DEFAULT_CONTEXT_TOOLTIP}
+                              className="block w-full min-w-0 cursor-default"
+                            >
+                              <SelectItem
+                                value={opt.id}
+                                disabled
+                                allowPointerEventsWhenDisabled
+                                title={JIRA_FIELD_NO_DEFAULT_CONTEXT_TOOLTIP}
+                              >
+                                {opt.label}
+                              </SelectItem>
+                            </Tooltip>
+                          );
+                        }
                         if (takenByPeer) {
                           return (
                             <Tooltip
@@ -302,25 +359,74 @@ function ManualMetricCard({
                   <Label htmlFor={contextSelectId} className={ads.labelField}>
                     Context
                   </Label>
-                  <Tooltip
-                    content={JIRA_CONTEXT_FIXED_TOOLTIP}
-                    className="block w-full min-w-0 cursor-default"
-                  >
-                    <div
-                      id={contextSelectId}
-                      className={cn(
-                        "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
-                      )}
-                      aria-disabled="true"
-                      aria-label="Context (default only)"
+                  {multiDefaultContextPicker ? (
+                    <Select
+                      value={selectedJiraContextId}
+                      onValueChange={onJiraContextChange}
                     >
-                      <span className="min-w-0 truncate">Default context</span>
-                      <ChevronDown
-                        className="size-4 shrink-0 opacity-50"
-                        aria-hidden
-                      />
-                    </div>
-                  </Tooltip>
+                      <SelectTrigger
+                        id={contextSelectId}
+                        className={cn(
+                          "flex h-9 w-full min-w-0 items-center justify-between gap-2 text-left hover:bg-[#FAFBFC] data-[placeholder]:text-[#626F86] [&_[data-slot=select-value]]:line-clamp-1 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[#44546F]",
+                          ads.fieldControl,
+                        )}
+                      >
+                        <SelectValue placeholder="Select default context" />
+                      </SelectTrigger>
+                      <SelectContent
+                        className={cn("rounded-[3px] shadow-md", ads.border, ads.surface)}
+                      >
+                        {defaultContextOptions.map((ctx) => {
+                          const noValues = ctx.hasValues === false;
+                          if (noValues) {
+                            return (
+                              <Tooltip
+                                key={ctx.id}
+                                content={JIRA_CONTEXT_NO_VALUES_TOOLTIP}
+                                className="block w-full min-w-0 cursor-default"
+                              >
+                                <SelectItem
+                                  value={ctx.id}
+                                  disabled
+                                  allowPointerEventsWhenDisabled
+                                  title={JIRA_CONTEXT_NO_VALUES_TOOLTIP}
+                                >
+                                  {ctx.label}
+                                </SelectItem>
+                              </Tooltip>
+                            );
+                          }
+                          return (
+                            <SelectItem key={ctx.id} value={ctx.id}>
+                              {ctx.label}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Tooltip
+                      content={JIRA_CONTEXT_FIXED_TOOLTIP}
+                      className="block w-full min-w-0 cursor-default"
+                    >
+                      <div
+                        id={contextSelectId}
+                        className={cn(
+                          "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
+                        )}
+                        aria-disabled="true"
+                        aria-label="Context (default only)"
+                      >
+                        <span className="min-w-0 truncate">
+                          {fixedDefaultContext?.label ?? "Default context"}
+                        </span>
+                        <ChevronDown
+                          className="size-4 shrink-0 opacity-50"
+                          aria-hidden
+                        />
+                      </div>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -346,7 +452,7 @@ function ManualMetricCard({
             <tr
               key={
                 mapToJira
-                  ? `${slug}-${defaultContextId}-${i}`
+                  ? `${slug}-${selectedJiraContextId}-${i}`
                   : `${slug}-${i}`
               }
             >
@@ -445,33 +551,38 @@ export default function TestPrototypePage() {
   const [consequenceJiraFieldId, setConsequenceJiraFieldId] = useState(
     initialConsequenceFieldId,
   );
+  const [likelihoodJiraContextId, setLikelihoodJiraContextId] = useState(() =>
+    firstSelectableDefaultContextId(initialLikelihoodFieldId),
+  );
+  const [consequenceJiraContextId, setConsequenceJiraContextId] = useState(() =>
+    firstSelectableDefaultContextId(initialConsequenceFieldId),
+  );
 
-  const likelihoodContextId = useMemo(
-    () => getContextsForJiraField(likelihoodJiraFieldId)[0].id,
-    [likelihoodJiraFieldId],
-  );
-  const consequenceContextId = useMemo(
-    () => getContextsForJiraField(consequenceJiraFieldId)[0].id,
-    [consequenceJiraFieldId],
-  );
+  useEffect(() => {
+    setLikelihoodJiraContextId(firstSelectableDefaultContextId(likelihoodJiraFieldId));
+  }, [likelihoodJiraFieldId]);
+
+  useEffect(() => {
+    setConsequenceJiraContextId(firstSelectableDefaultContextId(consequenceJiraFieldId));
+  }, [consequenceJiraFieldId]);
 
   const likelihoodDisplayRows = mapLikelihoodToJira
     ? (likelihoodRowsByContext[
-        likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId)
-      ] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId))
+        likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodJiraContextId)
+      ] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodJiraContextId))
     : likelihoodRows;
 
   const consequenceDisplayRows = mapConsequenceToJira
     ? (consequenceRowsByContext[
-        consequenceRowsStorageKey(consequenceJiraFieldId, consequenceContextId)
-      ] ?? seedConsequenceRows(consequenceJiraFieldId, consequenceContextId))
+        consequenceRowsStorageKey(consequenceJiraFieldId, consequenceJiraContextId)
+      ] ?? seedConsequenceRows(consequenceJiraFieldId, consequenceJiraContextId))
     : consequenceRows;
 
   useEffect(() => {
     if (!mapLikelihoodToJira || !mapConsequenceToJira) return;
     if (likelihoodJiraFieldId !== consequenceJiraFieldId) return;
     const alternative = JIRA_CUSTOM_FIELD_OPTIONS.find(
-      (o) => o.id !== likelihoodJiraFieldId,
+      (o) => o.id !== likelihoodJiraFieldId && o.hasDefaultContext,
     );
     if (alternative) {
       setConsequenceJiraFieldId(alternative.id);
@@ -506,8 +617,8 @@ export default function TestPrototypePage() {
   function patchLikelihoodValue(i: number, value: number) {
     if (mapLikelihoodToJira) {
       setLikelihoodRowsByContext((prev) => {
-        const k = likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId);
-        const rows = prev[k] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId);
+        const k = likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodJiraContextId);
+        const rows = prev[k] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodJiraContextId);
         return {
           ...prev,
           [k]: rows.map((r, j) => (j === i ? { ...r, value } : r)),
@@ -531,11 +642,11 @@ export default function TestPrototypePage() {
       setConsequenceRowsByContext((prev) => {
         const k = consequenceRowsStorageKey(
           consequenceJiraFieldId,
-          consequenceContextId,
+          consequenceJiraContextId,
         );
         const rows = prev[k] ?? seedConsequenceRows(
           consequenceJiraFieldId,
-          consequenceContextId,
+          consequenceJiraContextId,
         );
         return {
           ...prev,
@@ -838,7 +949,8 @@ export default function TestPrototypePage() {
                   onAddRow={addLikelihoodRow}
                   selectedJiraFieldId={likelihoodJiraFieldId}
                   onJiraFieldChange={setLikelihoodJiraFieldId}
-                  defaultContextId={likelihoodContextId}
+                  selectedJiraContextId={likelihoodJiraContextId}
+                  onJiraContextChange={setLikelihoodJiraContextId}
                   peerSelectedFieldId={
                     mapConsequenceToJira ? consequenceJiraFieldId : null
                   }
@@ -855,7 +967,8 @@ export default function TestPrototypePage() {
                   onAddRow={addConsequenceRow}
                   selectedJiraFieldId={consequenceJiraFieldId}
                   onJiraFieldChange={setConsequenceJiraFieldId}
-                  defaultContextId={consequenceContextId}
+                  selectedJiraContextId={consequenceJiraContextId}
+                  onJiraContextChange={setConsequenceJiraContextId}
                   peerSelectedFieldId={
                     mapLikelihoodToJira ? likelihoodJiraFieldId : null
                   }
