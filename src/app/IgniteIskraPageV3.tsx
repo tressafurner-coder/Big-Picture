@@ -134,6 +134,16 @@ function navActiveColor(active: boolean): string {
 const SIDEBAR_DARK_BASE_BG =
   "radial-gradient(circle 1200px at 50% 40%, rgba(234,88,12,0.16) 0%, rgba(38,26,20,0.96) 66%, rgba(26,17,13,1) 100%)";
 
+function mainContentNotebookBg(isDark: boolean): React.CSSProperties {
+  return {
+    backgroundColor: isDark ? DARK_PALETTE.bgBase : LIGHT_PALETTE.bgBase,
+    backgroundImage: isDark
+      ? "linear-gradient(rgba(251,146,60,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(251,146,60,0.05) 1px, transparent 1px)"
+      : "linear-gradient(rgba(124,92,231,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(124,92,231,0.06) 1px, transparent 1px)",
+    backgroundSize: "28px 28px",
+  };
+}
+
 function sidebarSpotlightBackground(mousePos: { x: number; y: number }): string {
   const { x, y } = mousePos;
   // Cursor hotspot only: one bright falloff over the unchanged base layer.
@@ -1283,10 +1293,6 @@ export default function IgniteIskraPageV3() {
     <div style={{
       minHeight: "100dvh",
       background: C.bgBase,
-      backgroundImage: isDark
-        ? "linear-gradient(rgba(251,146,60,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(251,146,60,0.05) 1px, transparent 1px)"
-        : "linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)",
-      backgroundSize: "28px 28px",
       color: C.textPrimary,
       fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       display: "flex",
@@ -1308,7 +1314,15 @@ export default function IgniteIskraPageV3() {
       />
 
       {/* Main Content */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative", zIndex: 10 }}>
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        zIndex: 10,
+        ...mainContentNotebookBg(isDark),
+      }}>
 
         {/* Sources view */}
         {activeNav === "sources" && <SourcesPanel isDark={isDark} activeSources={activeSources} onToggleSource={toggleSource} />}
