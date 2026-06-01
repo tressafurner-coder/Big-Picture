@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import slackLogo from "../imports/slack-logo.png";
 import confluenceLogo from "../imports/confluence-logo.png";
 import amplitudeLogo from "../imports/amplitude-logo.png";
@@ -11,7 +11,7 @@ import {
   Bug, MessageSquare, Flag, FileText, CheckCircle,
   Activity, Zap, AlertCircle, RefreshCw,
   Sun, Moon, Settings, Home, BarChart2, List,
-  Search, Bell, Edit2, ArrowLeft, LayoutGrid, Plug2,
+  Bell, Edit2, ArrowLeft, LayoutGrid, Plug2,
   Calendar, Sparkles, HelpCircle, ChevronLeft, ChevronRight, SlidersHorizontal,
 } from "lucide-react";
 
@@ -721,18 +721,6 @@ const ICON_NAV_MAIN = [
   { id: "sources", Icon: Plug2, label: "Integrations" },
 ] as const;
 
-const RECENT_WORK_ROWS = [
-  { name: "Sprint health dashboard", source: "Jira · 2 days ago", week: "W18", progress: 80, task: "12/15", feedback: "4.2" },
-  { name: "User retention overview", source: "Amplitude · 1 day ago", week: "W18", progress: 65, task: "8/12", feedback: "3.8" },
-  { name: "Feature flag rollout", source: "LaunchDarkly · 3 days ago", week: "W17", progress: 45, task: "5/11", feedback: "4.0" },
-];
-
-const TEAM_MEMBERS = [
-  { name: "Alex Kim", role: "Product Manager", time: "32 min/Work", initials: "AK" },
-  { name: "Jordan Lee", role: "Engineering Lead", time: "28 min/Work", initials: "JL" },
-  { name: "Sam Rivera", role: "Data Analyst", time: "41 min/Work", initials: "SR" },
-];
-
 // ─── Sources panel ────────────────────────────────────────────────────────────
 const SOURCE_DETAILS: Record<SourceId, { workspace: string; description: string }> = {
   amplitude:    { workspace: "Appfire Analytics",  description: "Tracks user behaviour, product events, funnels, and retention across all Appfire surfaces. Used to monitor DAU/MAU, feature adoption, and session quality in real time." },
@@ -827,9 +815,30 @@ function MonetaLogoMark() {
   );
 }
 
-function LeftSidebar({ isDark, activeNav, setActiveNav }: {
+function LeftSidebar({
+  isDark, activeNav, setActiveNav, savedDashboards, activeId, onSelect, onDelete,
+}: {
   isDark: boolean; activeNav: string; setActiveNav: (v: string) => void;
+  savedDashboards: SavedDashboard[]; activeId: string | null;
+  onSelect: (id: string) => void; onDelete: (id: string) => void;
 }) {
+  const hasSaved = savedDashboards.length > 0;
+  const [dashMenuOpen, setDashMenuOpen] = useState(false);
+  const hideMenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openDashMenu = () => {
+    if (hideMenuTimer.current) clearTimeout(hideMenuTimer.current);
+    if (hasSaved) setDashMenuOpen(true);
+  };
+
+  const closeDashMenu = () => {
+    hideMenuTimer.current = setTimeout(() => setDashMenuOpen(false), 150);
+  };
+
+  useEffect(() => () => {
+    if (hideMenuTimer.current) clearTimeout(hideMenuTimer.current);
+  }, []);
+
   const iconBtn = (active: boolean): React.CSSProperties => ({
     width: 44, height: 44, borderRadius: 14, border: "none", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -839,44 +848,289 @@ function LeftSidebar({ isDark, activeNav, setActiveNav }: {
     marginBottom: 8,
   });
 
+  const dashboardList = (
+    <div style={{ maxHeight: 320, overflowY: "auto", padding: "4px 0" }}>
+      {savedDashboards.map(d => {
+        const isActive = activeId === d.id && activeNav === "dashboard";
+        return (
+          <div
+            key={d.id}
+            onClick={() => { onSelect(d.id); setDashMenuOpen(false); }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 10px",
+              borderRadius: 10,
+              cursor: "pointer",
+              marginBottom: 2,
+              background: isActive ? (isDark ? "rgba(93,95,239,0.25)" : C.sparkFaint) : "transparent",
+              border: `1px solid ${isActive ? (isDark ? "rgba(93,95,239,0.35)" : "rgba(93,95,239,0.18)") : "transparent"}`,
+              transition: "all 0.12s",
+            }}
+          >
+            <div style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: isActive ? C.spark : C.textMuted,
+              flexShrink: 0, opacity: isActive ? 1 : 0.45,
+            }} />
+            <div style={{
+              flex: 1, minWidth: 0, fontSize: 12, fontWeight: isActive ? 600 : 500,
+              color: isActive ? C.spark : C.textSecondary,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {d.name}
+            </div>
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onDelete(d.id); }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 2, display: "flex", flexShrink: 0 }}
+              aria-label={`Delete ${d.name}`}
+            >
+              <X size={11} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div style={{
-      width: 72, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
+      width: 72,
+      flexShrink: 0,
+      height: "100dvh",
+      position: "sticky",
+      top: 0,
       background: isDark ? "rgba(13,20,40,0.98)" : "#ECEEF4",
       borderRight: `1px solid ${C.border}`,
-      display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "20px 0 16px", zIndex: 20,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: "20px 0 16px",
+      zIndex: 30,
     }}>
       <div style={{ marginBottom: 28 }}><MonetaLogoMark /></div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        {ICON_NAV_MAIN.map(({ id, Icon, label }) => (
-          <button key={id} type="button" onClick={() => setActiveNav(id)} style={iconBtn(activeNav === id)} title={label} aria-label={label}>
-            <Icon size={20} strokeWidth={1.75} />
-          </button>
-        ))}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+        {ICON_NAV_MAIN.map(({ id, Icon, label }) => {
+          if (id === "dashboard") {
+            return (
+              <div
+                key={id}
+                style={{ position: "relative", marginBottom: 8 }}
+                onMouseEnter={openDashMenu}
+                onMouseLeave={closeDashMenu}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveNav("dashboard")}
+                  style={{ ...iconBtn(activeNav === "dashboard"), position: "relative", marginBottom: 0 }}
+                  title={label}
+                  aria-label={label}
+                  aria-expanded={dashMenuOpen}
+                >
+                  <LayoutGrid size={20} strokeWidth={1.75} />
+                  {hasSaved && (
+                    <span style={{
+                      position: "absolute", top: 8, right: 8, width: 7, height: 7,
+                      borderRadius: "50%", background: C.spark,
+                      border: `2px solid ${isDark ? "#1a2840" : "#ECEEF4"}`,
+                    }} />
+                  )}
+                </button>
+                {dashMenuOpen && (
+                  <div
+                    onMouseEnter={openDashMenu}
+                    onMouseLeave={closeDashMenu}
+                    style={{
+                      position: "absolute",
+                      left: "calc(100% + 8px)",
+                      top: 0,
+                      width: 220,
+                      ...glassPanel(isDark),
+                      borderRadius: 16,
+                      padding: "12px 10px",
+                      boxShadow: "0 12px 40px rgba(30,42,74,0.14), 0 4px 12px rgba(30,42,74,0.08)",
+                      zIndex: 50,
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 10, fontWeight: 600, color: C.textMuted,
+                      letterSpacing: "0.08em", textTransform: "uppercase",
+                      marginBottom: 8, paddingLeft: 4,
+                    }}>
+                      Dashboards
+                    </div>
+                    {dashboardList}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return (
+            <button key={id} type="button" onClick={() => setActiveNav(id)} style={iconBtn(activeNav === id)} title={label} aria-label={label}>
+              <Icon size={20} strokeWidth={1.75} />
+            </button>
+          );
+        })}
       </div>
-      <button onClick={() => setActiveNav("settings")} style={iconBtn(activeNav === "settings")} title="Settings">
+      <button type="button" onClick={() => setActiveNav("settings")} style={iconBtn(activeNav === "settings")} title="Settings">
         <Settings size={20} strokeWidth={1.75} />
       </button>
-      <button style={{ ...iconBtn(false), marginTop: 8, marginBottom: 0 }} title="Help">
+      <button type="button" style={{ ...iconBtn(false), marginTop: 8, marginBottom: 0 }} title="Help">
         <HelpCircle size={20} strokeWidth={1.75} />
       </button>
     </div>
   );
 }
 
+const GENERATE_LOADER_STEPS = [
+  "Connecting Amplitude, Jira & Slack…",
+  "Pulling Confluence & LaunchDarkly…",
+  "Understanding your prompt…",
+  "Composing widgets & layout…",
+  "Almost there…",
+];
+
+function IskraGenerateLoader({ isDark }: { isDark: boolean }) {
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setStepIndex(i => (i + 1) % GENERATE_LOADER_STEPS.length), 850);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: 12 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: 8 }}
+      transition={{ type: "spring", stiffness: 320, damping: 28 }}
+      style={{
+        ...glassPanel(isDark),
+        borderRadius: 28,
+        padding: "36px 40px 32px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        maxWidth: 400,
+        width: "min(90vw, 400px)",
+        textAlign: "center",
+        boxShadow: "0 24px 64px rgba(30,42,74,0.12), 0 8px 24px rgba(93,95,239,0.15)",
+      }}
+    >
+      <div style={{ position: "relative", width: 96, height: 96, marginBottom: 28 }}>
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            animate={{ scale: [1, 1.75], opacity: [0.4, 0] }}
+            transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.65, ease: "easeOut" }}
+            style={{
+              position: "absolute", inset: 0, borderRadius: "50%",
+              border: `2px solid ${C.spark}`,
+            }}
+          />
+        ))}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: "linear" }}
+          style={{
+            position: "absolute", inset: 4, borderRadius: "50%",
+            background: `conic-gradient(from 0deg, transparent 0deg, ${C.spark} 90deg, #9B9DF8 180deg, ${ISKRA_STAR.gradBottom} 270deg, transparent 360deg)`,
+            opacity: 0.85,
+          }}
+        />
+        <div style={{
+          position: "absolute", inset: 14, borderRadius: "50%",
+          background: isDark ? C.bgSurface : "#FFFFFF",
+          boxShadow: "inset 0 0 20px rgba(93,95,239,0.08)",
+        }} />
+        <motion.div
+          animate={{ scale: [1, 1.12, 1], rotate: [0, 8, -8, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <svg viewBox="0 0 30 30" width={36} height={36} fill="none" style={{ filter: `drop-shadow(0 0 8px ${ISKRA_STAR.glow})` }}>
+            <defs>
+              <linearGradient id="loaderStar" x1="15" y1="0" x2="15" y2="30" gradientUnits="userSpaceOnUse">
+                <stop stopColor={ISKRA_STAR.gradTop} /><stop offset="1" stopColor={ISKRA_STAR.gradBottom} />
+              </linearGradient>
+            </defs>
+            <path d="M15 0 L16.6 12 L28 15 L16.6 18 L15 30 L13.4 18 L2 15 L13.4 12 Z" fill="url(#loaderStar)" />
+          </svg>
+        </motion.div>
+        {[0, 120, 240].map((_, i) => (
+          <motion.div
+            key={deg}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3 + i * 0.4, repeat: Infinity, ease: "linear" }}
+            style={{ position: "absolute", inset: 0 }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.25 }}
+              style={{
+                position: "absolute", top: 2, left: "50%", width: 7, height: 7, marginLeft: -3.5,
+                borderRadius: "50%", background: i === 1 ? ISKRA_STAR.gradBottom : C.spark,
+                boxShadow: `0 0 10px ${i === 1 ? ISKRA_STAR.glow : "rgba(93,95,239,0.5)"}`,
+              }}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={stepIndex}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25 }}
+          style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 600, color: C.navy, lineHeight: 1.4 }}
+        >
+          {GENERATE_LOADER_STEPS[stepIndex]}
+        </motion.p>
+      </AnimatePresence>
+
+      <div style={{
+        width: "100%", height: 5, borderRadius: 999, background: isDark ? "rgba(255,255,255,0.08)" : C.bgElevated,
+        overflow: "hidden", position: "relative",
+      }}>
+        <motion.div
+          animate={{ x: ["-120%", "220%"] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            position: "absolute", top: 0, left: 0, width: "45%", height: "100%",
+            background: `linear-gradient(90deg, transparent, ${C.spark}, #9B9DF8, transparent)`,
+            borderRadius: 999,
+          }}
+        />
+      </div>
+      <p style={{ margin: "14px 0 0", fontSize: 12, color: C.textMuted, letterSpacing: "0.02em" }}>
+        Iskra is building your dashboard
+      </p>
+    </motion.div>
+  );
+}
+
 // ─── Moneta-style dashboard shell ─────────────────────────────────────────────
 function MonetaDashboardShell({
   prompt, setPrompt, onGenerate, onAskAi, onConnectApps,
-  generating, hasDashboard, isDark,
+  generating, hasDashboard, isDark, hasGeneratedBefore,
+  dashboardTitle, setDashboardTitle, isEditingDashboardTitle, setIsEditingDashboardTitle, landingTitleInputRef,
 }: {
   prompt: string; setPrompt: (v: string) => void;
   onGenerate: () => void; onAskAi: () => void;
-  onConnectApps: () => void; generating: boolean; hasDashboard: boolean;
+  onConnectApps: () => void; generating: boolean; hasDashboard: boolean; hasGeneratedBefore: boolean;
   isDark: boolean;
+  dashboardTitle: string;
+  setDashboardTitle: (v: string) => void;
+  isEditingDashboardTitle: boolean;
+  setIsEditingDashboardTitle: (v: boolean) => void;
+  landingTitleInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const [workTab, setWorkTab] = useState<"all" | "project" | "videos" | "docs">("project");
-
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px 40px" }}>
       {/* Top header */}
@@ -899,35 +1153,126 @@ function MonetaDashboardShell({
       </div>
 
       {!hasDashboard && (
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 24 }}>
-          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
-            <p style={{ margin: "0 0 6px", fontSize: 13, color: C.textMuted, fontWeight: 500 }}>Project Overview</p>
-            <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: C.navy, letterSpacing: "-0.03em", lineHeight: 1.1 }}>Iskra Project</h1>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
-              <button type="button" onClick={onAskAi} style={pillBtn(true)}><Sparkles size={15} /> Ask AI</button>
-              <button type="button" onClick={() => onGenerate()} style={pillBtn()}>Get tasks updates</button>
-              <button type="button" onClick={onConnectApps} style={pillBtn()}>Connect apps</button>
-            </div>
-          </div>
-          <div style={{ flex: "0 1 280px", minWidth: 200, width: "100%", maxWidth: 320 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${C.borderStrong}`, paddingBottom: 8 }}>
+        <>
+          <div style={{ marginBottom: 20 }}>
+            {isEditingDashboardTitle ? (
               <input
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); onGenerate(); } }}
-                placeholder="Try Search…"
-                style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 14, color: C.textPrimary, fontFamily: "inherit" }}
+                ref={landingTitleInputRef}
+                value={dashboardTitle}
+                onChange={e => setDashboardTitle(e.target.value)}
+                onBlur={() => setIsEditingDashboardTitle(false)}
+                onKeyDown={e => { if (e.key === "Enter") setIsEditingDashboardTitle(false); }}
+                autoFocus
+                style={{
+                  margin: 0, width: "100%", maxWidth: 640, fontSize: 36, fontWeight: 800, color: C.navy,
+                  letterSpacing: "-0.03em", lineHeight: 1.1, background: "transparent", border: "none",
+                  borderBottom: `2px solid ${C.spark}`, outline: "none", fontFamily: "inherit", padding: "0 0 4px",
+                }}
               />
-              <Search size={18} color={C.textMuted} style={{ flexShrink: 0 }} />
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setIsEditingDashboardTitle(true); setTimeout(() => landingTitleInputRef.current?.select(), 30); }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "text", padding: 0, textAlign: "left" }}
+              >
+                <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: C.navy, letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+                  {dashboardTitle.trim() || "Your first dashboard"}
+                </h1>
+                <Edit2 size={18} color={C.textMuted} style={{ flexShrink: 0, opacity: 0.7 }} />
+              </button>
+            )}
+          </div>
+
+          {/* Ask Iskra — full-width prompt widget */}
+          <div style={{
+            width: "100%",
+            ...glassPanel(isDark),
+            borderRadius: MONETA_CARD_RADIUS,
+            padding: "18px 22px",
+            marginBottom: 20,
+            background: isDark ? undefined : `linear-gradient(165deg, ${C.bgSurface} 0%, ${C.lavender} 140%)`,
+            boxSizing: "border-box",
+          }}>
+            <div style={{ display: "flex", alignItems: "stretch", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, minWidth: 160 }}>
+                <motion.svg viewBox="0 0 30 30" width={28} height={28} fill="none"
+                  animate={{ rotate: [0, 18, -14, 8, 0], scale: [1, 1.12, 0.94, 1.06, 1] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ filter: `drop-shadow(0 0 5px ${ISKRA_STAR.glow})`, flexShrink: 0 }}>
+                  <defs>
+                    <linearGradient id="aiPromptStar" x1="15" y1="0" x2="15" y2="30" gradientUnits="userSpaceOnUse">
+                      <stop stopColor={ISKRA_STAR.gradTop} /><stop offset="1" stopColor={ISKRA_STAR.gradBottom} />
+                    </linearGradient>
+                  </defs>
+                  <path d="M15 0 L16.6 12 L28 15 L16.6 18 L15 30 L13.4 18 L2 15 L13.4 12 Z" fill="url(#aiPromptStar)" />
+                </motion.svg>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>Ask Iskra</div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Describe the dashboard you need</div>
+                </div>
+              </div>
+              <div style={{
+                flex: "1 1 280px",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                borderRadius: 18,
+                border: `1px solid ${isDark ? C.border : "rgba(93,95,239,0.14)"}`,
+                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.9)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.95)",
+                padding: "6px 6px 6px 16px",
+                minHeight: 52,
+              }}>
+                <textarea
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onGenerate(); } }}
+                  placeholder="e.g. Sprint health across Jira and Slack, user retention from Amplitude…"
+                  rows={1}
+                  style={{
+                    flex: 1,
+                    width: "100%",
+                    minHeight: 40,
+                    padding: "8px 0",
+                    border: "none",
+                    outline: "none",
+                    resize: "none",
+                    background: "transparent",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    color: C.textPrimary,
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <motion.button
+                  type="button"
+                  onClick={() => onGenerate()}
+                  disabled={!prompt.trim() || generating}
+                  whileHover={prompt.trim() && !generating ? { scale: 1.02 } : {}}
+                  whileTap={prompt.trim() && !generating ? { scale: 0.97 } : {}}
+                  style={{
+                    ...(hasGeneratedBefore ? pillBtn() : pillBtn(true)),
+                    padding: "10px 20px",
+                    fontSize: 13,
+                    flexShrink: 0,
+                    opacity: !prompt.trim() || generating ? 0.55 : 1,
+                    cursor: !prompt.trim() || generating ? "default" : "pointer",
+                  }}>
+                  {generating
+                    ? <><RefreshCw size={14} style={{ animation: "spin 0.8s linear infinite" }} /> Building…</>
+                    : <><Sparkles size={14} color={hasGeneratedBefore ? C.spark : undefined} /> {hasGeneratedBefore ? "Re-generate" : "Generate"}</>}
+                </motion.button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {!hasDashboard && !generating && (
         <>
           {/* Feature cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 0.85fr", gap: 16, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
             <div style={{ background: C.lavender, borderRadius: MONETA_CARD_RADIUS, padding: "28px 26px", minHeight: 200, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               <div>
                 <h3 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 700, color: C.navy, lineHeight: 1.35, maxWidth: 280 }}>Let us make our work journey a satisfying achievement</h3>
@@ -943,77 +1288,6 @@ function MonetaDashboardShell({
                 <button type="button" style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: C.spark, color: "white", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={16} /></button>
                 <button type="button" style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: C.spark, color: "white", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={16} /></button>
               </div>
-            </div>
-            <div style={{ ...glassPanel(isDark), borderRadius: MONETA_CARD_RADIUS, padding: "22px 20px", minHeight: 200 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 20 }}>Project progress stages</div>
-              {[{ label: "Iskra Project", pct: 80, color: C.spark }, { label: "Task", pct: 20, color: "#F4A261" }].map(row => (
-                <div key={row.label} style={{ marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textMuted, marginBottom: 8 }}>
-                    <span>{row.label}</span><span>{row.pct}%</span>
-                  </div>
-                  <div style={{ height: 8, borderRadius: 999, background: C.bgElevated, overflow: "hidden" }}>
-                    <div style={{ width: `${row.pct}%`, height: "100%", borderRadius: 999, background: row.color }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bottom: Recent work + Team */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16 }}>
-            <div style={{ ...glassPanel(isDark), borderRadius: MONETA_CARD_RADIUS, padding: "22px 24px 8px" }}>
-              <div style={{ display: "flex", gap: 20, marginBottom: 18, borderBottom: `1px solid ${C.border}` }}>
-                {(["all", "project", "videos", "docs"] as const).map(tab => (
-                  <button key={tab} type="button" onClick={() => setWorkTab(tab)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 12px", fontSize: 13, fontWeight: workTab === tab ? 600 : 400, color: workTab === tab ? C.spark : C.textMuted, borderBottom: workTab === tab ? `2px solid ${C.spark}` : "2px solid transparent", textTransform: "capitalize" }}>
-                    {tab === "all" ? "All" : tab === "project" ? "Project" : tab === "videos" ? "Videos" : "Docs"}
-                  </button>
-                ))}
-              </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ color: C.textMuted, fontSize: 11, fontWeight: 500, textAlign: "left" }}>
-                    {["Resource", "Week", "Progress", "Task", "Feedback"].map(h => (
-                      <th key={h} style={{ padding: "8px 12px 12px 0", fontWeight: 500 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {RECENT_WORK_ROWS.map(row => (
-                    <tr key={row.name} style={{ borderTop: `1px solid ${C.border}` }}>
-                      <td style={{ padding: "14px 12px 14px 0" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: C.lavender, flexShrink: 0 }} />
-                          <div>
-                            <div style={{ fontWeight: 600, color: C.textPrimary }}>{row.name}</div>
-                            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{row.source}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ color: C.textSecondary, padding: "14px 8px" }}>{row.week}</td>
-                      <td style={{ color: C.textSecondary, padding: "14px 8px" }}>{row.progress}%</td>
-                      <td style={{ color: C.textSecondary, padding: "14px 8px" }}>{row.task}</td>
-                      <td style={{ color: C.textSecondary, padding: "14px 0" }}>{row.feedback}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ ...glassPanel(isDark), borderRadius: MONETA_CARD_RADIUS, padding: "22px 20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary }}>My team</span>
-                <button type="button" style={{ background: "none", border: "none", color: C.spark, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>See all</button>
-              </div>
-              {TEAM_MEMBERS.map(m => (
-                <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: `1px solid ${C.border}` }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg, #9B9DF8, #5D5FEF)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{m.initials}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{m.name}</div>
-                    <div style={{ fontSize: 11, color: C.textMuted }}>{m.role}</div>
-                  </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, whiteSpace: "nowrap" }}>{m.time}</div>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -1059,7 +1333,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
       <div style={{ ...glassPanel(isDark), borderRadius: 16, padding: "24px", marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 20 }}>Profile</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #1F6B45, #164D33)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", flexShrink: 0 }}>AK</div>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #9B9DF8, #5D5FEF)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", flexShrink: 0 }}>AK</div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.textPrimary }}>Alex Kim</div>
             <div style={{ fontSize: 12, color: C.textMuted }}>Appfire · Product Manager</div>
@@ -1109,7 +1383,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
 
       {/* Save */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button style={{ padding: "9px 24px", borderRadius: 10, background: "linear-gradient(135deg, #1F6B45 0%, #1F6B45 100%)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: "0 2px 14px rgba(31,107,69,0.35)" }}>
+        <button style={{ padding: "9px 24px", borderRadius: 10, background: C.spark, border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: "0 2px 14px rgba(93,95,239,0.35)" }}>
           Save changes
         </button>
       </div>
@@ -1245,8 +1519,11 @@ export default function IgniteIskraPageV2() {
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [dashboardTitle, setDashboardTitle] = useState("Your first dashboard");
+  const [isEditingDashboardTitle, setIsEditingDashboardTitle] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const landingTitleInputRef = useRef<HTMLInputElement>(null);
   const idRef = useRef(0);
 
 
@@ -1258,12 +1535,12 @@ export default function IgniteIskraPageV2() {
     setTimeout(() => {
       const sources = detectSources(p).filter(s => activeSources.includes(s));
       setCurrentSources(sources.length > 0 ? sources : activeSources);
-      setCurrentName(prev => prev ?? dashboardName(p));
+      setCurrentName(prev => prev ?? (dashboardTitle.trim() || dashboardName(p)));
       setCurrentPrompt(p);
       setPromptHistory(prev => [...prev, p]);
       setGenerating(false);
     }, 900);
-  }, [prompt, activeSources]);
+  }, [prompt, activeSources, dashboardTitle]);
 
   const handleGenerateSource = useCallback((sourceId: SourceId) => {
     const sourceName = SOURCE_CONFIG[sourceId].label;
@@ -1286,6 +1563,7 @@ export default function IgniteIskraPageV2() {
     setSavedDashboards(prev => [{ id, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }, ...prev]);
     setActiveDashboardId(id);
     setIsDirty(false);
+    setActiveNav("dashboard");
   }, [currentSources, currentName, currentPrompt]);
 
   const handleUpdate = useCallback(() => {
@@ -1303,6 +1581,7 @@ export default function IgniteIskraPageV2() {
     setSavedDashboards(prev => [{ id, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }, ...prev]);
     setActiveDashboardId(id);
     setIsDirty(false);
+    setActiveNav("dashboard");
   }, [currentSources, currentName, currentPrompt]);
 
   const handleSelectDashboard = useCallback((id: string) => {
@@ -1320,11 +1599,13 @@ export default function IgniteIskraPageV2() {
   const handleNewDashboard = useCallback(() => {
     setCurrentSources(null); setCurrentName(null); setCurrentPrompt(null);
     setPrompt(""); setActiveDashboardId(null); setActiveSources([...ALL_SOURCES]); setPromptHistory([]); setHistoryOpen(false); setIsDirty(false);
+    setDashboardTitle("Your first dashboard"); setIsEditingDashboardTitle(false);
   }, []);
 
   const toggleSource = (s: SourceId) => setActiveSources(prev => prev.includes(s) ? (prev.length > 1 ? prev.filter(x => x !== s) : prev) : [...prev, s]);
 
   const hasDashboard = currentSources !== null && !generating;
+  const hasGeneratedBefore = currentSources !== null || promptHistory.length > 0;
 
 
   return (
@@ -1332,7 +1613,15 @@ export default function IgniteIskraPageV2() {
       <BackgroundAnimation isDark={isDark} />
 
       {/* Left Sidebar */}
-      <LeftSidebar isDark={isDark} activeNav={activeNav} setActiveNav={setActiveNav} />
+      <LeftSidebar
+        isDark={isDark}
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        savedDashboards={savedDashboards}
+        activeId={activeDashboardId}
+        onSelect={handleSelectDashboard}
+        onDelete={handleDeleteDashboard}
+      />
 
       {/* Main Content */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative", zIndex: 10 }}>
@@ -1358,7 +1647,13 @@ export default function IgniteIskraPageV2() {
           onConnectApps={() => setActiveNav("sources")}
           generating={generating}
           hasDashboard={hasDashboard}
+          hasGeneratedBefore={hasGeneratedBefore}
           isDark={isDark}
+          dashboardTitle={dashboardTitle}
+          setDashboardTitle={setDashboardTitle}
+          isEditingDashboardTitle={isEditingDashboardTitle}
+          setIsEditingDashboardTitle={setIsEditingDashboardTitle}
+          landingTitleInputRef={landingTitleInputRef}
         />
 
         {hasDashboard && (
@@ -1402,25 +1697,42 @@ export default function IgniteIskraPageV2() {
                 placeholder="Modify or extend this dashboard…" rows={1}
                 style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.textPrimary, fontSize: 14, resize: "none", fontFamily: "inherit" }} />
               <motion.button onClick={() => handleGenerate()} disabled={!prompt.trim() || generating}
-                style={{ ...pillBtn(true), padding: "8px 16px", opacity: !prompt.trim() || generating ? 0.5 : 1 }}>
-                {generating ? <RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : <Zap size={13} />}
-                {generating ? "Building…" : "Generate"}
+                style={{
+                  ...(hasGeneratedBefore ? pillBtn() : pillBtn(true)),
+                  padding: "8px 16px",
+                  opacity: !prompt.trim() || generating ? 0.5 : 1,
+                }}>
+                {generating
+                  ? <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Building…</>
+                  : hasGeneratedBefore
+                    ? <><RefreshCw size={13} color={C.spark} /> Re-generate</>
+                    : <><Zap size={13} /> Generate</>}
               </motion.button>
             </div>
           </div>
         )}
 
-        {/* Generating indicator */}
+        {/* Generating overlay + loader */}
         <AnimatePresence>
           {generating && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: "32px 32px", textAlign: "center" }}>
-              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
-                {[0, 0.2, 0.4].map((d, i) => (
-                  <motion.div key={i} animate={{ scale: [1,1.5,1], opacity: [0.4,1,0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }}
-                    style={{ width: 7, height: 7, borderRadius: "50%", background: C.spark }} />
-                ))}
-              </div>
-              <div style={{ fontSize: 13, color: C.textMuted }}>Pulling data and building your dashboard…</div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: isDark ? "rgba(10,14,28,0.72)" : "rgba(245,247,250,0.9)",
+                backdropFilter: "blur(14px)",
+                WebkitBackdropFilter: "blur(14px)",
+              }}
+            >
+              <IskraGenerateLoader isDark={isDark} />
             </motion.div>
           )}
         </AnimatePresence>

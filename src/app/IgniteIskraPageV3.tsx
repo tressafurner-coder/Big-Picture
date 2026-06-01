@@ -147,7 +147,7 @@ function heroGradientTitleStyle(): React.CSSProperties {
     fontWeight: 700,
     letterSpacing: "-0.4px",
     lineHeight: 1.2,
-    background: "linear-gradient(135deg, #5B8DEF 0%, #3BCEAC 100%)",
+    background: "linear-gradient(135deg, #4A7FD9 0%, #32B59A 100%)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
