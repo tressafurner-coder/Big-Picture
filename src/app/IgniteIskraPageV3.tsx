@@ -15,38 +15,39 @@ import {
 } from "lucide-react";
 
 // ─── Color palettes ──────────────────────────────────────────────────────────
+/** Dark theme — warm orange (Ignite Iskra project 3 orange) */
 const DARK_PALETTE = {
-  bgBase: "#0A0F0D",
-  bgSurface: "#111918",
-  bgElevated: "#182420",
-  bgHover: "#1E2E29",
-  border: "rgba(255,255,255,0.09)",
-  borderStrong: "rgba(255,255,255,0.16)",
-  spark: "#E8112A",
-  sparkBright: "#FF3347",
-  sparkFaint: "rgba(232,17,42,0.12)",
-  sparkGlow: "rgba(232,17,42,0.25)",
-  textPrimary: "#F2F2F2",
-  textSecondary: "#D8D8D8",
-  textMuted: "#8A9A96",
-  success: "#22C55E",
-  successFaint: "rgba(34,197,94,0.12)",
-  warning: "#F5A623",
-  warningFaint: "rgba(245,166,35,0.12)",
-  error: "#EF4444",
-  errorFaint: "rgba(239,68,68,0.12)",
-  info: "#38BDF8",
-  amplitude: "#29C6FA",
-  amplitudeFaint: "rgba(41,198,250,0.1)",
-  jira: "#A78BFA",
-  jiraFaint: "rgba(167,139,250,0.1)",
-  slack: "#FB923C",
-  slackFaint: "rgba(251,146,60,0.1)",
-  confluence: "#60A5FA",
-  confluenceFaint: "rgba(96,165,250,0.1)",
-  launchdarkly: "#34D399",
-  launchdarklyFaint: "rgba(52,211,153,0.1)",
-  shadow: "none",
+  bgBase: "#0F0A07",
+  bgSurface: "#1A110D",
+  bgElevated: "#261A14",
+  bgHover: "#32241C",
+  border: "rgba(251,146,60,0.12)",
+  borderStrong: "rgba(251,146,60,0.22)",
+  spark: "#FB923C",
+  sparkBright: "#FDBA74",
+  sparkFaint: "rgba(249,115,22,0.18)",
+  sparkGlow: "rgba(251,146,60,0.32)",
+  textPrimary: "#FAFAF9",
+  textSecondary: "#E7E5E4",
+  textMuted: "#A8A29E",
+  success: "#34D399",
+  successFaint: "rgba(52,211,153,0.14)",
+  warning: "#FBBF24",
+  warningFaint: "rgba(251,191,36,0.14)",
+  error: "#F87171",
+  errorFaint: "rgba(248,113,113,0.14)",
+  info: "#FB923C",
+  amplitude: "#FB923C",
+  amplitudeFaint: "rgba(251,146,60,0.14)",
+  jira: "#F59E0B",
+  jiraFaint: "rgba(245,158,11,0.14)",
+  slack: "#FB7185",
+  slackFaint: "rgba(251,113,133,0.12)",
+  confluence: "#FDBA74",
+  confluenceFaint: "rgba(253,186,116,0.12)",
+  launchdarkly: "#FBBF24",
+  launchdarklyFaint: "rgba(251,191,36,0.12)",
+  shadow: "0 4px 24px rgba(0,0,0,0.35)",
 };
 
 const LIGHT_PALETTE = {
@@ -96,11 +97,11 @@ let isDarkMode = false;
 function glassPanel(dark = isDarkMode): React.CSSProperties {
   return dark
     ? {
-        background: "rgba(255,255,255,0.07)",
+        background: "rgba(38,26,20,0.72)",
         backdropFilter: "blur(28px) saturate(160%)",
         WebkitBackdropFilter: "blur(28px) saturate(160%)",
-        border: "1px solid rgba(255,255,255,0.14)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
+        border: "1px solid rgba(251,146,60,0.14)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(251,146,60,0.06)",
       }
     : {
         background: "#FFFFFF",
@@ -112,9 +113,9 @@ function glassPanel(dark = isDarkMode): React.CSSProperties {
 function glassActiveNav(): React.CSSProperties {
   if (isDarkMode) {
     return {
-      background: "rgba(255,255,255,0.12)",
-      border: "1px solid rgba(255,255,255,0.2)",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      background: "rgba(249,115,22,0.2)",
+      border: "1px solid rgba(251,146,60,0.35)",
+      boxShadow: "0 2px 12px rgba(249,115,22,0.2)",
     };
   }
   return {
@@ -125,8 +126,13 @@ function glassActiveNav(): React.CSSProperties {
 }
 
 function navActiveColor(active: boolean): string {
-  if (!active) return isDarkMode ? "rgba(255,255,255,0.65)" : C.textMuted;
-  return isDarkMode ? "white" : C.spark;
+  if (!active) return isDarkMode ? "rgba(250,250,249,0.62)" : C.textMuted;
+  return isDarkMode ? C.sparkBright : C.spark;
+}
+
+function sidebarSpotlightBackground(mousePos: { x: number; y: number }): string {
+  const { x, y } = mousePos;
+  return `radial-gradient(circle 500px at ${x}px ${y}px, rgba(251,146,60,0.34) 0%, rgba(234,88,12,0.16) 36%, rgba(38,26,20,0.96) 66%, rgba(26,17,13,1) 100%)`;
 }
 
 function pageTitleStyle(): React.CSSProperties {
@@ -147,10 +153,13 @@ function heroGradientTitleStyle(): React.CSSProperties {
     fontWeight: 700,
     letterSpacing: "-0.4px",
     lineHeight: 1.2,
-    background: "linear-gradient(135deg, #4A7FD9 0%, #32B59A 100%)",
+    backgroundImage: isDarkMode
+      ? "linear-gradient(135deg, #FFEDD5 0%, #FB923C 50%, #EA580C 100%)"
+      : "linear-gradient(135deg, #4A7FD9 0%, #32B59A 100%)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
-    color: "transparent",
+    WebkitTextFillColor: "transparent",
+    color: C.spark,
   };
 }
 
@@ -173,14 +182,25 @@ const SOURCE_CONFIG: Record<SourceId, { label: string; color: string; faint: str
 
 const ALL_SOURCES: SourceId[] = ["amplitude", "jira", "slack", "confluence", "launchdarkly"];
 
-// Vibrant card gradients (like the project cards in the reference)
-const SOURCE_GRADIENTS: Record<SourceId, string> = {
+const SOURCE_GRADIENTS_LIGHT: Record<SourceId, string> = {
   amplitude:    "linear-gradient(135deg, #9B8AFB 0%, #7C5CE7 100%)",
   jira:         "linear-gradient(135deg, #818CF8 0%, #6366F1 100%)",
   slack:        "linear-gradient(135deg, #F9A8D4 0%, #EC4899 100%)",
   confluence:   "linear-gradient(135deg, #7DD3FC 0%, #38BDF8 100%)",
   launchdarkly: "linear-gradient(135deg, #5EEAD4 0%, #2DD4BF 100%)",
 };
+
+const SOURCE_GRADIENTS_DARK: Record<SourceId, string> = {
+  amplitude:    "linear-gradient(135deg, #FDBA74 0%, #F97316 100%)",
+  jira:         "linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%)",
+  slack:        "linear-gradient(135deg, #FDA4AF 0%, #FB7185 100%)",
+  confluence:   "linear-gradient(135deg, #FDE68A 0%, #FB923C 100%)",
+  launchdarkly: "linear-gradient(135deg, #FDE047 0%, #EA580C 100%)",
+};
+
+function sourceGradient(id: SourceId): string {
+  return isDarkMode ? SOURCE_GRADIENTS_DARK[id] : SOURCE_GRADIENTS_LIGHT[id];
+}
 
 const SOURCE_CARD_METRICS: Record<SourceId, { metric: string; detail: string; spark: number[] }> = {
   amplitude:    { metric: "14.8k DAU",    detail: "+8.2% this week",     spark: [42,38,51,47,55,49,58] },
@@ -671,13 +691,13 @@ function BackgroundAnimation({ isDark }: { isDark: boolean }) {
   if (!isDark) return null;
   const keyframesCss = SHOOTING_STARS.map(s => {
     const td = 380 + s.length, vP = ((s.dur / s.cycle) * 100).toFixed(2), fP = ((s.dur / s.cycle) * 100 * 0.6).toFixed(2), sP = (parseFloat(vP) + 0.4).toFixed(2);
-    return `@keyframes ss-${s.id}{0%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}0.4%{opacity:1;transform:rotate(${s.angle}deg) translateX(0px)}${fP}%{opacity:.9}${vP}%{opacity:0;transform:rotate(${s.angle}deg) translateX(${td}px)}${sP}%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}100%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}}`;
+    return `@keyframes ss-${s.id}{0%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}0.4%{opacity:.55;transform:rotate(${s.angle}deg) translateX(0px)}${fP}%{opacity:.45}${vP}%{opacity:0;transform:rotate(${s.angle}deg) translateX(${td}px)}${sP}%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}100%{opacity:0;transform:rotate(${s.angle}deg) translateX(0px)}}`;
   }).join('');
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
       <style>{keyframesCss}</style>
       {SHOOTING_STARS.map(s => (
-        <div key={s.id} style={{ position: "absolute", left: `${s.left}%`, top: `${s.top}%`, width: s.length, height: 1.5, background: "linear-gradient(to right, rgba(200,220,255,0), rgba(210,230,255,1))", borderRadius: 2, transformOrigin: "left center", animation: `ss-${s.id} ${s.cycle}s ${s.delay}s linear infinite`, opacity: 0 }} />
+        <div key={s.id} style={{ position: "absolute", left: `${s.left}%`, top: `${s.top}%`, width: s.length, height: 1.5, background: "linear-gradient(to right, rgba(251,146,60,0), rgba(253,186,116,0.38))", borderRadius: 2, transformOrigin: "left center", animation: `ss-${s.id} ${s.cycle}s ${s.delay}s linear infinite`, opacity: 0 }} />
       ))}
     </div>
   );
@@ -738,7 +758,7 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
         {ALL_SOURCES.map(s => {
           const { label, Icon } = SOURCE_CONFIG[s];
           const { workspace, description } = SOURCE_DETAILS[s];
-          const gradient = SOURCE_GRADIENTS[s];
+          const gradient = sourceGradient(s);
           const isOn = activeSources.includes(s);
           return (
             <div key={s} style={{
@@ -801,42 +821,30 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
   mousePos: { x: number; y: number }; onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
   enabledSourceCount: number;
 }) {
-  return (
-    <div style={{
-      width: 260, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
-      background: isDark ? "rgba(13,25,24,0.98)" : C.bgSurface,
-      borderRight: `1px solid ${C.border}`,
-      display: "flex", flexDirection: "column",
-      zIndex: 20,
-    }}>
-      <div style={{
-        flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
-        overflow: "hidden",
-      }}>
-        {/* Logo */}
-        <div style={{ padding: "22px 20px 16px" }}>
-          <IskraLogo />
-        </div>
-        <div style={{ margin: "0 20px", height: 1, background: C.border, borderRadius: 1 }} />
+  const sidebarInner = (
+    <>
+      <div style={{ padding: "22px 20px 16px" }}>
+        <IskraLogo />
+      </div>
+      <div style={{ margin: "0 20px", height: 1, background: C.border, borderRadius: 1 }} />
 
-        {/* User profile */}
-        <div style={{ padding: "16px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: isDark ? "rgba(255,255,255,0.15)" : "linear-gradient(135deg, #9B8AFB, #7C5CE7)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", border: isDark ? "1.5px solid rgba(255,255,255,0.25)" : "none" }}>
-                AK
-              </div>
-              <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#4AE87A", border: `2px solid ${isDark ? "#1a2e24" : C.bgSurface}` }} />
+      <div style={{ padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: isDark ? "linear-gradient(135deg, #FB923C, #F97316)" : "linear-gradient(135deg, #9B8AFB, #7C5CE7)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", border: isDark ? "1.5px solid rgba(251,146,60,0.4)" : "none" }}>
+              AK
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? "white" : C.textPrimary, letterSpacing: "0.01em" }}>Alex Kim</div>
-              <div style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.6)" : C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>alex@company.com</div>
-            </div>
+            <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#34D399", border: `2px solid ${C.bgSurface}` }} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, letterSpacing: "0.01em" }}>Alex Kim</div>
+            <div style={{ fontSize: 11, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>alex@company.com</div>
           </div>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <div style={{ padding: "10px 10px 4px", flex: 1, overflowY: "auto" }}>
+      <div style={{ padding: "10px 10px 4px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div style={{ flex: 1 }}>
           {NAV_ITEMS.map(item => (
             <div key={item.id}>
               <button onClick={() => setActiveNav(item.id === "dashboard" ? "dashboard" : item.id)}
@@ -850,26 +858,25 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
                       fontWeight: 400,
                       letterSpacing: "0.02em",
                       color: activeNav === item.id
-                        ? (isDark ? "rgba(255,255,255,0.5)" : "rgba(124,92,231,0.55)")
-                        : (isDark ? "rgba(255,255,255,0.38)" : C.textMuted),
+                        ? (isDark ? "rgba(251,146,60,0.75)" : "rgba(124,92,231,0.55)")
+                        : C.textMuted,
                     }}>
                       ({enabledSourceCount} out of {ALL_SOURCES.length})
                     </span>
                   )}
                 </span>
                 {item.id === "dashboard" && savedDashboards.length > 0 && (
-                  <span style={{ marginLeft: "auto", background: isDark ? "rgba(255,255,255,0.2)" : C.sparkFaint, color: isDark ? "white" : C.spark, fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "0 6px", lineHeight: "16px" }}>{savedDashboards.length}</span>
+                  <span style={{ marginLeft: "auto", background: C.sparkFaint, color: isDark ? C.sparkBright : C.spark, fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "0 6px", lineHeight: "16px" }}>{savedDashboards.length}</span>
                 )}
               </button>
 
-              {/* Dashboard sub-list */}
               {item.id === "dashboard" && savedDashboards.length > 0 && (
                 <div style={{ marginTop: 6, marginBottom: 4 }}>
                   {savedDashboards.map(d => (
                     <div key={d.id} onClick={() => onSelect(d.id)}
                       style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: 10, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}>
                       <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, flexShrink: 0, opacity: activeId === d.id && activeNav === "dashboard" ? 1 : 0.5 }} />
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id && activeNav === "dashboard" ? C.spark : (isDark ? "rgba(255,255,255,0.6)" : C.textMuted), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
                       <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 2, display: "flex", flexShrink: 0 }}>
                         <X size={11} />
@@ -881,7 +888,83 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
             </div>
           ))}
         </div>
+
+        <div style={{ padding: "8px 2px 12px", flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
+          <button
+            type="button"
+            onClick={() => setIsDark(v => !v)}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "9px 12px",
+              borderRadius: 12,
+              background: "transparent",
+              border: `1px solid ${C.border}`,
+              cursor: "pointer",
+              color: C.textSecondary,
+              fontSize: 13,
+              fontWeight: 500,
+              fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              transition: "all 0.12s",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.12)" : C.bgHover;
+              e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.3)" : C.borderStrong;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = C.border;
+            }}
+          >
+            {isDark ? <Moon size={15} color={C.spark} /> : <Sun size={15} color={C.spark} />}
+            <span>{isDark ? "Dark mode on" : "Switch to dark mode"}</span>
+          </button>
+        </div>
       </div>
+    </>
+  );
+
+  return (
+    <div style={{
+      width: 260, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
+      background: C.bgBase,
+      display: "flex", flexDirection: "column",
+      zIndex: 20,
+    }}>
+      {isDark ? (
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            background: sidebarSpotlightBackground(mousePos),
+            backdropFilter: "blur(28px) saturate(160%)",
+            WebkitBackdropFilter: "blur(28px) saturate(160%)",
+            borderRight: `1px solid ${C.border}`,
+            overflow: "hidden",
+            position: "relative",
+            transition: "background 0.15s ease",
+          }}
+          onMouseMove={onMouseMove}
+        >
+          {sidebarInner}
+        </div>
+      ) : (
+        <div style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          background: C.bgSurface,
+          borderRight: `1px solid ${C.border}`,
+          overflow: "hidden",
+        }}>
+          {sidebarInner}
+        </div>
+      )}
     </div>
   );
 }
@@ -908,7 +991,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
     textTransform: "uppercase", marginBottom: 6, display: "block",
   };
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
-    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? "#7C5CE7" : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? "#5B4BD4" : C.border}` }}>
+    <div onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 20, background: on ? C.spark : C.bgElevated, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, border: `1px solid ${on ? C.sparkBright : C.border}` }}>
       <div style={{ position: "absolute", top: 2, left: on ? 17 : 2, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
     </div>
   );
@@ -983,7 +1066,7 @@ function SettingsPanel({ isDark }: { isDark: boolean }) {
 function SourceCard({ sourceId, onGenerate }: { sourceId: SourceId; onGenerate: (s: SourceId) => void }) {
   const { label } = SOURCE_CONFIG[sourceId];
   const { metric, detail, spark } = SOURCE_CARD_METRICS[sourceId];
-  const gradient = SOURCE_GRADIENTS[sourceId];
+  const gradient = sourceGradient(sourceId);
   return (
     <motion.div
       whileHover={{ y: -3, boxShadow: "0 8px 28px rgba(0,0,0,0.18)" }}
@@ -1030,7 +1113,7 @@ function RightPanel({ isDark }: { isDark: boolean }) {
   return (
     <div style={{
       width: 272, flexShrink: 0, height: "100dvh", position: "sticky", top: 0,
-      background: isDark ? "rgba(13,25,24,0.98)" : C.bgSurface,
+      background: C.bgSurface,
       borderLeft: `1px solid ${C.border}`,
       display: "flex", flexDirection: "column",
       boxShadow: isDark ? "none" : "-2px 0 12px rgba(0,0,0,0.04)",
@@ -1067,7 +1150,7 @@ function RightPanel({ isDark }: { isDark: boolean }) {
             </div>
             {group.events.map((ev, i) => {
               const src = SOURCE_CONFIG[ev.source];
-              const grad = SOURCE_GRADIENTS[ev.source];
+              const grad = sourceGradient(ev.source);
               return (
                 <div key={i} style={{ padding: "8px 20px", display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <div style={{ flexShrink: 0, paddingTop: 2 }}>
@@ -1195,8 +1278,10 @@ export default function IgniteIskraPageV3() {
     <div style={{
       minHeight: "100dvh",
       background: C.bgBase,
-      backgroundImage: isDark ? "none" : "linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)",
-      backgroundSize: isDark ? undefined : "28px 28px",
+      backgroundImage: isDark
+        ? "linear-gradient(rgba(251,146,60,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(251,146,60,0.05) 1px, transparent 1px)"
+        : "linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)",
+      backgroundSize: "28px 28px",
       color: C.textPrimary,
       fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       display: "flex",
@@ -1258,7 +1343,7 @@ export default function IgniteIskraPageV3() {
                     <h1 style={{ ...pageTitleStyle(), margin: 0 }}>{currentName}</h1>
                     <Edit2 size={13} color={C.textMuted} style={{ opacity: 0.6, flexShrink: 0 }} />
                     {activeDashboardId && !isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: C.successFaint, color: C.success, fontWeight: 600, marginLeft: 2 }}>SAVED</span>}
-                    {activeDashboardId && isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: isDark ? "rgba(255,180,0,0.15)" : "#FFF8E6", color: "#B07800", fontWeight: 600, marginLeft: 2 }}>UNSAVED CHANGES</span>}
+                    {activeDashboardId && isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: isDark ? "rgba(251,191,36,0.18)" : "#FFF8E6", color: isDark ? "#FDBA74" : "#B07800", fontWeight: 600, marginLeft: 2 }}>UNSAVED CHANGES</span>}
                   </button>
                 )}
               </div>
@@ -1298,7 +1383,7 @@ export default function IgniteIskraPageV3() {
                   disabled={currentSources === null && !generating}
                   whileHover={currentSources !== null || generating ? { scale: 1.02 } : {}}
                   whileTap={currentSources !== null || generating ? { scale: 0.97 } : {}}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: (currentSources === null && !generating) ? (isDark ? "rgba(255,255,255,0.05)" : C.bgSurface) : C.spark, border: `1px solid ${(currentSources === null && !generating) ? C.border : "transparent"}`, cursor: (currentSources === null && !generating) ? "default" : "pointer", color: (currentSources === null && !generating) ? C.textMuted : "white", fontSize: 13, fontWeight: 600, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: (currentSources === null && !generating) ? "none" : "0 4px 14px rgba(124,92,231,0.35)", opacity: (currentSources === null && !generating) ? 0.5 : 1, transition: "all 0.15s" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: (currentSources === null && !generating) ? (isDark ? "rgba(255,255,255,0.05)" : C.bgSurface) : C.spark, border: `1px solid ${(currentSources === null && !generating) ? C.border : "transparent"}`, cursor: (currentSources === null && !generating) ? "default" : "pointer", color: (currentSources === null && !generating) ? C.textMuted : "white", fontSize: 13, fontWeight: 600, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: (currentSources === null && !generating) ? "none" : `0 4px 14px ${C.sparkGlow}`, opacity: (currentSources === null && !generating) ? 0.5 : 1, transition: "all 0.15s" }}>
                   <Plus size={14} /><span>New Dashboard</span>
                 </motion.button>
               </div>
@@ -1347,7 +1432,7 @@ export default function IgniteIskraPageV3() {
                   color: !prompt.trim() || generating ? C.textMuted : "white",
                   cursor: !prompt.trim() || generating ? "default" : "pointer",
                   fontSize: 13, fontWeight: 700, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                  boxShadow: prompt.trim() && !generating ? "0 4px 16px rgba(124,92,231,0.35)" : "none",
+                  boxShadow: prompt.trim() && !generating ? `0 4px 16px ${C.sparkGlow}` : "none",
                   transition: "all 0.15s",
                 }}>
                 {generating
@@ -1389,9 +1474,9 @@ export default function IgniteIskraPageV3() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SUGGESTED_PROMPTS.map(p => (
                 <button key={p} onClick={() => { setPrompt(p); handleGenerate(p); }}
-                  style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.45)", backdropFilter: "blur(16px) saturate(160%)", WebkitBackdropFilter: "blur(16px) saturate(160%)", border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(255,255,255,0.7)", borderRadius: 20, padding: "5px 14px", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.85)" : "#5B4BD4", fontSize: 12, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: isDark ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(124,92,231,0.1)", transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.58)"; e.currentTarget.style.borderColor = isDark ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.9)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = isDark ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.7)"; }}>
+                  style={{ background: isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)", backdropFilter: "blur(16px) saturate(160%)", WebkitBackdropFilter: "blur(16px) saturate(160%)", border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid rgba(255,255,255,0.7)", borderRadius: 20, padding: "5px 14px", cursor: "pointer", color: isDark ? C.sparkBright : "#5B4BD4", fontSize: 12, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxShadow: isDark ? "inset 0 1px 0 rgba(251,146,60,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(124,92,231,0.1)", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.22)" : "rgba(255,255,255,0.58)"; e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.4)" : "rgba(255,255,255,0.9)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.28)" : "rgba(255,255,255,0.7)"; }}>
                   {p}
                 </button>
               ))}
