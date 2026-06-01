@@ -21,6 +21,10 @@ export const ads = {
   primaryInteractiveHover: "hover:bg-[#0055CC]",
   danger: "text-[#AE2E24]",
   dangerHover: "hover:bg-[#FFECEB]",
+  /** ADS Section Message — error (R50 surface, N800 copy) */
+  sectionMessageError:
+    "flex gap-2 rounded-[3px] bg-[#FFECEB] px-3 py-2 font-sans text-sm font-normal leading-5 text-[#172B4D]",
+  sectionMessageErrorIcon: "mt-0.5 size-4 shrink-0 text-[#E34935]",
   sidebarBg: "bg-[#172B4D]",
   sidebarMuted: "text-[#B6C2CF]",
 

@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   ListOrdered,
   Plus,
+  AlertCircle,
   ShieldAlert,
   Target,
   Trophy,
@@ -39,6 +40,33 @@ const JIRA_FIELD_PEER_TAKEN_TOOLTIP =
 /** Context selector is fixed to default. */
 const JIRA_CONTEXT_FIXED_TOOLTIP =
   "Only the default Jira field context is supported.";
+
+/** Field 2 demo: no default context — mapping cannot be saved. */
+const JIRA_FIELD_NO_DEFAULT_CONTEXT_ERROR =
+  "This field lacks a default context and option values in Jira. Choose a different field or configure a context with values in Jira.";
+
+/** Field 3 demo: default context exists but has no option values. */
+const JIRA_FIELD_NO_VALUES_ERROR =
+  "This field's default context has no option values in Jira. Add values in Jira or choose a different field.";
+
+const JIRA_NO_CONTEXT_PLACEHOLDER = "There is no Jira context";
+/** Field 3: default context exists but has no values — shown in Context control. */
+const JIRA_DEFAULT_CONTEXT_NO_VALUES_LABEL = "Default Context 1";
+
+type JiraFieldIssue = "no_default_context" | "no_values";
+
+const jiraContextDisabledShellBase =
+  "flex h-9 w-full min-w-0 cursor-not-allowed items-center rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm shadow-none select-none";
+
+const jiraContextDisabledShellNoContextClass = cn(
+  jiraContextDisabledShellBase,
+  "italic text-[#626F86]",
+);
+
+const jiraContextDisabledShellWithContextClass = cn(
+  jiraContextDisabledShellBase,
+  "font-normal text-[#626F86]",
+);
 
 /** Demo Jira custom fields — prototype ids; labels numbered for clarity. */
 const JIRA_CUSTOM_FIELD_OPTIONS = [
@@ -80,8 +108,8 @@ const JIRA_FIELD_CONTEXTS: Record<string, JiraFieldContext[]> = {
     { id: "ctx_bp_prog", label: "BigPicture · Program Epic" },
     { id: "ctx_issue_types", label: "Issue types: Bug, Story, Task" },
   ],
+  /** No default context; only scoped contexts (unsaveable in BigPicture). */
   customfield_10058: [
-    { id: "ctx_default", label: "Default" },
     { id: "ctx_risk_proj", label: "Risk register (PROJ-42)" },
   ],
   customfield_10102: [
@@ -96,6 +124,34 @@ const JIRA_FIELD_CONTEXTS: Record<string, JiraFieldContext[]> = {
 
 function getContextsForJiraField(fieldId: string): JiraFieldContext[] {
   return JIRA_FIELD_CONTEXTS[fieldId] ?? [{ id: "ctx_default", label: "Default" }];
+}
+
+function getJiraFieldIssue(fieldId: string): JiraFieldIssue | null {
+  if (fieldId === "customfield_10058") return "no_default_context";
+  if (fieldId === "customfield_10102") return "no_values";
+  return null;
+}
+
+function isJiraFieldUnsaveable(fieldId: string): boolean {
+  return getJiraFieldIssue(fieldId) !== null;
+}
+
+function getJiraFieldUnsaveableError(fieldId: string): string {
+  const issue = getJiraFieldIssue(fieldId);
+  if (issue === "no_default_context") return JIRA_FIELD_NO_DEFAULT_CONTEXT_ERROR;
+  if (issue === "no_values") return JIRA_FIELD_NO_VALUES_ERROR;
+  return "";
+}
+
+function getDefaultContextId(fieldId: string): string | null {
+  if (getJiraFieldIssue(fieldId) === "no_default_context") return null;
+  return getContextsForJiraField(fieldId)[0]?.id ?? "ctx_default";
+}
+
+function getDisabledContextPlaceholder(issue: JiraFieldIssue): string {
+  return issue === "no_values"
+    ? JIRA_DEFAULT_CONTEXT_NO_VALUES_LABEL
+    : JIRA_NO_CONTEXT_PLACEHOLDER;
 }
 
 function likelihoodRowsStorageKey(fieldId: string, contextId: string) {
@@ -199,6 +255,8 @@ function ManualMetricCard({
   const metricNameInputId = `metric-display-name-${cardSlug}`;
   const fieldSelectId = `test-metric-jira-field-${slug}`;
   const contextSelectId = `test-metric-jira-context-${slug}`;
+  const jiraFieldIssue = mapToJira ? getJiraFieldIssue(selectedJiraFieldId) : null;
+  const jiraFieldBlocksSave = jiraFieldIssue !== null;
   return (
     <div
       className={cn(
@@ -302,109 +360,131 @@ function ManualMetricCard({
                   <Label htmlFor={contextSelectId} className={ads.labelField}>
                     Context
                   </Label>
-                  <Tooltip
-                    content={JIRA_CONTEXT_FIXED_TOOLTIP}
-                    className="block w-full min-w-0 cursor-default"
-                  >
+                  {jiraFieldIssue ? (
                     <div
                       id={contextSelectId}
-                      className={cn(
-                        "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
-                      )}
+                      className={
+                        jiraFieldIssue === "no_values"
+                          ? jiraContextDisabledShellWithContextClass
+                          : jiraContextDisabledShellNoContextClass
+                      }
                       aria-disabled="true"
-                      aria-label="Context (default only)"
+                      aria-label={getDisabledContextPlaceholder(jiraFieldIssue)}
                     >
-                      <span className="min-w-0 truncate">Default context</span>
-                      <ChevronDown
-                        className="size-4 shrink-0 opacity-50"
-                        aria-hidden
-                      />
+                      <span className="min-w-0 truncate">
+                        {getDisabledContextPlaceholder(jiraFieldIssue)}
+                      </span>
                     </div>
-                  </Tooltip>
+                  ) : (
+                    <Tooltip
+                      content={JIRA_CONTEXT_FIXED_TOOLTIP}
+                      className="block w-full min-w-0 cursor-default"
+                    >
+                      <div
+                        id={contextSelectId}
+                        className={cn(
+                          "flex h-9 w-full min-w-0 cursor-not-allowed items-center justify-between gap-2 rounded-[3px] border border-[#DFE1E6] bg-[#F7F8F9] px-3 text-left text-sm text-[#626F86] shadow-none select-none",
+                        )}
+                        aria-disabled="true"
+                        aria-label="Context (default only)"
+                      >
+                        <span className="min-w-0 truncate">Default context</span>
+                        <ChevronDown
+                          className="size-4 shrink-0 opacity-50"
+                          aria-hidden
+                        />
+                      </div>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             ) : null}
           </div>
         </div>
       </div>
-      <table className="w-full border-collapse font-sans text-sm">
-        <thead>
-          <tr
-            className={cn(
-              "border-b text-left",
-              ads.border,
-              ads.surfaceSubtle,
-              ads.overline,
-            )}
-          >
-            <th className="px-4 py-2 font-semibold">Value name</th>
-            <th className="px-4 py-2 font-semibold">Value</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#DFE1E6]">
-          {rows.map((row, i) => (
+      {!jiraFieldBlocksSave ? (
+        <table className="w-full border-collapse font-sans text-sm">
+          <thead>
             <tr
-              key={
-                mapToJira
-                  ? `${slug}-${defaultContextId}-${i}`
-                  : `${slug}-${i}`
-              }
+              className={cn(
+                "border-b text-left",
+                ads.border,
+                ads.surfaceSubtle,
+                ads.overline,
+              )}
             >
-              <td className="px-4 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className={`inline-block size-6 shrink-0 rounded-sm ${row.swatch}`}
-                    aria-hidden
-                  />
-                  {mapToJira ? (
-                    <Tooltip
-                      content={JIRA_VALUE_NAME_TOOLTIP}
-                      className="w-full min-w-0 flex-1 cursor-default"
-                    >
-                      <div
-                        className={cn(
-                          "flex min-h-9 min-w-0 flex-1 items-center rounded-[3px] border border-transparent bg-[#F7F8F9] px-3 py-2 text-sm font-normal leading-5 text-[#626F86]",
-                        )}
-                        aria-label={`${row.label}, managed in Jira — edit values in your Jira project`}
-                      >
-                        {row.label}
-                      </div>
-                    </Tooltip>
-                  ) : (
-                    <input
-                      type="text"
-                      value={row.label}
-                      onChange={(e) => onLabelChange(i, e.target.value)}
-                      className={cn(
-                        "min-w-0 flex-1 py-1 text-sm font-normal",
-                        ads.fieldControl,
-                      )}
-                      aria-label={`Value name for ${metricDisplayName}`}
-                    />
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-2">
-                <input
-                  type="number"
-                  value={row.value}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === "") return;
-                    const n = Number(raw);
-                    if (!Number.isNaN(n)) onValueChange(i, n);
-                  }}
-                  className={cn(
-                    "min-h-9 w-full min-w-[4rem] max-w-[7rem] tabular-nums",
-                    ads.fieldControl,
-                  )}
-                  aria-label={`${metricDisplayName} numeric value for ${row.label}`}
-                />
-              </td>
+              <th className="px-4 py-2 font-semibold">Value name</th>
+              <th className="px-4 py-2 font-semibold">Value</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-[#DFE1E6]">
+            {rows.map((row, i) => (
+              <tr
+                key={
+                  mapToJira
+                    ? `${slug}-${defaultContextId}-${i}`
+                    : `${slug}-${i}`
+                }
+              >
+                <td className="px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={`inline-block size-6 shrink-0 rounded-sm ${row.swatch}`}
+                      aria-hidden
+                    />
+                    {mapToJira ? (
+                      <Tooltip
+                        content={JIRA_VALUE_NAME_TOOLTIP}
+                        className="w-full min-w-0 flex-1 cursor-default"
+                      >
+                        <div
+                          className={cn(
+                            "flex min-h-9 min-w-0 flex-1 items-center rounded-[3px] border border-transparent bg-[#F7F8F9] px-3 py-2 text-sm font-normal leading-5 text-[#626F86]",
+                            jiraFieldBlocksSave && "cursor-not-allowed opacity-60",
+                          )}
+                          aria-label={`${row.label}, managed in Jira — edit values in your Jira project`}
+                        >
+                          {row.label}
+                        </div>
+                      </Tooltip>
+                    ) : (
+                      <input
+                        type="text"
+                        value={row.label}
+                        onChange={(e) => onLabelChange(i, e.target.value)}
+                        className={cn(
+                          "min-w-0 flex-1 py-1 text-sm font-normal",
+                          ads.fieldControl,
+                        )}
+                        aria-label={`Value name for ${metricDisplayName}`}
+                      />
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-2">
+                  <input
+                    type="number"
+                    value={row.value}
+                    disabled={jiraFieldBlocksSave}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") return;
+                      const n = Number(raw);
+                      if (!Number.isNaN(n)) onValueChange(i, n);
+                    }}
+                    className={cn(
+                      "min-h-9 w-full min-w-[4rem] max-w-[7rem] tabular-nums",
+                      ads.fieldControl,
+                      jiraFieldBlocksSave && "cursor-not-allowed opacity-60",
+                    )}
+                    aria-label={`${metricDisplayName} numeric value for ${row.label}`}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
       {!mapToJira && (
         <div className={cn("border-t px-4 py-3", ads.border)}>
           <button type="button" onClick={onAddRow} className={cn(ads.linkUi, "inline")}>
@@ -412,6 +492,14 @@ function ManualMetricCard({
           </button>
         </div>
       )}
+      {jiraFieldIssue ? (
+        <div className={cn("border-t px-4 py-3", ads.border)}>
+          <div role="alert" className={ads.sectionMessageError}>
+            <AlertCircle className={ads.sectionMessageErrorIcon} aria-hidden />
+            <p>{getJiraFieldUnsaveableError(selectedJiraFieldId)}</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -447,25 +535,38 @@ export default function TestPrototypePage() {
   );
 
   const likelihoodContextId = useMemo(
-    () => getContextsForJiraField(likelihoodJiraFieldId)[0].id,
+    () => getDefaultContextId(likelihoodJiraFieldId),
     [likelihoodJiraFieldId],
   );
   const consequenceContextId = useMemo(
-    () => getContextsForJiraField(consequenceJiraFieldId)[0].id,
+    () => getDefaultContextId(consequenceJiraFieldId),
     [consequenceJiraFieldId],
   );
 
-  const likelihoodDisplayRows = mapLikelihoodToJira
-    ? (likelihoodRowsByContext[
-        likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId)
-      ] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId))
-    : likelihoodRows;
+  const likelihoodJiraUnsaveable =
+    mapLikelihoodToJira && isJiraFieldUnsaveable(likelihoodJiraFieldId);
+  const consequenceJiraUnsaveable =
+    mapConsequenceToJira && isJiraFieldUnsaveable(consequenceJiraFieldId);
+  const saveBlocked = likelihoodJiraUnsaveable || consequenceJiraUnsaveable;
+  const saveBlockedMessage = likelihoodJiraUnsaveable
+    ? getJiraFieldUnsaveableError(likelihoodJiraFieldId)
+    : consequenceJiraUnsaveable
+      ? getJiraFieldUnsaveableError(consequenceJiraFieldId)
+      : undefined;
 
-  const consequenceDisplayRows = mapConsequenceToJira
-    ? (consequenceRowsByContext[
-        consequenceRowsStorageKey(consequenceJiraFieldId, consequenceContextId)
-      ] ?? seedConsequenceRows(consequenceJiraFieldId, consequenceContextId))
-    : consequenceRows;
+  const likelihoodDisplayRows =
+    mapLikelihoodToJira && !likelihoodJiraUnsaveable && likelihoodContextId
+      ? (likelihoodRowsByContext[
+          likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId)
+        ] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId))
+      : likelihoodRows;
+
+  const consequenceDisplayRows =
+    mapConsequenceToJira && !consequenceJiraUnsaveable && consequenceContextId
+      ? (consequenceRowsByContext[
+          consequenceRowsStorageKey(consequenceJiraFieldId, consequenceContextId)
+        ] ?? seedConsequenceRows(consequenceJiraFieldId, consequenceContextId))
+      : consequenceRows;
 
   useEffect(() => {
     if (!mapLikelihoodToJira || !mapConsequenceToJira) return;
@@ -505,6 +606,7 @@ export default function TestPrototypePage() {
   }
   function patchLikelihoodValue(i: number, value: number) {
     if (mapLikelihoodToJira) {
+      if (!likelihoodContextId) return;
       setLikelihoodRowsByContext((prev) => {
         const k = likelihoodRowsStorageKey(likelihoodJiraFieldId, likelihoodContextId);
         const rows = prev[k] ?? seedLikelihoodRows(likelihoodJiraFieldId, likelihoodContextId);
@@ -528,6 +630,7 @@ export default function TestPrototypePage() {
   }
   function patchConsequenceValue(i: number, value: number) {
     if (mapConsequenceToJira) {
+      if (!consequenceContextId) return;
       setConsequenceRowsByContext((prev) => {
         const k = consequenceRowsStorageKey(
           consequenceJiraFieldId,
@@ -838,7 +941,7 @@ export default function TestPrototypePage() {
                   onAddRow={addLikelihoodRow}
                   selectedJiraFieldId={likelihoodJiraFieldId}
                   onJiraFieldChange={setLikelihoodJiraFieldId}
-                  defaultContextId={likelihoodContextId}
+                  defaultContextId={likelihoodContextId ?? ""}
                   peerSelectedFieldId={
                     mapConsequenceToJira ? consequenceJiraFieldId : null
                   }
@@ -855,7 +958,7 @@ export default function TestPrototypePage() {
                   onAddRow={addConsequenceRow}
                   selectedJiraFieldId={consequenceJiraFieldId}
                   onJiraFieldChange={setConsequenceJiraFieldId}
-                  defaultContextId={consequenceContextId}
+                  defaultContextId={consequenceContextId ?? ""}
                   peerSelectedFieldId={
                     mapLikelihoodToJira ? likelihoodJiraFieldId : null
                   }
@@ -866,10 +969,13 @@ export default function TestPrototypePage() {
             <div className={cn("border-t pt-6", ads.border)}>
               <button
                 type="button"
+                disabled={saveBlocked}
+                title={saveBlockedMessage}
                 className={cn(
                   "rounded-[3px] px-5 py-2.5 font-sans text-sm font-semibold leading-5 text-white",
-                  ads.primaryInteractive,
-                  ads.primaryInteractiveHover,
+                  saveBlocked
+                    ? "cursor-not-allowed bg-[#091E420A] text-[#A5ADBA]"
+                    : cn(ads.primaryInteractive, ads.primaryInteractiveHover),
                 )}
               >
                 Save
