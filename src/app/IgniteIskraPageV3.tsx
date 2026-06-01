@@ -10,7 +10,7 @@ import {
   X, Save, Trash2, TrendingUp, TrendingDown,
   Bug, MessageSquare, Flag, FileText, CheckCircle,
   Activity, Zap, AlertCircle, RefreshCw,
-  Sun, Moon, Settings, Home, BarChart2, List,
+  Settings, Home, BarChart2, List,
   Search, Bell, Edit2, ArrowLeft,
 } from "lucide-react";
 
@@ -881,6 +881,72 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
   );
 }
 
+/** Pull-cord bedside lamp — lit in light mode, off in dark mode. */
+function PullCordLamp({ lit }: { lit: boolean }) {
+  const shade = lit ? "#F97316" : "#94A3B8";
+  const bulb = lit ? "#FDBA74" : "#64748B";
+  const cord = lit ? "#FB923C" : "#94A3B8";
+  const cordEnd = lit ? 23 : 25;
+
+  return (
+    <motion.svg
+      width={22}
+      height={28}
+      viewBox="0 0 22 28"
+      fill="none"
+      style={{ flexShrink: 0, overflow: "visible" }}
+      aria-hidden
+    >
+      <motion.ellipse
+        cx={11}
+        cy={10}
+        rx={9}
+        ry={7}
+        fill="#FB923C"
+        initial={false}
+        animate={{ opacity: lit ? 0.5 : 0, scale: lit ? 1 : 0.7 }}
+        transition={{ duration: 0.45 }}
+      />
+      <path
+        d="M4 2.5h14l-1.75 5.5H5.75L4 2.5z"
+        fill={shade}
+        opacity={lit ? 0.95 : 0.5}
+      />
+      <motion.circle
+        cx={11}
+        cy={9.5}
+        r={3.2}
+        fill={bulb}
+        initial={false}
+        animate={{
+          opacity: lit ? 1 : 0.4,
+          filter: lit
+            ? "drop-shadow(0 0 6px rgba(251,146,60,0.85))"
+            : "drop-shadow(0 0 0 transparent)",
+        }}
+        transition={{ duration: 0.4 }}
+      />
+      <motion.g
+        key={lit ? "lamp-lit" : "lamp-off"}
+        initial={{ y: 0 }}
+        animate={{ y: [0, 3, 0] }}
+        transition={{ duration: 0.55, ease: [0.34, 1.56, 0.64, 1] }}
+      >
+        <line
+          x1={11}
+          y1={8}
+          x2={11}
+          y2={cordEnd}
+          stroke={cord}
+          strokeWidth={1.4}
+          strokeLinecap="round"
+        />
+        <circle cx={11} cy={cordEnd + 1} r={1.7} fill={cord} />
+      </motion.g>
+    </motion.svg>
+  );
+}
+
 function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount }: {
   savedDashboards: SavedDashboard[]; activeId: string | null;
   onSelect: (id: string) => void; onDelete: (id: string) => void;
@@ -986,7 +1052,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
               e.currentTarget.style.borderColor = C.border;
             }}
           >
-            {isDark ? <Moon size={15} color={C.spark} /> : <Sun size={15} color={C.spark} />}
+            <PullCordLamp lit={!isDark} />
             <span>{isDark ? "Switch to light mode" : "Switch to dark mode"}</span>
           </button>
         </div>
