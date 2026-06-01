@@ -130,9 +130,14 @@ function navActiveColor(active: boolean): string {
   return isDarkMode ? C.sparkBright : C.spark;
 }
 
+/** Static warm sidebar fill — same stops as the original sidebar gradient, without the cursor hotspot. */
+const SIDEBAR_DARK_BASE_BG =
+  "radial-gradient(circle 1200px at 50% 40%, rgba(234,88,12,0.16) 0%, rgba(38,26,20,0.96) 66%, rgba(26,17,13,1) 100%)";
+
 function sidebarSpotlightBackground(mousePos: { x: number; y: number }): string {
   const { x, y } = mousePos;
-  return `radial-gradient(circle 500px at ${x}px ${y}px, rgba(251,146,60,0.34) 0%, rgba(234,88,12,0.16) 36%, rgba(38,26,20,0.96) 66%, rgba(26,17,13,1) 100%)`;
+  // Cursor hotspot only: one bright falloff over the unchanged base layer.
+  return `radial-gradient(circle 1100px at ${x}px ${y}px, rgba(251, 146, 60, 0.48) 0%, transparent 62%), ${SIDEBAR_DARK_BASE_BG}`;
 }
 
 function pageTitleStyle(): React.CSSProperties {
@@ -919,7 +924,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
             }}
           >
             {isDark ? <Moon size={15} color={C.spark} /> : <Sun size={15} color={C.spark} />}
-            <span>{isDark ? "Dark mode on" : "Switch to dark mode"}</span>
+            <span>{isDark ? "Dark mode on" : "Switch to light mode"}</span>
           </button>
         </div>
       </div>
@@ -1174,7 +1179,7 @@ function RightPanel({ isDark }: { isDark: boolean }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function IgniteIskraPageV3() {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const [activeNav, setActiveNav] = useState("dashboard");
   C = isDark ? DARK_PALETTE : LIGHT_PALETTE;
   isDarkMode = isDark;

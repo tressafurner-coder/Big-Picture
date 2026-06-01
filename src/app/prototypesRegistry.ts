@@ -3,7 +3,6 @@ import {
   IGNITE_ISKRA_LAST_UPDATE_DISPLAY,
   IGNITE_ISKRA_V2_LAST_UPDATE_DISPLAY,
   IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY,
-  IGNITE_ISKRA_V3_ORANGE_LAST_UPDATE_DISPLAY,
   MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
   SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
@@ -31,21 +30,11 @@ export type PrototypeEntry = {
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
   {
-    id: "ignite-iskra-v3-orange",
-    name: "Ignite Iskra project 3 (orange)",
-    status: "In Development",
-    summary:
-      "Same Prodify-style layout as project 3 — dark-only warm orange theme, spotlight sidebar, and orange gradient hero.",
-    lastEdited: IGNITE_ISKRA_V3_ORANGE_LAST_UPDATE_DISPLAY,
-    kind: "route",
-    routeSegment: "ignite-iskra-v3-orange",
-  },
-  {
     id: "ignite-iskra-v3",
     name: "Ignite Iskra project 3",
     status: "In Development",
     summary:
-      "Prodify-inspired UI — light workspace, purple accents, gradient hero, and rounded card layout.",
+      "Prodify-inspired UI — light workspace with purple accents, optional dark mode (warm orange), gradient hero, and rounded cards.",
     lastEdited: IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY,
     kind: "route",
     routeSegment: "ignite-iskra-v3",

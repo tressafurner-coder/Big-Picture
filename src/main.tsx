@@ -13,7 +13,6 @@ import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
 import IgniteIskraPage from "./app/IgniteIskraPage.tsx";
 import IgniteIskraPageV2 from "./app/IgniteIskraPageV2.tsx";
 import IgniteIskraPageV3 from "./app/IgniteIskraPageV3.tsx";
-import IgniteIskraPageV3Orange from "./app/IgniteIskraPageV3Orange.tsx";
 import MergingBoardGoalsPage from "./app/MergingBoardGoalsPage.tsx";
 import ShowOnlyValidApiTokensPage from "./app/ShowOnlyValidApiTokensPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
@@ -102,8 +101,14 @@ const hubRoutes = (
     <Route path="/ignite-iskra-v2/" element={<IgniteIskraPageV2 />} />
     <Route path="/ignite-iskra-v3" element={<IgniteIskraPageV3 />} />
     <Route path="/ignite-iskra-v3/" element={<IgniteIskraPageV3 />} />
-    <Route path="/ignite-iskra-v3-orange" element={<IgniteIskraPageV3Orange />} />
-    <Route path="/ignite-iskra-v3-orange/" element={<IgniteIskraPageV3Orange />} />
+    <Route
+      path="/ignite-iskra-v3-orange"
+      element={<Navigate to="/ignite-iskra-v3" replace />}
+    />
+    <Route
+      path="/ignite-iskra-v3-orange/"
+      element={<Navigate to="/ignite-iskra-v3" replace />}
+    />
     <Route
       path="/show-only-valid-api-tokens"
       element={<ShowOnlyValidApiTokensPage />}
