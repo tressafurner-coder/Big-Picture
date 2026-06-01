@@ -11,6 +11,8 @@ import ChatbotPrototype from "./app/ChatbotPrototype.tsx";
 import ChatbotPrototypeV2 from "./app/ChatbotPrototypeV2.tsx";
 import GlobalTeamsPage from "./app/GlobalTeamsPage.tsx";
 import IgniteIskraPage from "./app/IgniteIskraPage.tsx";
+import IgniteIskraPageV2 from "./app/IgniteIskraPageV2.tsx";
+import IgniteIskraPageV3 from "./app/IgniteIskraPageV3.tsx";
 import MergingBoardGoalsPage from "./app/MergingBoardGoalsPage.tsx";
 import ShowOnlyValidApiTokensPage from "./app/ShowOnlyValidApiTokensPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
@@ -95,6 +97,10 @@ const hubRoutes = (
     />
     <Route path="/ignite-iskra" element={<IgniteIskraPage />} />
     <Route path="/ignite-iskra/" element={<IgniteIskraPage />} />
+    <Route path="/ignite-iskra-v2" element={<IgniteIskraPageV2 />} />
+    <Route path="/ignite-iskra-v2/" element={<IgniteIskraPageV2 />} />
+    <Route path="/ignite-iskra-v3" element={<IgniteIskraPageV3 />} />
+    <Route path="/ignite-iskra-v3/" element={<IgniteIskraPageV3 />} />
     <Route
       path="/show-only-valid-api-tokens"
       element={<ShowOnlyValidApiTokensPage />}

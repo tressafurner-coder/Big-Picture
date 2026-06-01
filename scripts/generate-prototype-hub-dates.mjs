@@ -48,6 +48,8 @@ const PROTOTYPES = {
     "src/app/ShowOnlyValidApiTokensPage.tsx",
   ],
   IGNITE_ISKRA_LAST_UPDATE_DISPLAY: ["src/app/IgniteIskraPage.tsx"],
+  IGNITE_ISKRA_V2_LAST_UPDATE_DISPLAY: ["src/app/IgniteIskraPageV2.tsx"],
+  IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY: ["src/app/IgniteIskraPageV3.tsx"],
 };
 
 /** Always UTC so GitHub Actions (UTC) and local dev show the same hub stamps. */
@@ -114,6 +116,8 @@ export const TEST_PROTOTYPE_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.TEST_P
 export const MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY)};
 export const SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY)};
 export const IGNITE_ISKRA_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.IGNITE_ISKRA_LAST_UPDATE_DISPLAY)};
+export const IGNITE_ISKRA_V2_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.IGNITE_ISKRA_V2_LAST_UPDATE_DISPLAY)};
+export const IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY = ${JSON.stringify(stamps.IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY)};
 `;
 
 mkdirSync(outDir, { recursive: true });

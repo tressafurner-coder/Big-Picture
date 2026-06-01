@@ -1,6 +1,8 @@
 import {
   CHATBOT_LAST_UPDATE_DISPLAY,
   IGNITE_ISKRA_LAST_UPDATE_DISPLAY,
+  IGNITE_ISKRA_V2_LAST_UPDATE_DISPLAY,
+  IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY,
   MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
   SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
@@ -27,6 +29,26 @@ export type PrototypeEntry = {
 
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
+  {
+    id: "ignite-iskra-v3",
+    name: "Ignite Iskra project 3",
+    status: "In Development",
+    summary:
+      "Prodify-inspired UI — light workspace, purple accents, gradient hero, and rounded card layout.",
+    lastEdited: IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "ignite-iskra-v3",
+  },
+  {
+    id: "ignite-iskra-v2",
+    name: "Ignite Iskra project 2",
+    status: "In Development",
+    summary:
+      "Green-themed dashboard UI inspired by modern project analytics — same Iskra flows with refreshed visual language.",
+    lastEdited: IGNITE_ISKRA_V2_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "ignite-iskra-v2",
+  },
   {
     id: "ignite-iskra",
     name: "Ignite - Iskra",
