@@ -747,11 +747,13 @@ function SourcesPanel({ isDark }: { isDark: boolean }) {
                   <button style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 500 }}>
                     Configure
                   </button>
-                  <button
-                    onClick={() => setConnected(prev => ({ ...prev, [s]: !prev[s] }))}
-                    style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${isOn ? C.errorFaint : C.successFaint}`, background: isOn ? C.errorFaint : C.successFaint, cursor: "pointer", color: isOn ? C.error : C.success, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}>
-                    {isOn ? "Disconnect" : "Connect"}
-                  </button>
+                  {!isOn && (
+                    <button
+                      onClick={() => setConnected(prev => ({ ...prev, [s]: !prev[s] }))}
+                      style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.successFaint}`, background: C.successFaint, cursor: "pointer", color: C.success, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 600 }}>
+                      Connect
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
