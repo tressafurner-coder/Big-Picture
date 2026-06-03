@@ -815,7 +815,7 @@ const SOURCE_DETAILS: Record<SourceId, { workspace: string; description: string 
   amplitude:    { workspace: "Appfire Analytics",  description: "Tracks user behaviour, product events, funnels, and retention across all Appfire surfaces. Used to monitor DAU/MAU, feature adoption, and session quality in real time." },
   jira:         { workspace: "Appfire Jira (APF)", description: "Connected to the main engineering project board. Provides sprint progress, velocity trends, bug distribution by priority, and backlog health across all active teams." },
   slack:        { workspace: "Appfire HQ",         description: "Reads message volume and response time metrics across team channels. Helps surface communication bottlenecks and identify the most active collaboration threads." },
-  confluence:   { workspace: "Appfire Docs",       description: "Indexes internal documentation pages, wiki coverage, and recent edits. Enables tracking of documentation health and highlights knowledge gaps across product areas." },
+  confluence:   { workspace: "Appfire Docs",       description: "Indexes internal documentation pages, wiki coverage, and recent edits. Enables tracking of documentation health and highlights knowledge gaps across product areas. Also tries to understand the business context behind documented features and Amplitude events." },
   launchdarkly: { workspace: "appfire-prod",       description: "Manages feature flags and gradual rollouts for the production environment. Exposes flag state, targeting rules, evaluation volume, and kill-switch status per release." },
 };
 
@@ -918,7 +918,13 @@ function SocketThemeSwitch({
         width: "100%",
         padding: "9px 12px",
         borderRadius: BUTTON_RADIUS,
-        ...(hover ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }),
+        ...(hover
+          ? {
+              background: isDark ? "rgba(255,255,255,0.04)" : C.bgHover,
+              border: "1px solid transparent",
+              boxShadow: "none",
+            }
+          : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }),
         cursor: "pointer",
         transition: "all 0.12s",
       }}
@@ -1028,8 +1034,9 @@ function IskraSignInScreen({
   );
 }
 
-function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount, onLogout }: {
+function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount, onLogout }: {
   savedDashboards: SavedDashboard[]; activeId: string | null;
+  activeDashboardName: string | null;
   onSelect: (id: string) => void; onDelete: (id: string) => void;
   isDark: boolean; setIsDark: (v: (p: boolean) => boolean) => void;
   activeNav: string; setActiveNav: (v: string) => void;
@@ -1073,7 +1080,15 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
             gap: 10,
             padding: "9px 12px",
             borderRadius: BUTTON_RADIUS,
-            ...(userMenuOpen || accountHover ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }),
+            ...(userMenuOpen
+              ? glassActiveNav()
+              : accountHover
+                ? {
+                    background: isDark ? "rgba(255,255,255,0.04)" : C.bgHover,
+                    border: "1px solid transparent",
+                    boxShadow: "none",
+                  }
+                : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }),
             cursor: "pointer",
             textAlign: "left",
             marginBottom: 2,
@@ -1218,7 +1233,12 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
                     <div key={d.id} onClick={() => onSelect(d.id)}
                       style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: BUTTON_RADIUS, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}>
                       <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, flexShrink: 0, opacity: activeId === d.id && activeNav === "dashboard" ? 1 : 0.5 }} />
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
+                      <div
+                        title={d.id === activeId && activeDashboardName ? activeDashboardName : d.name}
+                        style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: activeId === d.id ? 600 : 400, color: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        {d.id === activeId && activeDashboardName ? activeDashboardName : d.name}
+                      </div>
                       <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 2, display: "flex", flexShrink: 0 }}>
                         <X size={11} />
@@ -1580,6 +1600,13 @@ export default function IgniteIskraPageV3() {
     setIsDirty(false);
   }, [currentSources, currentName, currentPrompt]);
 
+  const commitDashboardName = useCallback(() => {
+    if (!activeDashboardId || !currentName) return;
+    setSavedDashboards(prev =>
+      prev.map(d => (d.id === activeDashboardId ? { ...d, name: currentName } : d)),
+    );
+  }, [activeDashboardId, currentName]);
+
   const handleGenerateSource = useCallback((sourceId: SourceId) => {
     const sourceName = getSourceConfig(sourceId).label;
     const p = `Show me ${sourceName} insights and key metrics`;
@@ -1653,6 +1680,7 @@ export default function IgniteIskraPageV3() {
       {/* Left Sidebar */}
       <LeftSidebar
         savedDashboards={savedDashboards} activeId={activeDashboardId}
+        activeDashboardName={currentName}
         onSelect={handleSelectDashboard} onDelete={handleDeleteDashboard}
         isDark={isDark} setIsDark={setIsDark}
         activeNav={activeNav} setActiveNav={setActiveNav}
@@ -1702,8 +1730,16 @@ export default function IgniteIskraPageV3() {
                     ref={nameInputRef}
                     value={currentName ?? ""}
                     onChange={e => setCurrentName(e.target.value)}
-                    onBlur={() => setIsEditingName(false)}
-                    onKeyDown={e => { if (e.key === "Enter") setIsEditingName(false); }}
+                    onBlur={() => {
+                      setIsEditingName(false);
+                      commitDashboardName();
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        setIsEditingName(false);
+                        commitDashboardName();
+                      }
+                    }}
                     autoFocus
                     style={{ ...pageTitleStyle(), margin: 0, background: "transparent", border: "none", borderBottom: `2px solid ${C.spark}`, outline: "none", textAlign: "center", minWidth: 200, maxWidth: 480 }}
                   />
