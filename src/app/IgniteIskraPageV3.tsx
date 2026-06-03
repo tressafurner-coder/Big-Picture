@@ -229,6 +229,14 @@ const SOURCE_LABELS: Record<SourceId, string> = {
   launchdarkly: "LaunchDarkly",
 };
 
+const SOURCE_LOGOS: Record<SourceId, string> = {
+  amplitude: amplitudeLogo,
+  jira: jiraLogo,
+  slack: slackLogo,
+  confluence: confluenceLogo,
+  launchdarkly: launchdarklyLogo,
+};
+
 function getSourceConfig(source: SourceId): {
   label: string;
   color: string;
@@ -269,6 +277,39 @@ const SOURCE_GRADIENTS_DARK: Record<SourceId, string> = {
 
 function sourceGradient(id: SourceId): string {
   return isDarkMode ? SOURCE_GRADIENTS_DARK[id] : SOURCE_GRADIENTS_LIGHT[id];
+}
+
+function SourceLogoBadge({
+  source,
+  boxSize = 40,
+  logoSize = 26,
+}: {
+  source: SourceId;
+  boxSize?: number;
+  logoSize?: number;
+}) {
+  const { label, Icon } = getSourceConfig(source);
+  const logo = SOURCE_LOGOS[source];
+  const gradient = sourceGradient(source);
+  const radius = boxSize <= 24 ? 5 : 10;
+
+  return (
+    <div style={{
+      width: boxSize,
+      height: boxSize,
+      borderRadius: radius,
+      background: logo ? "white" : gradient,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      border: logo ? `1px solid ${C.border}` : "none",
+    }}>
+      {logo
+        ? <img src={logo} alt={label} style={{ width: logoSize, height: logoSize, objectFit: "contain" }} />
+        : <Icon size={Math.max(11, Math.round(logoSize * 0.65))} />}
+    </div>
+  );
 }
 
 const SOURCE_CARD_METRICS: Record<SourceId, { metric: string; detail: string; spark: number[] }> = {
@@ -433,7 +474,7 @@ function W({ title, source, span = 1, badge, children, delay = 0 }: {
   title: string; source: SourceId; span?: 1 | 2 | 3;
   badge?: string; children: React.ReactNode; delay?: number;
 }) {
-  const { color, label, Icon } = getSourceConfig(source);
+  const { color, label } = getSourceConfig(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
@@ -456,7 +497,7 @@ function W({ title, source, span = 1, badge, children, delay = 0 }: {
           <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default", fontSize: 10, color: C.textMuted, fontWeight: 700, userSelect: "none" }}>?</div>
           <div className="w-tooltip" style={{ position: "absolute", right: 0, top: 22, background: C.bgSurface, border: `1px solid ${C.borderStrong}`, borderRadius: 10, padding: "8px 12px", minWidth: 160, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", opacity: 0, transition: "opacity 0.15s", pointerEvents: "none", zIndex: 50 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <span style={{ color, display: "flex" }}><Icon size={12} /></span>
+              <SourceLogoBadge source={source} boxSize={20} logoSize={14} />
               <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{label}</span>
             </div>
             <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>Data sourced from <strong style={{ color: C.textSecondary }}>{label}</strong> integration.</div>
@@ -833,9 +874,8 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {ALL_SOURCES.map(s => {
-          const { label, Icon } = getSourceConfig(s);
+          const { label } = getSourceConfig(s);
           const { workspace, description } = SOURCE_DETAILS[s];
-          const gradient = sourceGradient(s);
           const isOn = activeSources.includes(s);
           return (
             <div key={s} style={{
@@ -845,15 +885,7 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
             }}>
               <div style={{ padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 16 }}>
                 {/* Icon */}
-                {(() => {
-                  const logoMap: Partial<Record<SourceId, string>> = { slack: slackLogo, confluence: confluenceLogo, amplitude: amplitudeLogo, launchdarkly: launchdarklyLogo, jira: jiraLogo };
-                  const logo = logoMap[s];
-                  return (
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: logo ? "white" : gradient, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: logo ? `1px solid ${C.border}` : "none" }}>
-                      {logo ? <img src={logo} alt={label} style={{ width: 26, height: 26, objectFit: "contain" }} /> : <Icon size={18} />}
-                    </div>
-                  );
-                })()}
+                <SourceLogoBadge source={s} />
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
