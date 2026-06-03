@@ -212,6 +212,21 @@ interface SavedDashboard {
   sources: SourceId[]; createdAt: Date;
 }
 
+interface PromptHistoryEntry {
+  id: string;
+  prompt: string;
+  sources: SourceId[];
+  name: string;
+  createdAt: Date;
+}
+
+function historyEntryMatchesSaved(entry: PromptHistoryEntry, saved: SavedDashboard | undefined): boolean {
+  if (!saved) return false;
+  return saved.prompt === entry.prompt
+    && saved.name === entry.name
+    && JSON.stringify(saved.sources) === JSON.stringify(entry.sources);
+}
+
 // ─── Source config (colors read from C at call time — palette switches with theme) ───
 const SOURCE_ICONS: Record<SourceId, React.FC<{ size?: number }>> = {
   amplitude:    ({ size = 14 }) => <Activity size={size} />,
@@ -1731,7 +1746,8 @@ export default function IgniteIskraPageV3() {
   const [savedDashboards, setSavedDashboards] = useState<SavedDashboard[]>([]);
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  const [promptHistory, setPromptHistory] = useState<PromptHistoryEntry[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -1739,7 +1755,23 @@ export default function IgniteIskraPageV3() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const idRef = useRef(0);
+  const historyIdRef = useRef(0);
 
+  const syncDirtyForHistoryEntry = useCallback((entry: PromptHistoryEntry) => {
+    const saved = activeDashboardId
+      ? savedDashboards.find(d => d.id === activeDashboardId)
+      : undefined;
+    setIsDirty(!historyEntryMatchesSaved(entry, saved));
+  }, [activeDashboardId, savedDashboards]);
+
+  const restorePromptHistory = useCallback((entry: PromptHistoryEntry) => {
+    setCurrentSources(entry.sources);
+    setCurrentPrompt(entry.prompt);
+    setCurrentName(entry.name);
+    setPrompt(entry.prompt);
+    setActiveHistoryId(entry.id);
+    syncDirtyForHistoryEntry(entry);
+  }, [syncDirtyForHistoryEntry]);
 
   const handleGenerate = useCallback(
     (overridePrompt?: string) => {
@@ -1752,15 +1784,39 @@ export default function IgniteIskraPageV3() {
         const finalSources = sources.length > 0 ? sources : activeSources;
         setCurrentSources(finalSources);
         setCurrentPrompt(p);
-        setPromptHistory(prev => [...prev, p]);
         setGenerating(false);
 
+        const pushHistory = (name: string) => {
+          const entry: PromptHistoryEntry = {
+            id: `h-${++historyIdRef.current}`,
+            prompt: p,
+            sources: finalSources,
+            name,
+            createdAt: new Date(),
+          };
+          setPromptHistory(prev => [...prev, entry]);
+          setActiveHistoryId(entry.id);
+        };
+
         if (isRegenerate) {
-          setCurrentName(prev => prev ?? dashboardName(p));
-          setIsDirty(true);
+          setCurrentName(prev => {
+            const name = prev ?? dashboardName(p);
+            pushHistory(name);
+            setIsDirty(true);
+            return name;
+          });
         } else {
           setCurrentName(prev => {
             const name = prev ?? dashboardName(p);
+            const entry: PromptHistoryEntry = {
+              id: `h-${++historyIdRef.current}`,
+              prompt: p,
+              sources: finalSources,
+              name,
+              createdAt: new Date(),
+            };
+            setPromptHistory([entry]);
+            setActiveHistoryId(entry.id);
             const id = `d-${++idRef.current}`;
             setSavedDashboards(prevDash => [
               { id, name, prompt: p, sources: finalSources, createdAt: new Date() },
@@ -1791,8 +1847,17 @@ export default function IgniteIskraPageV3() {
           : d,
       ),
     );
+    if (activeHistoryId) {
+      setPromptHistory(prev =>
+        prev.map(e =>
+          e.id === activeHistoryId
+            ? { ...e, name: currentName, prompt: currentPrompt, sources: currentSources }
+            : e,
+        ),
+      );
+    }
     setIsDirty(false);
-  }, [activeDashboardId, currentSources, currentName, currentPrompt]);
+  }, [activeDashboardId, currentSources, currentName, currentPrompt, activeHistoryId]);
 
   const handleSaveAsNew = useCallback(() => {
     if (!currentSources || !currentName || !currentPrompt) return;
@@ -1831,7 +1896,15 @@ export default function IgniteIskraPageV3() {
       setCurrentSources(sources);
       setCurrentName(name);
       setCurrentPrompt(p);
-      setPromptHistory(prev => [...prev, p]);
+      const entry: PromptHistoryEntry = {
+        id: `h-${++historyIdRef.current}`,
+        prompt: p,
+        sources,
+        name,
+        createdAt: new Date(),
+      };
+      setPromptHistory([entry]);
+      setActiveHistoryId(entry.id);
       const id = `d-${++idRef.current}`;
       setSavedDashboards(prev => [
         { id, name, prompt: p, sources, createdAt: new Date() },
@@ -1851,7 +1924,9 @@ export default function IgniteIskraPageV3() {
     setActiveDashboardId(id);
     setIsDirty(false);
     setActiveNav("dashboard");
-  }, [savedDashboards]);
+    const match = [...promptHistory].reverse().find(e => historyEntryMatchesSaved(e, d));
+    setActiveHistoryId(match?.id ?? null);
+  }, [savedDashboards, promptHistory]);
 
   const handleDeleteDashboard = useCallback((id: string) => {
     setSavedDashboards(prev => prev.filter(d => d.id !== id));
@@ -1870,6 +1945,7 @@ export default function IgniteIskraPageV3() {
     setActiveDashboardId(null);
     setActiveSources([...ALL_SOURCES]);
     setPromptHistory([]);
+    setActiveHistoryId(null);
     setHistoryOpen(false);
     setIsDirty(false);
   }, []);
@@ -2135,15 +2211,35 @@ export default function IgniteIskraPageV3() {
               {historyOpen && (
                 <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
                   style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-                  {promptHistory.map((p, i) => (
-                    <div key={i} onClick={() => setPrompt(p)}
-                      style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 12px", borderRadius: 10, background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, border: `1px solid ${C.border}`, cursor: "pointer", transition: "background 0.12s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = isDark ? "rgba(255,255,255,0.07)" : C.bgHover; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = isDark ? "rgba(255,255,255,0.04)" : C.bgSurface; }}>
-                      <span style={{ fontSize: 10, color: C.textMuted, marginTop: 1, flexShrink: 0 }}>#{i + 1}</span>
-                      <span style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.4 }}>{p}</span>
-                    </div>
-                  ))}
+                  {promptHistory.map(entry => {
+                    const isActive = entry.id === activeHistoryId;
+                    return (
+                      <div
+                        key={entry.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => restorePromptHistory(entry)}
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") restorePromptHistory(entry); }}
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: BUTTON_RADIUS,
+                          ...(isActive ? glassActiveNav() : { background: isDark ? "rgba(255,255,255,0.04)" : C.bgSurface, border: `1px solid ${C.border}`, boxShadow: "none" }),
+                          cursor: "pointer",
+                          transition: "all 0.12s",
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive) e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : C.bgHover;
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : C.bgSurface;
+                        }}
+                      >
+                        <span style={{ fontSize: 12, color: isActive ? C.textPrimary : C.textSecondary, lineHeight: 1.4, fontWeight: isActive ? 500 : 400 }}>
+                          {entry.prompt}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </motion.div>
               )}
             </div>
