@@ -1229,6 +1229,7 @@ function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect,
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [accountHover, setAccountHover] = useState(false);
+  const [hoveredDashboardId, setHoveredDashboardId] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1413,8 +1414,13 @@ function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect,
               {item.id === "dashboard" && savedDashboards.length > 0 && (
                 <div style={{ marginTop: 6, marginBottom: 4 }}>
                   {savedDashboards.map(d => (
-                    <div key={d.id} onClick={() => onSelect(d.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: BUTTON_RADIUS, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}>
+                    <div
+                      key={d.id}
+                      onClick={() => onSelect(d.id)}
+                      onMouseEnter={() => setHoveredDashboardId(d.id)}
+                      onMouseLeave={() => setHoveredDashboardId(null)}
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px 7px 34px", borderRadius: BUTTON_RADIUS, ...(activeId === d.id && activeNav === "dashboard" ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }), cursor: "pointer", marginBottom: 1, transition: "all 0.12s" }}
+                    >
                       <div style={{ width: 5, height: 5, borderRadius: "50%", background: activeId === d.id && activeNav === "dashboard" ? C.spark : C.textMuted, flexShrink: 0, opacity: activeId === d.id && activeNav === "dashboard" ? 1 : 0.5 }} />
                       <div
                         title={d.id === activeId && activeDashboardName ? activeDashboardName : d.name}
@@ -1422,14 +1428,29 @@ function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect,
                       >
                         {d.id === activeId && activeDashboardName ? activeDashboardName : d.name}
                       </div>
-                      <button onClick={e => {
-                        e.stopPropagation();
-                        onRequestDelete(
-                          d.id,
-                          d.id === activeId && activeDashboardName ? activeDashboardName : d.name,
-                        );
-                      }}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 2, display: "flex", flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${d.id === activeId && activeDashboardName ? activeDashboardName : d.name}`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          onRequestDelete(
+                            d.id,
+                            d.id === activeId && activeDashboardName ? activeDashboardName : d.name,
+                          );
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: C.textMuted,
+                          padding: 2,
+                          display: "flex",
+                          flexShrink: 0,
+                          opacity: hoveredDashboardId === d.id ? 1 : 0,
+                          pointerEvents: hoveredDashboardId === d.id ? "auto" : "none",
+                          transition: "opacity 0.12s",
+                        }}
+                      >
                         <X size={11} />
                       </button>
                     </div>
