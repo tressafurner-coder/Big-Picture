@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import slackLogo from "../imports/slack-logo.png";
 import confluenceLogo from "../imports/confluence-logo.png";
 import amplitudeLogo from "../imports/amplitude-logo.png";
@@ -7,11 +8,11 @@ import jiraLogo from "../imports/jira-logo.png";
 import iskraWordmark from "../imports/iskra-wordmark.png";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  X, Save, Trash2, TrendingUp, TrendingDown,
+  X, Trash2, TrendingUp, TrendingDown,
   Bug, MessageSquare, Flag, FileText, CheckCircle,
   Activity, Zap, AlertCircle, RefreshCw,
   Settings, Home, BarChart2, List,
-  Search, Bell, Edit2, ArrowLeft, LogOut, ChevronDown,
+  Search, Bell, Edit2, ArrowLeft, LogOut, ChevronDown, AlertTriangle,
 } from "lucide-react";
 
 // ─── Color palettes ──────────────────────────────────────────────────────────
@@ -1034,10 +1035,160 @@ function IskraSignInScreen({
   );
 }
 
-function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount, onLogout }: {
+function IskraDeleteConfirmDialog({
+  isOpen,
+  dashboardName,
+  isDark,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  dashboardName: string;
+  isDark: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onCancel}
+            aria-hidden
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 10050,
+              background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.28)",
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 10051,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 24,
+              pointerEvents: "none",
+            }}
+          >
+            <motion.div
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="iskra-delete-dialog-title"
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ duration: 0.16 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: 400,
+                padding: "24px 24px 20px",
+                borderRadius: 18,
+                pointerEvents: "auto",
+                ...glassPanel(isDark),
+                fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              }}
+            >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{
+                flexShrink: 0,
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: C.errorFaint,
+                border: `1px solid ${isDark ? "rgba(248,113,113,0.28)" : "rgba(239,68,68,0.18)"}`,
+              }}>
+                <AlertTriangle size={18} color={C.error} aria-hidden />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3
+                  id="iskra-delete-dialog-title"
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: C.textPrimary,
+                    letterSpacing: "-0.2px",
+                  }}
+                >
+                  Delete dashboard?
+                </h3>
+                <p style={{ margin: "0 0 20px", fontSize: 13, lineHeight: 1.55, color: C.textMuted }}>
+                  <span style={{ color: C.textSecondary, fontWeight: 500 }}>&ldquo;{dashboardName}&rdquo;</span>
+                  {" "}will be permanently removed.
+                </p>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: BUTTON_RADIUS,
+                      border: `1px solid ${C.border}`,
+                      background: "transparent",
+                      color: C.textSecondary,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: BUTTON_FONT,
+                      cursor: "pointer",
+                      transition: "background 0.12s, border-color 0.12s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgHover; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onConfirm}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: BUTTON_RADIUS,
+                      border: "none",
+                      background: isDark ? "#DC2626" : "#EF4444",
+                      color: "#FFFFFF",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontFamily: BUTTON_FONT,
+                      cursor: "pointer",
+                      boxShadow: isDark ? "0 2px 10px rgba(220,38,38,0.35)" : "0 2px 8px rgba(239,68,68,0.25)",
+                      transition: "background 0.12s, box-shadow 0.12s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = isDark ? "#B91C1C" : "#DC2626"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isDark ? "#DC2626" : "#EF4444"; }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body,
+  );
+}
+
+function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect, onRequestDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount, onLogout }: {
   savedDashboards: SavedDashboard[]; activeId: string | null;
   activeDashboardName: string | null;
-  onSelect: (id: string) => void; onDelete: (id: string) => void;
+  onSelect: (id: string) => void; onRequestDelete: (id: string, name: string) => void;
   isDark: boolean; setIsDark: (v: (p: boolean) => boolean) => void;
   activeNav: string; setActiveNav: (v: string) => void;
   mousePos: { x: number; y: number }; onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -1239,7 +1390,13 @@ function LeftSidebar({ savedDashboards, activeId, activeDashboardName, onSelect,
                       >
                         {d.id === activeId && activeDashboardName ? activeDashboardName : d.name}
                       </div>
-                      <button onClick={e => { e.stopPropagation(); onDelete(d.id); }}
+                      <button onClick={e => {
+                        e.stopPropagation();
+                        onRequestDelete(
+                          d.id,
+                          d.id === activeId && activeDashboardName ? activeDashboardName : d.name,
+                        );
+                      }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 2, display: "flex", flexShrink: 0 }}>
                         <X size={11} />
                       </button>
@@ -1523,6 +1680,7 @@ export default function IgniteIskraPageV3() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [sidebarMouse, setSidebarMouse] = useState({ x: 50, y: 30 });
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1644,7 +1802,13 @@ export default function IgniteIskraPageV3() {
 
   const handleDeleteDashboard = useCallback((id: string) => {
     setSavedDashboards(prev => prev.filter(d => d.id !== id));
-    if (activeDashboardId === id) { setActiveDashboardId(null); setCurrentSources(null); }
+    if (activeDashboardId === id) {
+      setActiveDashboardId(null);
+      setCurrentSources(null);
+      setCurrentName(null);
+      setCurrentPrompt(null);
+      setIsDirty(false);
+    }
   }, [activeDashboardId]);
 
   const handleNewDashboard = useCallback(() => {
@@ -1661,7 +1825,8 @@ export default function IgniteIskraPageV3() {
 
   const hasDashboard = currentSources !== null;
   const isRegenerating = generating && currentSources !== null;
-  const saveChangesEnabled = isDirty && !generating;
+  const showSavePair = isDirty || isRegenerating;
+  const savePairEnabled = isDirty && !generating;
 
   if (!isAuthenticated) {
     return <IskraSignInScreen isDark={isDark} onSignIn={() => setIsAuthenticated(true)} />;
@@ -1681,7 +1846,8 @@ export default function IgniteIskraPageV3() {
       <LeftSidebar
         savedDashboards={savedDashboards} activeId={activeDashboardId}
         activeDashboardName={currentName}
-        onSelect={handleSelectDashboard} onDelete={handleDeleteDashboard}
+        onSelect={handleSelectDashboard}
+        onRequestDelete={(id, name) => setDeleteConfirm({ id, name })}
         isDark={isDark} setIsDark={setIsDark}
         activeNav={activeNav} setActiveNav={setActiveNav}
         enabledSourceCount={activeSources.length}
@@ -1773,58 +1939,54 @@ export default function IgniteIskraPageV3() {
                 )}
               </div>
 
-              {/* Right: disabled Save Dashboard until Re-generate; then Save as new + Save changes */}
+              {/* Right: disabled Save after auto-save; re-generating — disabled pair; dirty — Save as new + Save */}
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                {saveChangesEnabled ? (
+                {showSavePair ? (
                   <>
                     <motion.button
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      onClick={handleSaveAsNew}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
+                      disabled={!savePairEnabled}
+                      onClick={savePairEnabled ? handleSaveAsNew : undefined}
+                      whileHover={savePairEnabled ? { scale: 1.02 } : undefined}
+                      whileTap={savePairEnabled ? { scale: 0.97 } : undefined}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
                         background: "transparent",
                         border: `1px solid ${C.border}`,
                         borderRadius: BUTTON_RADIUS,
                         padding: "8px 16px",
-                        cursor: "pointer",
+                        cursor: savePairEnabled ? "pointer" : "default",
                         color: C.textMuted,
                         fontSize: 13,
                         fontWeight: 500,
                         fontFamily: BUTTON_FONT,
+                        opacity: savePairEnabled ? 1 : 0.85,
                       }}
                     >
-                      <Save size={13} />
-                      <span>Save as new</span>
+                      Save as new
                     </motion.button>
                     <motion.button
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      onClick={handleSaveChanges}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
+                      disabled={!savePairEnabled}
+                      onClick={savePairEnabled ? handleSaveChanges : undefined}
+                      whileHover={savePairEnabled ? { scale: 1.02 } : undefined}
+                      whileTap={savePairEnabled ? { scale: 0.97 } : undefined}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
                         border: "none",
                         borderRadius: BUTTON_RADIUS,
                         padding: "8px 18px",
                         fontSize: 13,
                         fontWeight: 600,
                         fontFamily: BUTTON_FONT,
-                        background: primaryCtaFill(isDark),
-                        color: primaryCtaTextColor(isDark),
-                        cursor: "pointer",
-                        boxShadow: primaryCtaShadow(isDark),
+                        background: savePairEnabled ? primaryCtaFill(isDark) : (isDark ? "rgba(255,255,255,0.07)" : C.bgElevated),
+                        color: savePairEnabled ? primaryCtaTextColor(isDark) : C.textMuted,
+                        cursor: savePairEnabled ? "pointer" : "default",
+                        boxShadow: savePairEnabled ? primaryCtaShadow(isDark) : "none",
+                        opacity: savePairEnabled ? 1 : 0.85,
                       }}
                     >
-                      <Save size={13} />
-                      <span>Save changes</span>
+                      Save
                     </motion.button>
                   </>
                 ) : (
@@ -1833,9 +1995,6 @@ export default function IgniteIskraPageV3() {
                     animate={{ opacity: 1, scale: 1 }}
                     disabled
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
                       border: "none",
                       borderRadius: BUTTON_RADIUS,
                       padding: "8px 18px",
@@ -1848,8 +2007,7 @@ export default function IgniteIskraPageV3() {
                       opacity: 0.85,
                     }}
                   >
-                    <Save size={13} />
-                    <span>Save Dashboard</span>
+                    Save
                   </motion.button>
                 )}
               </div>
@@ -2044,6 +2202,17 @@ export default function IgniteIskraPageV3() {
         </p>
       </div>
 
+
+      <IskraDeleteConfirmDialog
+        isOpen={deleteConfirm !== null}
+        dashboardName={deleteConfirm?.name ?? ""}
+        isDark={isDark}
+        onConfirm={() => {
+          if (deleteConfirm) handleDeleteDashboard(deleteConfirm.id);
+          setDeleteConfirm(null);
+        }}
+        onCancel={() => setDeleteConfirm(null)}
+      />
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
