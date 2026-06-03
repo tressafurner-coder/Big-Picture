@@ -1448,6 +1448,7 @@ export default function IgniteIskraPageV3() {
       <div style={{
         flex: 1,
         minWidth: 0,
+        minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -1722,6 +1723,22 @@ export default function IgniteIskraPageV3() {
         )}
 
         </> }
+
+        <p
+          style={{
+            marginTop: "auto",
+            padding: "16px 28px 22px",
+            fontSize: 10,
+            fontWeight: 400,
+            lineHeight: 1.4,
+            textAlign: "center",
+            letterSpacing: "0.06em",
+            color: isDark ? "rgba(251,146,60,0.16)" : "rgba(124,92,231,0.2)",
+            userSelect: "none",
+          }}
+        >
+          Created during Ignite · June 2026
+        </p>
       </div>
 
 
