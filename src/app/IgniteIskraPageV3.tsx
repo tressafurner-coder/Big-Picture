@@ -860,18 +860,15 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
                   <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>{description}</div>
                 </div>
                 {/* Actions */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <button style={{ fontSize: 12, padding: "8px 16px", borderRadius: BUTTON_RADIUS, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", color: C.textMuted, fontFamily: BUTTON_FONT, fontWeight: 500 }}>
-                    Configure
-                  </button>
-                  {!isOn && (
+                {!isOn && (
+                  <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                     <button
                       onClick={() => onToggleSource(s)}
                       style={{ fontSize: 12, padding: "8px 16px", borderRadius: BUTTON_RADIUS, border: `1px solid ${C.successFaint}`, background: C.successFaint, cursor: "pointer", color: C.success, fontFamily: BUTTON_FONT, fontWeight: 600 }}>
                       Connect
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -881,69 +878,81 @@ function SourcesPanel({ isDark, activeSources, onToggleSource }: {
   );
 }
 
-/** Pull-cord bedside lamp — lit in light mode, off in dark mode. */
-function PullCordLamp({ lit }: { lit: boolean }) {
-  const shade = lit ? "#F97316" : "#94A3B8";
-  const bulb = lit ? "#FDBA74" : "#64748B";
-  const cord = lit ? "#FB923C" : "#94A3B8";
-  const cordEnd = lit ? 23 : 25;
+/** Wall-socket style rocker switch for dark / light mode. */
+function SocketThemeSwitch({
+  isDark,
+  onToggle,
+}: {
+  isDark: boolean;
+  onToggle: () => void;
+}) {
+  const plate = isDark ? "#292524" : "#E7E5E4";
+  const plateBorder = isDark ? "rgba(251,146,60,0.22)" : "rgba(124,92,231,0.18)";
+  const recess = isDark ? "#1C1917" : "#D6D3D1";
+  const rockerOff = isDark ? "#57534E" : "#A8A29E";
+  const rockerOn = isDark ? "#FB923C" : "#7C5CE7";
+  const glow = isDark ? "rgba(251,146,60,0.55)" : "rgba(124,92,231,0.45)";
 
   return (
-    <motion.svg
-      width={22}
-      height={28}
-      viewBox="0 0 22 28"
-      fill="none"
-      style={{ flexShrink: 0, overflow: "visible" }}
-      aria-hidden
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        width: "100%",
+        padding: "8px 12px",
+        borderRadius: BUTTON_RADIUS,
+        border: `1px solid ${plateBorder}`,
+        background: isDark ? "rgba(28,25,23,0.65)" : "rgba(255,255,255,0.72)",
+        cursor: "pointer",
+        transition: "border-color 0.2s, background 0.2s",
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.45)" : "rgba(124,92,231,0.35)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = plateBorder;
+      }}
     >
-      <motion.ellipse
-        cx={11}
-        cy={10}
-        rx={9}
-        ry={7}
-        fill="#FB923C"
-        initial={false}
-        animate={{ opacity: lit ? 0.5 : 0, scale: lit ? 1 : 0.7 }}
-        transition={{ duration: 0.45 }}
-      />
-      <path
-        d="M4 2.5h14l-1.75 5.5H5.75L4 2.5z"
-        fill={shade}
-        opacity={lit ? 0.95 : 0.5}
-      />
-      <motion.circle
-        cx={11}
-        cy={9.5}
-        r={3.2}
-        fill={bulb}
-        initial={false}
-        animate={{
-          opacity: lit ? 1 : 0.4,
-          filter: lit
-            ? "drop-shadow(0 0 6px rgba(251,146,60,0.85))"
-            : "drop-shadow(0 0 0 transparent)",
-        }}
-        transition={{ duration: 0.4 }}
-      />
-      <motion.g
-        key={lit ? "lamp-lit" : "lamp-off"}
-        initial={{ y: 0 }}
-        animate={{ y: [0, 3, 0] }}
-        transition={{ duration: 0.55, ease: [0.34, 1.56, 0.64, 1] }}
-      >
-        <line
-          x1={11}
-          y1={8}
-          x2={11}
-          y2={cordEnd}
-          stroke={cord}
-          strokeWidth={1.4}
-          strokeLinecap="round"
+      <svg width={56} height={32} viewBox="0 0 56 32" fill="none" aria-hidden style={{ display: "block", flexShrink: 0 }}>
+        <rect x={2} y={2} width={52} height={28} rx={7} fill={plate} stroke={plateBorder} strokeWidth={1.1} />
+        <rect x={8} y={9} width={40} height={14} rx={4} fill={recess} />
+        <motion.rect
+          y={11}
+          width={18}
+          height={10}
+          rx={3}
+          initial={false}
+          animate={{
+            x: isDark ? 10 : 28,
+            fill: isDark ? rockerOff : rockerOn,
+            filter: isDark
+              ? "drop-shadow(0 0 0 transparent)"
+              : `drop-shadow(0 0 5px ${glow})`,
+          }}
+          transition={{ type: "spring", stiffness: 520, damping: 32 }}
         />
-        <circle cx={11} cy={cordEnd + 1} r={1.7} fill={cord} />
-      </motion.g>
-    </motion.svg>
+        <motion.circle
+          cy={16}
+          r={1.8}
+          initial={false}
+          animate={{
+            cx: isDark ? 19 : 37,
+            fill: isDark ? "#78716C" : "#EDE9FE",
+            opacity: isDark ? 0.55 : 1,
+          }}
+          transition={{ type: "spring", stiffness: 520, damping: 32 }}
+        />
+      </svg>
+      <span style={{ fontSize: 12, fontWeight: 500, color: C.textSecondary, letterSpacing: "0.01em" }}>
+        {isDark ? "Dark mode" : "Light mode"}
+      </span>
+    </button>
   );
 }
 
@@ -1024,37 +1033,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
         </div>
 
         <div style={{ padding: "8px 2px 12px", flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
-          <button
-            type="button"
-            onClick={() => setIsDark(v => !v)}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "9px 12px",
-              borderRadius: BUTTON_RADIUS,
-              background: "transparent",
-              border: `1px solid ${C.border}`,
-              cursor: "pointer",
-              color: C.textSecondary,
-              fontSize: 13,
-              fontWeight: 500,
-              fontFamily: BUTTON_FONT,
-              transition: "all 0.12s",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.12)" : C.bgHover;
-              e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.3)" : C.borderStrong;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.borderColor = C.border;
-            }}
-          >
-            <PullCordLamp lit={!isDark} />
-            <span>{isDark ? "Switch to light mode" : "Switch to dark mode"}</span>
-          </button>
+          <SocketThemeSwitch isDark={isDark} onToggle={() => setIsDark(v => !v)} />
         </div>
       </div>
     </>
