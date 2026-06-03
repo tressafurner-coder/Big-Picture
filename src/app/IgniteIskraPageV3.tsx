@@ -902,10 +902,10 @@ function SocketThemeSwitch({
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         gap: 10,
         width: "100%",
-        padding: "8px 12px",
+        padding: "8px 10px",
         borderRadius: BUTTON_RADIUS,
         border: `1px solid ${plateBorder}`,
         background: isDark ? "rgba(28,25,23,0.65)" : "rgba(255,255,255,0.72)",
@@ -1032,7 +1032,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
           ))}
         </div>
 
-        <div style={{ padding: "8px 2px 12px", flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
+        <div style={{ padding: "8px 10px 12px", flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
           <SocketThemeSwitch isDark={isDark} onToggle={() => setIsDark(v => !v)} />
         </div>
       </div>
