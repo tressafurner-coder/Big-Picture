@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import slackLogo from "../imports/slack-logo.png";
 import confluenceLogo from "../imports/confluence-logo.png";
 import amplitudeLogo from "../imports/amplitude-logo.png";
@@ -11,7 +11,7 @@ import {
   Bug, MessageSquare, Flag, FileText, CheckCircle,
   Activity, Zap, AlertCircle, RefreshCw,
   Settings, Home, BarChart2, List,
-  Search, Bell, Edit2, ArrowLeft,
+  Search, Bell, Edit2, ArrowLeft, LogOut, ChevronDown,
 } from "lucide-react";
 
 // ─── Color palettes ──────────────────────────────────────────────────────────
@@ -772,9 +772,18 @@ function BackgroundAnimation({ isDark }: { isDark: boolean }) {
 }
 
 // ─── Iskra Logo ───────────────────────────────────────────────────────────────
-function IskraLogo() {
+function IskraLogo({ centered = false }: { centered?: boolean }) {
   return (
-    <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 10, padding: "4px 12px", marginLeft: -5 }}>
+    <div style={{
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      padding: centered ? "4px 0" : "4px 12px",
+      marginLeft: centered ? 0 : -5,
+      justifyContent: centered ? "center" : "flex-start",
+      width: centered ? "100%" : undefined,
+    }}>
       <motion.svg viewBox="0 0 30 30" width="42" height="42" fill="none"
         animate={{ rotate: [0, 22, -18, 12, 0], scale: [1, 1.18, 0.93, 1.10, 1] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -799,7 +808,6 @@ function IskraLogo() {
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboards", Icon: Home },
   { id: "sources",   label: "Sources",   Icon: List },
-  { id: "settings",  label: "Settings",  Icon: Settings },
 ];
 
 // ─── Sources panel ────────────────────────────────────────────────────────────
@@ -886,6 +894,7 @@ function SocketThemeSwitch({
   isDark: boolean;
   onToggle: () => void;
 }) {
+  const [hover, setHover] = useState(false);
   const plate = isDark ? "#292524" : "#E7E5E4";
   const plateBorder = isDark ? "rgba(251,146,60,0.22)" : "rgba(124,92,231,0.18)";
   const recess = isDark ? "#1C1917" : "#D6D3D1";
@@ -898,6 +907,8 @@ function SocketThemeSwitch({
       type="button"
       onClick={onToggle}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       style={{
         display: "flex",
         flexDirection: "row",
@@ -905,18 +916,11 @@ function SocketThemeSwitch({
         justifyContent: "flex-start",
         gap: 10,
         width: "100%",
-        padding: "8px 10px",
+        padding: "9px 12px",
         borderRadius: BUTTON_RADIUS,
-        border: `1px solid ${plateBorder}`,
-        background: isDark ? "rgba(28,25,23,0.65)" : "rgba(255,255,255,0.72)",
+        ...(hover ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }),
         cursor: "pointer",
-        transition: "border-color 0.2s, background 0.2s",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.45)" : "rgba(124,92,231,0.35)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = plateBorder;
+        transition: "all 0.12s",
       }}
     >
       <svg width={56} height={32} viewBox="0 0 56 32" fill="none" aria-hidden style={{ display: "block", flexShrink: 0 }}>
@@ -956,14 +960,96 @@ function SocketThemeSwitch({
   );
 }
 
-function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount }: {
+function IskraSignInScreen({
+  isDark,
+  onSignIn,
+}: {
+  isDark: boolean;
+  onSignIn: () => void;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        background: C.bgBase,
+        color: C.textPrimary,
+        fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <BackgroundAnimation isDark={isDark} />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          position: "relative",
+          zIndex: 10,
+          width: "100%",
+          maxWidth: 400,
+          padding: "32px 28px",
+          borderRadius: 18,
+          ...glassPanel(isDark),
+          textAlign: "center",
+        }}
+      >
+        <div style={{ marginBottom: 24 }}>
+          <IskraLogo centered />
+        </div>
+        <h1 style={{ ...pageTitleStyle(), margin: "0 0 8px", fontSize: 20 }}>Sign in to Iskra</h1>
+        <p style={{ margin: "0 0 24px", fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
+          You&apos;ve been signed out. Sign in again to continue to your dashboards.
+        </p>
+        <motion.button
+          type="button"
+          onClick={onSignIn}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          style={{
+            width: "100%",
+            padding: "10px 18px",
+            borderRadius: BUTTON_RADIUS,
+            border: "none",
+            background: primaryCtaFill(isDark),
+            color: primaryCtaTextColor(isDark),
+            fontSize: 14,
+            fontWeight: 600,
+            fontFamily: BUTTON_FONT,
+            cursor: "pointer",
+            boxShadow: primaryCtaShadow(isDark),
+          }}
+        >
+          Sign in with Atlassian
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
+function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, setIsDark, activeNav, setActiveNav, mousePos, onMouseMove, enabledSourceCount, onLogout }: {
   savedDashboards: SavedDashboard[]; activeId: string | null;
   onSelect: (id: string) => void; onDelete: (id: string) => void;
   isDark: boolean; setIsDark: (v: (p: boolean) => boolean) => void;
   activeNav: string; setActiveNav: (v: string) => void;
   mousePos: { x: number; y: number }; onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
   enabledSourceCount: number;
+  onLogout: () => void;
 }) {
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [accountHover, setAccountHover] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const close = (e: PointerEvent) => {
+      if (!userMenuRef.current?.contains(e.target as Node)) setUserMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [userMenuOpen]);
+
   const sidebarInner = (
     <>
       <div style={{ padding: "22px 20px 16px" }}>
@@ -971,19 +1057,132 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
       </div>
       <div style={{ margin: "0 20px", height: 1, background: C.border, borderRadius: 1 }} />
 
-      <div style={{ padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div ref={userMenuRef} style={{ padding: "10px 10px 8px", position: "relative", zIndex: 30 }}>
+        <button
+          type="button"
+          onClick={() => setUserMenuOpen(open => !open)}
+          aria-expanded={userMenuOpen}
+          aria-haspopup="menu"
+          aria-label="Account menu"
+          onMouseEnter={() => setAccountHover(true)}
+          onMouseLeave={() => setAccountHover(false)}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "9px 12px",
+            borderRadius: BUTTON_RADIUS,
+            ...(userMenuOpen || accountHover ? glassActiveNav() : { background: "transparent", border: "1px solid transparent", boxShadow: "none" }),
+            cursor: "pointer",
+            textAlign: "left",
+            marginBottom: 2,
+            transition: "all 0.12s",
+          }}
+        >
           <div style={{ position: "relative", flexShrink: 0 }}>
             <div style={{ width: 38, height: 38, borderRadius: "50%", background: isDark ? "linear-gradient(135deg, #FB923C, #F97316)" : "linear-gradient(135deg, #9B8AFB, #7C5CE7)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", border: isDark ? "1.5px solid rgba(251,146,60,0.4)" : "none" }}>
               AK
             </div>
             <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", background: "#34D399", border: `2px solid ${C.bgSurface}` }} />
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, letterSpacing: "0.01em" }}>Alex Kim</div>
             <div style={{ fontSize: 11, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>alex@company.com</div>
           </div>
-        </div>
+          <ChevronDown
+            size={14}
+            aria-hidden
+            style={{
+              flexShrink: 0,
+              color: C.textMuted,
+              transform: userMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.15s ease",
+            }}
+          />
+        </button>
+
+        <AnimatePresence>
+          {userMenuOpen && (
+            <motion.div
+              role="menu"
+              initial={{ opacity: 0, y: -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.98 }}
+              transition={{ duration: 0.14 }}
+              style={{
+                position: "absolute",
+                left: 10,
+                right: 10,
+                top: "100%",
+                marginTop: 4,
+                padding: 4,
+                borderRadius: BUTTON_RADIUS,
+                ...glassPanel(isDark),
+                boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.35)" : C.shadow,
+              }}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setActiveNav("settings");
+                  setUserMenuOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 400,
+                  fontFamily: BUTTON_FONT,
+                  color: C.textPrimary,
+                  textAlign: "left",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              >
+                <Settings size={14} color={C.textMuted} aria-hidden />
+                Settings
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onLogout();
+                }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 400,
+                  fontFamily: BUTTON_FONT,
+                  color: C.textPrimary,
+                  textAlign: "left",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              >
+                <LogOut size={14} color={C.textMuted} aria-hidden />
+                Log out
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div style={{ padding: "10px 10px 4px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1032,7 +1231,7 @@ function LeftSidebar({ savedDashboards, activeId, onSelect, onDelete, isDark, se
           ))}
         </div>
 
-        <div style={{ padding: "8px 10px 12px", flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
+        <div style={{ padding: "10px 10px 12px", flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
           <SocketThemeSwitch isDark={isDark} onToggle={() => setIsDark(v => !v)} />
         </div>
       </div>
@@ -1287,6 +1486,7 @@ function RightPanel({ isDark }: { isDark: boolean }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function IgniteIskraPageV3() {
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isDark, setIsDark] = useState(true);
   const [activeNav, setActiveNav] = useState("dashboard");
   C = isDark ? DARK_PALETTE : LIGHT_PALETTE;
@@ -1436,6 +1636,9 @@ export default function IgniteIskraPageV3() {
   const isRegenerating = generating && currentSources !== null;
   const saveChangesEnabled = isDirty && !generating;
 
+  if (!isAuthenticated) {
+    return <IskraSignInScreen isDark={isDark} onSignIn={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div style={{
@@ -1459,6 +1662,7 @@ export default function IgniteIskraPageV3() {
           const rect = e.currentTarget.getBoundingClientRect();
           setSidebarMouse({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         }}
+        onLogout={() => setIsAuthenticated(false)}
       />
 
       {/* Main Content */}
