@@ -1331,66 +1331,92 @@ export default function IgniteIskraPageV3() {
   const idRef = useRef(0);
 
 
-  const handleGenerate = useCallback((overridePrompt?: string) => {
-    const p = (overridePrompt ?? prompt).trim();
-    if (!p) return;
-    setGenerating(true);
-    setActiveDashboardId(prev => { setIsDirty(!!prev); return prev; });
-    setTimeout(() => {
-      const sources = detectSources(p).filter(s => activeSources.includes(s));
-      setCurrentSources(sources.length > 0 ? sources : activeSources);
-      setCurrentName(prev => prev ?? dashboardName(p));
-      setCurrentPrompt(p);
-      setPromptHistory(prev => [...prev, p]);
-      setGenerating(false);
-    }, 900);
-  }, [prompt, activeSources]);
+  const handleGenerate = useCallback(
+    (overridePrompt?: string) => {
+      const p = (overridePrompt ?? prompt).trim();
+      if (!p) return;
+      const isRegenerate = currentSources !== null;
+      setGenerating(true);
+      setTimeout(() => {
+        const sources = detectSources(p).filter(s => activeSources.includes(s));
+        const finalSources = sources.length > 0 ? sources : activeSources;
+        setCurrentSources(finalSources);
+        setCurrentPrompt(p);
+        setPromptHistory(prev => [...prev, p]);
+        setGenerating(false);
+
+        if (isRegenerate) {
+          setCurrentName(prev => prev ?? dashboardName(p));
+          setIsDirty(true);
+        } else {
+          setCurrentName(prev => {
+            const name = prev ?? dashboardName(p);
+            const id = `d-${++idRef.current}`;
+            setSavedDashboards(prevDash => [
+              { id, name, prompt: p, sources: finalSources, createdAt: new Date() },
+              ...prevDash,
+            ]);
+            setActiveDashboardId(id);
+            setIsDirty(false);
+            return name;
+          });
+        }
+      }, 900);
+    },
+    [prompt, activeSources, currentSources],
+  );
+
+  const handleSaveChanges = useCallback(() => {
+    if (!currentSources || !currentName || !currentPrompt || !activeDashboardId) return;
+    setSavedDashboards(prev =>
+      prev.map(d =>
+        d.id === activeDashboardId
+          ? {
+              ...d,
+              name: currentName,
+              prompt: currentPrompt,
+              sources: currentSources,
+              createdAt: new Date(),
+            }
+          : d,
+      ),
+    );
+    setIsDirty(false);
+  }, [activeDashboardId, currentSources, currentName, currentPrompt]);
 
   const handleGenerateSource = useCallback((sourceId: SourceId) => {
     const sourceName = getSourceConfig(sourceId).label;
     const p = `Show me ${sourceName} insights and key metrics`;
+    const name = `${sourceName} Overview`;
     setPrompt(p);
     setActiveSources([sourceId]);
     setGenerating(true);
     setActiveDashboardId(null);
     setTimeout(() => {
-      setCurrentSources([sourceId]);
-      setCurrentName(`${sourceName} Overview`);
+      const sources: SourceId[] = [sourceId];
+      setCurrentSources(sources);
+      setCurrentName(name);
       setCurrentPrompt(p);
+      setPromptHistory(prev => [...prev, p]);
+      const id = `d-${++idRef.current}`;
+      setSavedDashboards(prev => [
+        { id, name, prompt: p, sources, createdAt: new Date() },
+        ...prev,
+      ]);
+      setActiveDashboardId(id);
+      setIsDirty(false);
       setGenerating(false);
     }, 900);
   }, []);
-
-  const handleSave = useCallback(() => {
-    if (!currentSources || !currentName || !currentPrompt) return;
-    const id = `d-${++idRef.current}`;
-    setSavedDashboards(prev => [{ id, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }, ...prev]);
-    setActiveDashboardId(id);
-    setIsDirty(false);
-  }, [currentSources, currentName, currentPrompt]);
-
-  const handleUpdate = useCallback(() => {
-    if (!activeDashboardId || !currentSources || !currentName || !currentPrompt) return;
-    setSavedDashboards(prev => prev.map(d => d.id === activeDashboardId
-      ? { ...d, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }
-      : d
-    ));
-    setIsDirty(false);
-  }, [activeDashboardId, currentSources, currentName, currentPrompt]);
-
-  const handleSaveAsNew = useCallback(() => {
-    if (!currentSources || !currentName || !currentPrompt) return;
-    const id = `d-${++idRef.current}`;
-    setSavedDashboards(prev => [{ id, name: currentName!, prompt: currentPrompt!, sources: currentSources!, createdAt: new Date() }, ...prev]);
-    setActiveDashboardId(id);
-    setIsDirty(false);
-  }, [currentSources, currentName, currentPrompt]);
 
   const handleSelectDashboard = useCallback((id: string) => {
     const d = savedDashboards.find(x => x.id === id);
     if (!d) return;
     setCurrentSources(d.sources); setCurrentName(d.name); setCurrentPrompt(d.prompt);
-    setPrompt(d.prompt); setActiveDashboardId(id); setIsDirty(false); setActiveNav("dashboard");
+    setPrompt(d.prompt);
+    setActiveDashboardId(id);
+    setIsDirty(false);
+    setActiveNav("dashboard");
   }, [savedDashboards]);
 
   const handleDeleteDashboard = useCallback((id: string) => {
@@ -1400,12 +1426,19 @@ export default function IgniteIskraPageV3() {
 
   const handleNewDashboard = useCallback(() => {
     setCurrentSources(null); setCurrentName(null); setCurrentPrompt(null);
-    setPrompt(""); setActiveDashboardId(null); setActiveSources([...ALL_SOURCES]); setPromptHistory([]); setHistoryOpen(false); setIsDirty(false);
+    setPrompt("");
+    setActiveDashboardId(null);
+    setActiveSources([...ALL_SOURCES]);
+    setPromptHistory([]);
+    setHistoryOpen(false);
+    setIsDirty(false);
   }, []);
 
   const toggleSource = (s: SourceId) => setActiveSources(prev => prev.includes(s) ? (prev.length > 1 ? prev.filter(x => x !== s) : prev) : [...prev, s]);
 
-  const hasDashboard = currentSources !== null && !generating;
+  const hasDashboard = currentSources !== null;
+  const isRegenerating = generating && currentSources !== null;
+  const saveChangesEnabled = isDirty && !generating;
 
 
   return (
@@ -1462,7 +1495,7 @@ export default function IgniteIskraPageV3() {
               </motion.button>
 
               {/* Center: Editable name */}
-              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                 {isEditingName ? (
                   <input
                     ref={nameInputRef}
@@ -1475,38 +1508,67 @@ export default function IgniteIskraPageV3() {
                   />
                 ) : (
                   <button onClick={() => { setIsEditingName(true); setTimeout(() => nameInputRef.current?.select(), 30); }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "text", padding: "4px 8px", borderRadius: BUTTON_RADIUS }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, maxWidth: "100%", minWidth: 0, overflow: "hidden", background: "none", border: "none", cursor: "text", padding: "4px 8px", borderRadius: BUTTON_RADIUS }}
                     onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : C.bgElevated; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                    <h1 style={{ ...pageTitleStyle(), margin: 0 }}>{currentName}</h1>
+                    <h1
+                      title={currentName ?? undefined}
+                      style={{
+                        ...pageTitleStyle(),
+                        margin: 0,
+                        flex: "1 1 auto",
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {currentName}
+                    </h1>
                     <Edit2 size={13} color={C.textMuted} style={{ opacity: 0.6, flexShrink: 0 }} />
-                    {activeDashboardId && !isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: C.successFaint, color: C.success, fontWeight: 600, marginLeft: 2 }}>SAVED</span>}
-                    {activeDashboardId && isDirty && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: isDark ? "rgba(251,191,36,0.18)" : "#FFF8E6", color: isDark ? "#FDBA74" : "#B07800", fontWeight: 600, marginLeft: 2 }}>UNSAVED CHANGES</span>}
+                    {activeDashboardId && !isDirty && (
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: C.successFaint, color: C.success, fontWeight: 600, marginLeft: 2, flexShrink: 0 }}>SAVED</span>
+                    )}
+                    {isDirty && (
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: isDark ? "rgba(251,191,36,0.18)" : "#FFF8E6", color: isDark ? "#FDBA74" : "#B07800", fontWeight: 600, marginLeft: 2, flexShrink: 0 }}>UNSAVED CHANGES</span>
+                    )}
                   </button>
                 )}
               </div>
 
-              {/* Right: Save buttons */}
+              {/* Right: auto-saved on first prompt; Save changes after Re-generate */}
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                {!activeDashboardId ? (
-                  <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSave}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: primaryCtaFill(isDark), border: "none", borderRadius: BUTTON_RADIUS, padding: "8px 18px", cursor: "pointer", color: primaryCtaTextColor(isDark), fontSize: 13, fontWeight: 600, fontFamily: BUTTON_FONT, boxShadow: primaryCtaShadow(isDark) }}>
-                    <Save size={13} /><span>Save Dashboard</span>
-                  </motion.button>
-                ) : isDirty ? (
-                  <>
-                    <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleSaveAsNew}
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${C.border}`, borderRadius: BUTTON_RADIUS, padding: "8px 16px", cursor: "pointer", color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: BUTTON_FONT }}>
-                      <Save size={13} /><span>Save as new</span>
-                    </motion.button>
-                    <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={handleUpdate}
-                      style={{ display: "flex", alignItems: "center", gap: 6, background: primaryCtaFill(isDark), border: "none", borderRadius: BUTTON_RADIUS, padding: "8px 18px", cursor: "pointer", color: primaryCtaTextColor(isDark), fontSize: 13, fontWeight: 600, fontFamily: BUTTON_FONT, boxShadow: primaryCtaShadow(isDark) }}>
-                      <RefreshCw size={13} /><span>Update</span>
-                    </motion.button>
-                  </>
-                ) : (
-                  <div style={{ width: 8 }} />
-                )}
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  onClick={handleSaveChanges}
+                  disabled={!saveChangesEnabled}
+                  whileHover={saveChangesEnabled ? { scale: 1.02 } : {}}
+                  whileTap={saveChangesEnabled ? { scale: 0.97 } : {}}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    border: "none",
+                    borderRadius: BUTTON_RADIUS,
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: BUTTON_FONT,
+                    background: saveChangesEnabled
+                      ? primaryCtaFill(isDark)
+                      : isDark
+                        ? "rgba(255,255,255,0.07)"
+                        : C.bgElevated,
+                    color: saveChangesEnabled ? primaryCtaTextColor(isDark) : C.textMuted,
+                    cursor: saveChangesEnabled ? "pointer" : "default",
+                    boxShadow: saveChangesEnabled ? primaryCtaShadow(isDark) : "none",
+                    opacity: saveChangesEnabled ? 1 : 0.85,
+                  }}
+                >
+                  <Save size={13} />
+                  <span>{saveChangesEnabled ? "Save changes" : "Save Dashboard"}</span>
+                </motion.button>
               </div>
             </>
           ) : (
@@ -1611,9 +1673,9 @@ export default function IgniteIskraPageV3() {
           )}
         </div>
 
-        {/* Generating indicator */}
+        {/* Generating indicator — first build only; re-generate uses in-grid overlay */}
         <AnimatePresence>
-          {generating && (
+          {generating && !currentSources && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: "32px 28px", textAlign: "center" }}>
               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
                 {[0, 0.2, 0.4].map((d, i) => (
@@ -1629,8 +1691,52 @@ export default function IgniteIskraPageV3() {
 
         {/* Widget grid */}
         {hasDashboard && currentSources && (
-          <div style={{ padding: "16px 28px 40px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+          <div style={{ padding: "16px 28px 40px", position: "relative" }}>
+            <AnimatePresence>
+              {isRegenerating && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    zIndex: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 12,
+                    background: isDark ? "rgba(15, 10, 7, 0.78)" : "rgba(247, 248, 249, 0.82)",
+                    backdropFilter: "blur(6px)",
+                    WebkitBackdropFilter: "blur(6px)",
+                    borderRadius: 14,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+                    {[0, 0.2, 0.4].map((d, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 0.9, repeat: Infinity, delay: d }}
+                        style={{ width: 7, height: 7, borderRadius: "50%", background: C.spark }}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 13, color: C.textMuted }}>Re-building your dashboard…</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 14,
+                opacity: isRegenerating ? 0.45 : 1,
+                transition: "opacity 0.2s ease",
+                pointerEvents: isRegenerating ? "none" : "auto",
+              }}
+            >
               {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
             </div>
           </div>
