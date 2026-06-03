@@ -1363,6 +1363,23 @@ export default function IgniteIskraPageV3() {
     setIsDirty(false);
   }, [activeDashboardId, currentSources, currentName, currentPrompt]);
 
+  const handleSaveAsNew = useCallback(() => {
+    if (!currentSources || !currentName || !currentPrompt) return;
+    const id = `d-${++idRef.current}`;
+    setSavedDashboards(prev => [
+      {
+        id,
+        name: currentName,
+        prompt: currentPrompt,
+        sources: currentSources,
+        createdAt: new Date(),
+      },
+      ...prev,
+    ]);
+    setActiveDashboardId(id);
+    setIsDirty(false);
+  }, [currentSources, currentName, currentPrompt]);
+
   const handleGenerateSource = useCallback((sourceId: SourceId) => {
     const sourceName = getSourceConfig(sourceId).label;
     const p = `Show me ${sourceName} insights and key metrics`;
@@ -1516,39 +1533,85 @@ export default function IgniteIskraPageV3() {
                 )}
               </div>
 
-              {/* Right: auto-saved on first prompt; Save changes after Re-generate */}
+              {/* Right: disabled Save Dashboard until Re-generate; then Save as new + Save changes */}
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  onClick={handleSaveChanges}
-                  disabled={!saveChangesEnabled}
-                  whileHover={saveChangesEnabled ? { scale: 1.02 } : {}}
-                  whileTap={saveChangesEnabled ? { scale: 0.97 } : {}}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    border: "none",
-                    borderRadius: BUTTON_RADIUS,
-                    padding: "8px 18px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    fontFamily: BUTTON_FONT,
-                    background: saveChangesEnabled
-                      ? primaryCtaFill(isDark)
-                      : isDark
-                        ? "rgba(255,255,255,0.07)"
-                        : C.bgElevated,
-                    color: saveChangesEnabled ? primaryCtaTextColor(isDark) : C.textMuted,
-                    cursor: saveChangesEnabled ? "pointer" : "default",
-                    boxShadow: saveChangesEnabled ? primaryCtaShadow(isDark) : "none",
-                    opacity: saveChangesEnabled ? 1 : 0.85,
-                  }}
-                >
-                  <Save size={13} />
-                  <span>{saveChangesEnabled ? "Save changes" : "Save Dashboard"}</span>
-                </motion.button>
+                {saveChangesEnabled ? (
+                  <>
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      onClick={handleSaveAsNew}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "transparent",
+                        border: `1px solid ${C.border}`,
+                        borderRadius: BUTTON_RADIUS,
+                        padding: "8px 16px",
+                        cursor: "pointer",
+                        color: C.textMuted,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        fontFamily: BUTTON_FONT,
+                      }}
+                    >
+                      <Save size={13} />
+                      <span>Save as new</span>
+                    </motion.button>
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      onClick={handleSaveChanges}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        border: "none",
+                        borderRadius: BUTTON_RADIUS,
+                        padding: "8px 18px",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        fontFamily: BUTTON_FONT,
+                        background: primaryCtaFill(isDark),
+                        color: primaryCtaTextColor(isDark),
+                        cursor: "pointer",
+                        boxShadow: primaryCtaShadow(isDark),
+                      }}
+                    >
+                      <Save size={13} />
+                      <span>Save changes</span>
+                    </motion.button>
+                  </>
+                ) : (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    disabled
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      border: "none",
+                      borderRadius: BUTTON_RADIUS,
+                      padding: "8px 18px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontFamily: BUTTON_FONT,
+                      background: isDark ? "rgba(255,255,255,0.07)" : C.bgElevated,
+                      color: C.textMuted,
+                      cursor: "default",
+                      opacity: 0.85,
+                    }}
+                  >
+                    <Save size={13} />
+                    <span>Save Dashboard</span>
+                  </motion.button>
+                )}
               </div>
             </>
           ) : (
