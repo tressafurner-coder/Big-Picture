@@ -829,15 +829,15 @@ function BackgroundAnimation({ isDark }: { isDark: boolean }) {
 }
 
 // ─── Iskra Logo ───────────────────────────────────────────────────────────────
-function IskraLogo({ centered = false }: { centered?: boolean }) {
+function IskraLogo({ centered = false, compact = false }: { centered?: boolean; compact?: boolean }) {
   return (
     <div style={{
       display: "flex",
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      padding: centered ? "4px 0" : "4px 12px",
-      marginLeft: centered ? 0 : -5,
+      padding: centered || compact ? "4px 0" : "4px 12px",
+      marginLeft: compact ? -8 : centered ? 0 : -5,
       justifyContent: centered ? "center" : "flex-start",
       width: centered ? "100%" : undefined,
     }}>
@@ -1046,15 +1046,15 @@ function IskraSignInScreen({
           padding: "32px 28px",
           borderRadius: 18,
           ...glassPanel(isDark),
-          textAlign: "center",
+          textAlign: "left",
         }}
       >
         <div style={{ marginBottom: 24 }}>
-          <IskraLogo centered />
+          <IskraLogo compact />
         </div>
         <h1 style={{ ...pageTitleStyle(), margin: "0 0 8px", fontSize: 20 }}>Sign in to Iskra</h1>
         <p style={{ margin: "0 0 24px", fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
-          You&apos;ve been signed out. Sign in again to continue to your dashboards.
+          Access is limited to accounts with an @appfire.com email address.
         </p>
         <motion.button
           type="button"
@@ -1075,7 +1075,7 @@ function IskraSignInScreen({
             boxShadow: primaryCtaShadow(isDark),
           }}
         >
-          Sign in with Atlassian
+          Sign in with Google
         </motion.button>
       </motion.div>
     </div>
