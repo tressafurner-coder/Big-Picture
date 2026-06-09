@@ -218,6 +218,85 @@ interface PromptHistoryEntry {
   sources: SourceId[];
   name: string;
   createdAt: Date;
+  scenario: DashboardScenarioId;
+}
+
+type DashboardScenarioId =
+  | "default"
+  | "full-health"
+  | "sprint-health"
+  | "engagement"
+  | "team-comms"
+  | "feature-adoption"
+  | "adoption-breakdown"
+  | "sunsetting"
+  | "release-delays";
+
+interface SupportTicket {
+  key: string;
+  summary: string;
+  priority: "Critical" | "High" | "Medium" | "Low";
+  ageDays: number;
+}
+
+interface LicenseTierRow {
+  tier: string;
+  users: number;
+  topFeature: string;
+  adoptionPct: number;
+}
+
+interface SunsetCandidate {
+  feature: string;
+  monthlyUsers: number;
+  openBugs: number;
+  oldestBugDays: number;
+  supportTickets: number;
+}
+
+interface ReleaseBlocker {
+  feature: string;
+  bugs: { key: string; summary: string; severity: string; ageDays: number }[];
+}
+
+interface DashboardMock {
+  amplitude: {
+    dau: number; dauChange: number; mau: number; mauChange: number;
+    weeklyEvents: number[];
+    topEvents: { name: string; count: number }[];
+    retention: number[];
+    featureName?: string;
+    weeklyAdopters?: number[];
+    licenseTiers?: LicenseTierRow[];
+    lowUsageFeatures?: { name: string; monthlyUsers: number; trend: number }[];
+  };
+  jira: {
+    sprintName: string; done: number; total: number; daysLeft: number;
+    open: number; inProgress: number; closed: number;
+    critical: number; high: number; medium: number; low: number;
+    velocity: number[];
+    supportTickets?: SupportTicket[];
+    sunsetCandidates?: SunsetCandidate[];
+    releaseVersion?: string;
+    releaseOriginalDate?: string;
+    releaseNewDate?: string;
+    releaseBlockers?: ReleaseBlocker[];
+  };
+  slack: {
+    dailyMessages: number[];
+    avgResponse: string; responseChange: number;
+    channels: { name: string; messages: number }[];
+  };
+  confluence: {
+    totalPages: number; weeklyViews: number; viewsChange: number; coverage: number;
+    pages: { title: string; space: string; ago: string }[];
+  };
+  launchdarkly: {
+    active: number; inactive: number; evaluations: string; evalChange: number;
+    flags: { key: string; on: boolean; rollout: number }[];
+    rolloutStarted?: string;
+    rolloutTarget?: string;
+  };
 }
 
 function historyEntryMatchesSaved(entry: PromptHistoryEntry, saved: SavedDashboard | undefined): boolean {
@@ -336,25 +415,25 @@ const SOURCE_CARD_METRICS: Record<SourceId, { metric: string; detail: string; sp
 };
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK = {
+const DEFAULT_MOCK: DashboardMock = {
   amplitude: {
     dau: 14832, dauChange: 8.2, mau: 52104, mauChange: 3.1,
-    weeklyEvents: [42000,38000,51000,47000,55000,49000,58000],
+    weeklyEvents: [42000, 38000, 51000, 47000, 55000, 49000, 58000],
     topEvents: [
       { name: "dashboard_view", count: 28420 }, { name: "feature_clicked", count: 21840 },
       { name: "report_generated", count: 15660 }, { name: "export_triggered", count: 9230 },
       { name: "integration_added", count: 6410 },
     ],
-    retention: [100,62,44,38,31,28,24],
+    retention: [100, 62, 44, 38, 31, 28, 24],
   },
   jira: {
     sprintName: "Sprint 18", done: 34, total: 50, daysLeft: 4,
     open: 23, inProgress: 14, closed: 58,
     critical: 2, high: 8, medium: 15, low: 22,
-    velocity: [42,38,51,44,50,48],
+    velocity: [42, 38, 51, 44, 50, 48],
   },
   slack: {
-    dailyMessages: [1240,980,1420,1130,1510,720,1340],
+    dailyMessages: [1240, 980, 1420, 1130, 1510, 720, 1340],
     avgResponse: "18m", responseChange: -12,
     channels: [
       { name: "#engineering", messages: 482 }, { name: "#product", messages: 341 },
@@ -382,6 +461,199 @@ const MOCK = {
   },
 };
 
+const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
+  default: DEFAULT_MOCK,
+  "full-health": DEFAULT_MOCK,
+  "sprint-health": {
+    ...DEFAULT_MOCK,
+    jira: {
+      ...DEFAULT_MOCK.jira,
+      sprintName: "Sprint 18 — Release",
+      done: 41, total: 50, daysLeft: 2,
+      critical: 3, high: 6, medium: 11, low: 18,
+      velocity: [44, 46, 48, 47, 49, 51],
+    },
+    launchdarkly: {
+      ...DEFAULT_MOCK.launchdarkly,
+      flags: [
+        { key: "release-v4.2.0", on: true, rollout: 0 },
+        { key: "hotfix-auth-token", on: true, rollout: 100 },
+        { key: "deploy-gate-check", on: true, rollout: 100 },
+        { key: "canary-prod-eu", on: true, rollout: 15 },
+        { key: "rollback-v4.1.9", on: false, rollout: 0 },
+      ],
+    },
+  },
+  engagement: {
+    ...DEFAULT_MOCK,
+    amplitude: {
+      ...DEFAULT_MOCK.amplitude,
+      dau: 16240, dauChange: 11.4, mau: 54820, mauChange: 4.8,
+      weeklyEvents: [48000, 52000, 61000, 58000, 64000, 59000, 67000],
+      topEvents: [
+        { name: "session_start", count: 41200 }, { name: "dashboard_view", count: 28420 },
+        { name: "feature_clicked", count: 21840 }, { name: "onboarding_step", count: 18420 },
+        { name: "report_generated", count: 15660 },
+      ],
+      retention: [100, 68, 44, 36, 30, 27, 23],
+    },
+  },
+  "team-comms": {
+    ...DEFAULT_MOCK,
+    slack: {
+      dailyMessages: [1580, 1420, 1890, 1640, 2100, 980, 1760],
+      avgResponse: "14m", responseChange: -18,
+      channels: [
+        { name: "#release-v4.2", messages: 612 }, { name: "#engineering", messages: 482 },
+        { name: "#product", messages: 341 }, { name: "#support-escalations", messages: 287 },
+        { name: "#feature-flags", messages: 214 },
+      ],
+    },
+    launchdarkly: {
+      ...DEFAULT_MOCK.launchdarkly,
+      active: 18, inactive: 6, evaluations: "2.8M", evalChange: 14.3,
+      flags: [
+        { key: "ai-copilot", on: true, rollout: 12 },
+        { key: "bigtemplate-v3", on: true, rollout: 35 },
+        { key: "enhanced-search", on: true, rollout: 100 },
+        { key: "csv-export-v2", on: false, rollout: 0 },
+      ],
+    },
+  },
+  "feature-adoption": {
+    ...DEFAULT_MOCK,
+    amplitude: {
+      dau: 8420, dauChange: 14.6, mau: 22140, mauChange: 9.2,
+      weeklyEvents: [820, 1240, 1860, 2420, 3180, 3940, 4680],
+      topEvents: [
+        { name: "bigtemplate_opened", count: 4680 },
+        { name: "bigtemplate_export_pdf", count: 2140 },
+        { name: "bigtemplate_saved", count: 1820 },
+        { name: "bigtemplate_shared", count: 940 },
+        { name: "bigtemplate_marketplace_view", count: 620 },
+      ],
+      retention: [100, 72, 58, 49, 42, 38, 34],
+      featureName: "BigTemplate v3",
+      weeklyAdopters: [120, 340, 580, 920, 1240, 1580, 1920],
+    },
+    jira: {
+      ...DEFAULT_MOCK.jira,
+      sprintName: "BT-142 BigTemplate Rework",
+      done: 28, total: 32, daysLeft: 6,
+      critical: 0, high: 2, medium: 1, low: 1,
+      velocity: [18, 22, 24, 26, 28, 30],
+      supportTickets: [
+        { key: "SUP-4821", summary: "PDF export renders blurry on A4 — low resolution", priority: "High", ageDays: 3 },
+        { key: "SUP-4798", summary: "Exported PDF text is pixelated at 150 DPI", priority: "High", ageDays: 5 },
+        { key: "SUP-4762", summary: "BigTemplate PDF export quality worse than v2", priority: "Medium", ageDays: 7 },
+        { key: "SUP-4710", summary: "Template preview loads slowly on first open", priority: "Low", ageDays: 12 },
+      ],
+    },
+    launchdarkly: {
+      active: 12, inactive: 4, evaluations: "840K", evalChange: 38.4,
+      rolloutStarted: "12 Mar 2026",
+      rolloutTarget: "30 Jun 2026",
+      flags: [
+        { key: "bigtemplate-v3-rework", on: true, rollout: 35 },
+        { key: "bigtemplate-pdf-hd", on: false, rollout: 0 },
+        { key: "bigtemplate-marketplace", on: true, rollout: 100 },
+      ],
+    },
+  },
+  "adoption-breakdown": {
+    ...DEFAULT_MOCK,
+    amplitude: {
+      dau: 8420, dauChange: 14.6, mau: 22140, mauChange: 9.2,
+      weeklyEvents: [4680, 4820, 5100, 5240, 5480, 5620, 5890],
+      topEvents: [
+        { name: "template_editor_open", count: 5890 },
+        { name: "export_pdf", count: 4120 },
+        { name: "apply_branding", count: 3680 },
+        { name: "share_template", count: 2140 },
+        { name: "import_csv_data", count: 980 },
+      ],
+      retention: [100, 72, 58, 49, 42, 38, 34],
+      featureName: "BigTemplate v3",
+      licenseTiers: [
+        { tier: "Enterprise", users: 840, topFeature: "export_pdf", adoptionPct: 78 },
+        { tier: "Pro", users: 2140, topFeature: "template_editor_open", adoptionPct: 62 },
+        { tier: "Standard", users: 4820, topFeature: "apply_branding", adoptionPct: 41 },
+        { tier: "Free", users: 9340, topFeature: "import_csv_data", adoptionPct: 18 },
+      ],
+    },
+  },
+  sunsetting: {
+    ...DEFAULT_MOCK,
+    amplitude: {
+      ...DEFAULT_MOCK.amplitude,
+      lowUsageFeatures: [
+        { name: "legacy-chart-builder", monthlyUsers: 42, trend: -28 },
+        { name: "csv-import-v1", monthlyUsers: 68, trend: -19 },
+        { name: "custom-css-editor", monthlyUsers: 91, trend: -12 },
+        { name: "bulk-email-sender", monthlyUsers: 124, trend: -8 },
+        { name: "old-dashboard-v1", monthlyUsers: 156, trend: -31 },
+      ],
+    },
+    jira: {
+      ...DEFAULT_MOCK.jira,
+      critical: 1, high: 5, medium: 12, low: 28,
+      sunsetCandidates: [
+        { feature: "Legacy Chart Builder", monthlyUsers: 42, openBugs: 14, oldestBugDays: 186, supportTickets: 9 },
+        { feature: "CSV Import v1", monthlyUsers: 68, openBugs: 11, oldestBugDays: 142, supportTickets: 6 },
+        { feature: "Custom CSS Editor", monthlyUsers: 91, openBugs: 8, oldestBugDays: 98, supportTickets: 4 },
+        { feature: "Old Dashboard v1", monthlyUsers: 156, openBugs: 7, oldestBugDays: 76, supportTickets: 3 },
+        { feature: "Bulk Email Sender", monthlyUsers: 124, openBugs: 5, oldestBugDays: 64, supportTickets: 2 },
+      ],
+    },
+  },
+  "release-delays": {
+    ...DEFAULT_MOCK,
+    jira: {
+      ...DEFAULT_MOCK.jira,
+      sprintName: "Release v4.2.0",
+      done: 38, total: 50, daysLeft: 0,
+      critical: 4, high: 7, medium: 9, low: 14,
+      releaseVersion: "v4.2.0",
+      releaseOriginalDate: "15 May 2026",
+      releaseNewDate: "29 May 2026",
+      releaseBlockers: [
+        {
+          feature: "PDF Export (BigTemplate)",
+          bugs: [
+            { key: "BUG-3841", summary: "Critical memory leak on large PDF export", severity: "Critical", ageDays: 11 },
+            { key: "BUG-3829", summary: "Export fails silently for >50-page templates", severity: "Critical", ageDays: 8 },
+          ],
+        },
+        {
+          feature: "Auth Token Refresh",
+          bugs: [
+            { key: "BUG-3812", summary: "Session expires during long-running export", severity: "Critical", ageDays: 6 },
+          ],
+        },
+        {
+          feature: "Marketplace Sync",
+          bugs: [
+            { key: "BUG-3798", summary: "Template version mismatch after marketplace update", severity: "High", ageDays: 14 },
+            { key: "BUG-3784", summary: "Rollback leaves stale cache in CDN", severity: "High", ageDays: 9 },
+          ],
+        },
+      ],
+    },
+  },
+};
+
+let activeDashboardMock: DashboardMock = DEFAULT_MOCK;
+let activeScenario: DashboardScenarioId = "default";
+
+function getMock(): DashboardMock {
+  return activeDashboardMock;
+}
+
+function setDashboardContext(scenario: DashboardScenarioId) {
+  activeScenario = scenario;
+  activeDashboardMock = SCENARIO_MOCKS[scenario];
+}
+
 const QUICK_INSIGHTS = [
   { date: "Today", events: [
     { time: "10:00", source: "amplitude" as SourceId, label: "DAU spike detected", detail: "+8.2% vs yesterday" },
@@ -395,20 +667,57 @@ const QUICK_INSIGHTS = [
   ]},
 ];
 
-const SUGGESTED_PROMPTS = [
-  "Show sprint health and deployment readiness",
-  "User engagement and retention overview",
-  "Team communication and feature flag status",
-  "Full product health across all sources",
+interface SuggestedPrompt {
+  id: string;
+  label: string;
+  prompt: string;
+}
+
+const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
+  { id: "sprint-health", label: "Show sprint health and deployment readiness", prompt: "Show sprint health and deployment readiness" },
+  { id: "engagement", label: "User engagement and retention overview", prompt: "User engagement and retention overview" },
+  { id: "team-comms", label: "Team communication and feature flag status", prompt: "Team communication and feature flag status" },
+  { id: "full-health", label: "Full product health across all sources", prompt: "Full product health across all sources" },
+  { id: "feature-adoption", label: "New feature adoption & support feedback", prompt: "We released new reworked BigTemplate to the marketplace. What is the adoption and user feedback?" },
+  { id: "adoption-breakdown", label: "Functionality adoption breakdown", prompt: "We released new reworked BigTemplate to the marketplace. What are the most used features? Break them down by user license tier." },
+  { id: "sunsetting", label: "Sunsetting features or products", prompt: "Which features are least used and have most unresolved bugs for the longest time? Help me find features to remove from the app to simplify it." },
+  { id: "release-delays", label: "Release delays from critical bugs", prompt: "Bugs related to which features caused the last release to be postponed?" },
 ];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
-function detectSources(prompt: string): SourceId[] {
+function detectScenario(prompt: string): DashboardScenarioId {
+  const t = prompt.toLowerCase();
+  if (/bigtemplate.*adoption.*feedback|adoption and user feedback/.test(t)) return "feature-adoption";
+  if (/most used features|license tier|break them down by user/.test(t)) return "adoption-breakdown";
+  if (/least used|unresolved bugs|features to remove|sunset|cause most problems/.test(t)) return "sunsetting";
+  if (/release.*postponed|caused the last release|release delay/.test(t)) return "release-delays";
+  if (/sprint health|deployment readiness/.test(t)) return "sprint-health";
+  if (/engagement|retention overview/.test(t)) return "engagement";
+  if (/team communication|feature flag status/.test(t)) return "team-comms";
+  if (/full product health|across all sources/.test(t)) return "full-health";
+  return "default";
+}
+
+const SCENARIO_SOURCES: Record<DashboardScenarioId, SourceId[] | null> = {
+  default: null,
+  "full-health": [...ALL_SOURCES],
+  "sprint-health": ["jira", "launchdarkly"],
+  engagement: ["amplitude"],
+  "team-comms": ["slack", "launchdarkly"],
+  "feature-adoption": ["amplitude", "jira", "launchdarkly"],
+  "adoption-breakdown": ["amplitude"],
+  sunsetting: ["jira", "amplitude"],
+  "release-delays": ["jira"],
+};
+
+function detectSources(prompt: string, scenario: DashboardScenarioId): SourceId[] {
+  const scenarioSources = SCENARIO_SOURCES[scenario];
+  if (scenarioSources) return scenarioSources;
   const t = prompt.toLowerCase();
   const found: SourceId[] = [];
-  if (/amp|event|user|analytic|retention|funnel|dau|mau|session|track/.test(t)) found.push("amplitude");
-  if (/jira|sprint|bug|issue|task|ticket|velocity|backlog|story/.test(t)) found.push("jira");
-  if (/slack|message|channel|team|chat|thread/.test(t)) found.push("slack");
+  if (/amp|event|user|analytic|retention|funnel|dau|mau|session|track|adoption/.test(t)) found.push("amplitude");
+  if (/jira|sprint|bug|issue|task|ticket|velocity|backlog|story|support|feedback/.test(t)) found.push("jira");
+  if (/slack|message|channel|team|chat|thread|communication/.test(t)) found.push("slack");
   if (/confluence|doc|wiki|page|knowledge|content/.test(t)) found.push("confluence");
   if (/launch|darkly|flag|feature|rollout|toggle|canary|release/.test(t)) found.push("launchdarkly");
   return found.length > 0 ? found : [...ALL_SOURCES];
@@ -540,7 +849,7 @@ function W({ title, source, span = 1, badge, children, delay = 0, summaryTooltip
 
 // ─── Widget components ────────────────────────────────────────────────────────
 function WidgetAmplitudeDAU({ delay }: { delay: number }) {
-  const d = MOCK.amplitude;
+  const d = getMock().amplitude;
   return (
     <W title="Active Users" source="amplitude" delay={delay}>
       <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
@@ -562,20 +871,23 @@ function WidgetAmplitudeDAU({ delay }: { delay: number }) {
 }
 
 function WidgetAmplitudeEvents({ delay }: { delay: number }) {
-  const d = MOCK.amplitude;
+  const d = getMock().amplitude;
+  const adopters = d.weeklyAdopters;
+  const values = adopters ?? d.weeklyEvents;
+  const totalLabel = adopters ? "new adopters this week" : "total this week";
   return (
-    <W title="Event Volume (7 days)" source="amplitude" span={2} delay={delay}>
+    <W title={adopters ? `${d.featureName ?? "Feature"} adoption (7 days)` : "Event Volume (7 days)"} source="amplitude" span={2} delay={delay}>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(d.weeklyEvents.reduce((a, b) => a + b))}</div>
-          <div style={{ fontSize: 12, color: C.textMuted }}>total this week</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(values.reduce((a, b) => a + b))}</div>
+          <div style={{ fontSize: 12, color: C.textMuted }}>{totalLabel}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, paddingBottom: 4 }}>
           <TrendingUp size={12} color={C.success} />
-          <span style={{ fontSize: 12, color: C.success }}>+11.2% vs last week</span>
+          <span style={{ fontSize: 12, color: C.success }}>+{d.dauChange}% vs last week</span>
         </div>
       </div>
-      <MiniBar values={d.weeklyEvents} color={C.amplitude} />
+      <MiniBar values={values} color={C.amplitude} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
         {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => <span key={d} style={{ fontSize: 11, color: C.textMuted }}>{d}</span>)}
       </div>
@@ -584,10 +896,10 @@ function WidgetAmplitudeEvents({ delay }: { delay: number }) {
 }
 
 function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
-  const d = MOCK.amplitude;
+  const d = getMock().amplitude;
   const max = d.topEvents[0].count;
   return (
-    <W title="Top Events" source="amplitude" delay={delay}>
+    <W title={d.featureName ? `${d.featureName} — top events` : "Top Events"} source="amplitude" delay={delay}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {d.topEvents.map((e, i) => (
           <div key={e.name}>
@@ -606,7 +918,7 @@ function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
 }
 
 function WidgetJiraSprint({ delay }: { delay: number }) {
-  const d = MOCK.jira;
+  const d = getMock().jira;
   const pct = Math.round((d.done / d.total) * 100);
   return (
     <W title={d.sprintName} source="jira" badge={`${d.daysLeft}d left`} delay={delay}>
@@ -630,7 +942,7 @@ function WidgetJiraSprint({ delay }: { delay: number }) {
 }
 
 function WidgetJiraBugs({ delay }: { delay: number }) {
-  const d = MOCK.jira;
+  const d = getMock().jira;
   const bugs = [{ label: "Critical", val: d.critical, color: C.error }, { label: "High", val: d.high, color: C.warning }, { label: "Medium", val: d.medium, color: C.jira }, { label: "Low", val: d.low, color: C.textMuted }];
   const total = bugs.reduce((s, b) => s + b.val, 0);
   return (
@@ -656,7 +968,7 @@ function WidgetJiraBugs({ delay }: { delay: number }) {
 }
 
 function WidgetJiraVelocity({ delay }: { delay: number }) {
-  const d = MOCK.jira;
+  const d = getMock().jira;
   const avg = Math.round(d.velocity.reduce((s, v) => s + v) / d.velocity.length);
   return (
     <W title="Velocity (last 6 sprints)" source="jira" delay={delay}>
@@ -669,92 +981,200 @@ function WidgetJiraVelocity({ delay }: { delay: number }) {
   );
 }
 
+function SummaryCallout({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      padding: "12px 14px",
+      borderRadius: 10,
+      background: isDarkMode ? "rgba(249,115,22,0.1)" : C.sparkFaint,
+      border: `1px solid ${isDarkMode ? "rgba(251,146,60,0.22)" : "rgba(124,92,231,0.14)"}`,
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.55 }}>{children}</div>
+    </div>
+  );
+}
+
 function WidgetTextSummary({ delay }: { delay: number }) {
-  const d = MOCK;
+  const d = getMock();
   const jiraPct = Math.round((d.jira.done / d.jira.total) * 100);
   const jiraAvg = Math.round(d.jira.velocity.reduce((s, v) => s + v) / d.jira.velocity.length);
+  const flag = d.launchdarkly.flags[0];
+  const pdfTickets = d.jira.supportTickets?.filter(t => /pdf|resolution|pixelat/i.test(t.summary)).length ?? 0;
+
+  let body: React.ReactNode;
+  switch (activeScenario) {
+    case "feature-adoption":
+      body = (
+        <>
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> rollout is at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{flag.rollout}%</strong>
+          {" "}(started {d.launchdarkly.rolloutStarted}, target {d.launchdarkly.rolloutTarget}) with <strong style={{ color: C.textPrimary, fontWeight: 600 }}>1,920 weekly adopters</strong> (+{d.amplitude.dauChange}% WoW).
+          {" "}Amplitude shows strong usage of <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>bigtemplate_opened</code> and <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>bigtemplate_export_pdf</code>.
+          {" "}There are <strong style={{ color: C.textPrimary, fontWeight: 600 }}>4 support tickets</strong> — <strong style={{ color: C.error, fontWeight: 600 }}>{pdfTickets} complain about low PDF resolution</strong>. Consider fixing before expanding rollout.
+        </>
+      );
+      break;
+    case "adoption-breakdown":
+      body = (
+        <>
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> adoption varies sharply by license tier — Enterprise leads at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>78%</strong> (top: export PDF), while Free tier sits at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>18%</strong> (mostly import CSV).
+          {" "}The most used capability overall is <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>template_editor_open</code> ({fmt(d.amplitude.topEvents[0].count)} events/week).
+        </>
+      );
+      break;
+    case "sunsetting":
+      body = (
+        <>
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Legacy Chart Builder</strong> is the strongest sunset candidate — only <strong style={{ color: C.textPrimary, fontWeight: 600 }}>42 monthly users</strong>, <strong style={{ color: C.error, fontWeight: 600 }}>14 open bugs</strong> (oldest 186 days), and 9 support tickets.
+          {" "}CSV Import v1 and Old Dashboard v1 follow with low usage and long-standing unresolved issues. Removing these could simplify the product without impacting most customers.
+        </>
+      );
+      break;
+    case "release-delays":
+      body = (
+        <>
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseVersion}</strong> was postponed from <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseOriginalDate}</strong> to <strong style={{ color: C.error, fontWeight: 600 }}>{d.jira.releaseNewDate}</strong>.
+          {" "}The primary blockers are <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF Export (BigTemplate)</strong> — 2 critical bugs including a memory leak — and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth Token Refresh</strong> causing session expiry during long exports.
+        </>
+      );
+      break;
+    case "sprint-health":
+      body = (
+        <>
+          {d.jira.sprintName} is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left and <strong style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</strong> open.
+          {" "}Deployment readiness flags show <strong style={{ color: C.textPrimary, fontWeight: 600 }}>release-v4.2.0</strong> at 0% rollout (gated), canary at 15%, and hotfix-auth-token fully deployed.
+        </>
+      );
+      break;
+    case "engagement":
+      body = (
+        <>
+          User engagement is trending up — DAU <strong style={{ color: C.textPrimary, fontWeight: 600 }}>+{d.amplitude.dauChange}%</strong> WoW, MAU <strong style={{ color: C.textPrimary, fontWeight: 600 }}>+{d.amplitude.mauChange}%</strong>, with week-2 retention at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.
+          {" "}Top events are <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>session_start</code> and <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>dashboard_view</code>.
+        </>
+      );
+      break;
+    case "team-comms":
+      body = (
+        <>
+          Team activity peaked in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>#release-v4.2</strong> ({d.slack.channels[0].messages} messages) with avg response time down to <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.slack.avgResponse}</strong>.
+          {" "}Feature flags: <strong style={{ color: C.textPrimary, fontWeight: 600 }}>bigtemplate-v3</strong> at 35% rollout, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> at 12%.
+        </>
+      );
+      break;
+    default:
+      body = (
+        <>
+          Product engagement remains healthy — DAU is up {d.amplitude.dauChange}% week-over-week, with week-2 retention holding at 44%.
+          {" "}Engineering is on track: {d.jira.sprintName} is {jiraPct}% complete with ~{jiraAvg} pts/sprint velocity and {d.jira.critical} critical bugs open.
+          {" "}Slack activity peaked in {d.slack.channels[0].name} ({d.slack.channels[0].messages} messages), while Confluence coverage sits at {d.confluence.coverage}%.
+          {" "}The <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> flag is at 12% rollout — worth monitoring adoption before expanding.
+        </>
+      );
+  }
+
   return (
-    <W
-      title="Executive summary"
-      source="amplitude"
-      span={3}
-      badge="AI"
-      delay={delay}
-      summaryTooltip="Synthesised by Iskra from your connected data sources."
-    >
-      <p style={{ margin: 0, fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>
-        Product engagement remains healthy — DAU is up {d.amplitude.dauChange}% week-over-week, with week-2 retention holding at 44%.
-        {" "}Engineering is on track: {d.jira.sprintName} is {jiraPct}% complete with ~{jiraAvg} pts/sprint velocity and {d.jira.critical} critical bugs open.
-        {" "}Slack activity peaked in #engineering ({d.slack.channels[0].messages} messages), while Confluence coverage sits at {d.confluence.coverage}%.
-        {" "}The <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> flag is at 12% rollout — worth monitoring adoption before expanding.
-      </p>
+    <W title="Executive summary" source="amplitude" span={3} badge="AI" delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
+      <p style={{ margin: 0, fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>{body}</p>
     </W>
   );
 }
 
-function WidgetFormattedInsights({ delay }: { delay: number }) {
-  const d = MOCK;
-  const jiraPct = Math.round((d.jira.done / d.jira.total) * 100);
+function InsightSection({ title, items }: { title: string; items: React.ReactNode[] }) {
   return (
-    <W
-      title="Key takeaways"
-      source="jira"
-      span={3}
-      badge="AI"
-      delay={delay}
-      summaryTooltip="Synthesised by Iskra from your connected data sources."
-    >
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, marginBottom: 8 }}>{title}</div>
+      <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+        {items.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function WidgetFormattedInsights({ delay }: { delay: number }) {
+  const d = getMock();
+  const jiraPct = Math.round((d.jira.done / d.jira.total) * 100);
+
+  let intro: React.ReactNode;
+  let sections: { title: string; items: React.ReactNode[] }[] = [];
+  let callout: { title: string; body: React.ReactNode } | null = null;
+
+  switch (activeScenario) {
+    case "feature-adoption":
+      intro = <>BigTemplate v3 rollout is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>progressing well on adoption</strong> but user feedback highlights a quality gap in PDF export.</>;
+      sections = [
+        { title: "Rollout & adoption", items: [
+          <>Flag <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>bigtemplate-v3-rework</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>35%</strong> — on track for 100% by {d.launchdarkly.rolloutTarget}.</>,
+          <>Weekly adopters grew to <strong style={{ color: C.textPrimary, fontWeight: 600 }}>1,920</strong> (+{d.amplitude.dauChange}% WoW).</>,
+        ]},
+        { title: "Support & feedback", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>4 open tickets</strong> — 3 about low PDF resolution (SUP-4821, SUP-4798, SUP-4762).</>,
+          <>Epic <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BT-142</strong> is {jiraPct}% complete with no critical bugs.</>,
+        ]},
+      ];
+      callout = { title: "Recommended follow-up", body: <>Ask: <em>&quot;What is the distribution of clients using this feature by License Tier?&quot;</em></> };
+      break;
+    case "adoption-breakdown":
+      intro = <>Feature usage within <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> is heavily skewed toward Enterprise and Pro tiers.</>;
+      sections = [
+        { title: "By license tier", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Enterprise (78%)</strong> — export PDF is the top action.</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Pro (62%)</strong> — template editor drives most sessions.</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Free (18%)</strong> — mostly import CSV; low depth of use.</>,
+        ]},
+      ];
+      callout = { title: "Insight", body: <>Consider tailoring onboarding flows per tier — Free users rarely reach export or sharing features.</> };
+      break;
+    case "sunsetting":
+      intro = <>Five features qualify as <strong style={{ color: C.textPrimary, fontWeight: 600 }}>sunset candidates</strong> based on low usage, stale bugs, and support load.</>;
+      sections = [
+        { title: "Top candidates", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Legacy Chart Builder</strong> — 42 users/mo, 14 bugs, oldest 186 days.</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>CSV Import v1</strong> — 68 users/mo, 11 bugs, 6 support tickets.</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Old Dashboard v1</strong> — usage down 31% MoM.</>,
+        ]},
+      ];
+      callout = { title: "Priority action", body: <>Start deprecation comms for Legacy Chart Builder — highest bug-to-user ratio with no active development.</> };
+      break;
+    case "release-delays":
+      intro = <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseVersion}</strong> slipped 14 days — bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>3 feature areas</strong> blocked the release window.</>;
+      sections = [
+        { title: "Blocking features", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF Export</strong> — BUG-3841 (memory leak), BUG-3829 (silent failure &gt;50 pages).</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth Token Refresh</strong> — BUG-3812 (session expiry during export).</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Marketplace Sync</strong> — 2 high-severity bugs, 9–14 days old.</>,
+        ]},
+      ];
+      callout = { title: "Next step", body: <>Fix PDF Export criticals first — they account for 3 of 4 release-blocking bugs.</> };
+      break;
+    default:
+      intro = <>Based on this week&apos;s data, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>overall product health is stable</strong> with two areas that deserve attention before the next release.</>;
+      sections = [
+        { title: "Product & growth", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>DAU +{d.amplitude.dauChange}%</strong> week-over-week — retention week 2 at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.</>,
+          <>Top event: <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>dashboard_view</code>.</>,
+        ]},
+        { title: "Engineering & delivery", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left.</>,
+          <><span style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</span> remain open.</>,
+        ]},
+      ];
+      callout = { title: "Priority action", body: <>Monitor the <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> rollout at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> before expanding.</> };
+  }
+
+  return (
+    <W title="Key takeaways" source="jira" span={3} badge="AI" delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
       <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 13, lineHeight: 1.6, color: C.textSecondary }}>
-        <p style={{ margin: 0 }}>
-          Based on this week&apos;s data, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>overall product health is stable</strong> with two areas that deserve attention before the next release.
-        </p>
-
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, marginBottom: 8 }}>
-            Product &amp; growth
-          </div>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-            <li>
-              <strong style={{ color: C.textPrimary, fontWeight: 600 }}>DAU +{d.amplitude.dauChange}%</strong> week-over-week — retention week 2 at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.
-            </li>
-            <li>
-              Top event: <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>dashboard_viewed</code> — consider doubling down on dashboard discovery.
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, marginBottom: 8 }}>
-            Engineering &amp; delivery
-          </div>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-            <li>
-              <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left — velocity is consistent.
-            </li>
-            <li>
-              <span style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</span> remain open — triage before Friday&apos;s release window.
-            </li>
-          </ul>
-        </div>
-
-        <div style={{
-          padding: "12px 14px",
-          borderRadius: 10,
-          background: isDarkMode ? "rgba(249,115,22,0.1)" : C.sparkFaint,
-          border: `1px solid ${isDarkMode ? "rgba(251,146,60,0.22)" : "rgba(124,92,231,0.14)"}`,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>Priority action</div>
-          <p style={{ margin: 0, fontSize: 12, color: C.textSecondary, lineHeight: 1.55 }}>
-            Monitor the <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> rollout at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> — expand only after adoption metrics from Amplitude confirm stable engagement.
-          </p>
-        </div>
+        <p style={{ margin: 0 }}>{intro}</p>
+        {sections.map(s => <InsightSection key={s.title} title={s.title} items={s.items} />)}
+        {callout && <SummaryCallout title={callout.title}>{callout.body}</SummaryCallout>}
       </div>
     </W>
   );
 }
 
 function WidgetSlackMessages({ delay }: { delay: number }) {
-  const d = MOCK.slack;
+  const d = getMock().slack;
   const total = d.dailyMessages.reduce((s, v) => s + v);
   return (
     <W title="Message Volume (7 days)" source="slack" span={2} delay={delay}>
@@ -778,7 +1198,7 @@ function WidgetSlackMessages({ delay }: { delay: number }) {
 }
 
 function WidgetSlackChannels({ delay }: { delay: number }) {
-  const d = MOCK.slack;
+  const d = getMock().slack;
   const max = d.channels[0].messages;
   return (
     <W title="Most Active Channels" source="slack" delay={delay}>
@@ -800,7 +1220,7 @@ function WidgetSlackChannels({ delay }: { delay: number }) {
 }
 
 function WidgetConfluenceOverview({ delay }: { delay: number }) {
-  const d = MOCK.confluence;
+  const d = getMock().confluence;
   return (
     <W title="Documentation Health" source="confluence" delay={delay}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
@@ -829,7 +1249,7 @@ function WidgetConfluenceOverview({ delay }: { delay: number }) {
 }
 
 function WidgetConfluencePages({ delay }: { delay: number }) {
-  const d = MOCK.confluence;
+  const d = getMock().confluence;
   return (
     <W title="Recently Updated" source="confluence" span={2} delay={delay}>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -849,7 +1269,7 @@ function WidgetConfluencePages({ delay }: { delay: number }) {
 }
 
 function WidgetLDOverview({ delay }: { delay: number }) {
-  const d = MOCK.launchdarkly;
+  const d = getMock().launchdarkly;
   return (
     <W title="Feature Flag Status" source="launchdarkly" delay={delay}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
@@ -873,7 +1293,7 @@ function WidgetLDOverview({ delay }: { delay: number }) {
 }
 
 function WidgetLDFlags({ delay }: { delay: number }) {
-  const d = MOCK.launchdarkly;
+  const d = getMock().launchdarkly;
   return (
     <W title="Active Rollouts" source="launchdarkly" span={2} delay={delay}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -896,6 +1316,129 @@ function WidgetLDFlags({ delay }: { delay: number }) {
   );
 }
 
+function WidgetSupportTickets({ delay }: { delay: number }) {
+  const tickets = getMock().jira.supportTickets ?? [];
+  const priorityColor = (p: SupportTicket["priority"]) =>
+    p === "Critical" ? C.error : p === "High" ? C.warning : p === "Medium" ? C.jira : C.textMuted;
+  return (
+    <W title="Support tickets" source="jira" span={2} delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        {tickets.map((t, i) => (
+          <div key={t.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: i < tickets.length - 1 ? `1px solid ${C.border}` : "none" }}>
+            <Bug size={13} color={priorityColor(t.priority)} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                <span style={{ fontSize: 11, fontFamily: "monospace", color: C.textMuted }}>{t.key}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: priorityColor(t.priority) }}>{t.priority}</span>
+              </div>
+              <div style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.4 }}>{t.summary}</div>
+            </div>
+            <span style={{ fontSize: 11, color: C.textMuted, flexShrink: 0 }}>{t.ageDays}d</span>
+          </div>
+        ))}
+      </div>
+    </W>
+  );
+}
+
+function WidgetLicenseTierBreakdown({ delay }: { delay: number }) {
+  const tiers = getMock().amplitude.licenseTiers ?? [];
+  const max = tiers[0]?.adoptionPct ?? 100;
+  return (
+    <W title="Adoption by license tier" source="amplitude" span={2} delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {tiers.map((t, i) => (
+          <div key={t.tier}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{t.tier}</span>
+              <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(t.users)} users · {t.adoptionPct}%</span>
+            </div>
+            <div style={{ height: 4, background: "rgba(128,128,128,0.1)", borderRadius: 2, marginBottom: 4 }}>
+              <div style={{ height: "100%", width: `${(t.adoptionPct / max) * 100}%`, background: C.amplitude, borderRadius: 2, opacity: i === 0 ? 1 : 0.55 }} />
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted }}>
+              Top feature: <code style={{ fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark }}>{t.topFeature}</code>
+            </div>
+          </div>
+        ))}
+      </div>
+    </W>
+  );
+}
+
+function WidgetLowUsageFeatures({ delay }: { delay: number }) {
+  const features = getMock().amplitude.lowUsageFeatures ?? [];
+  return (
+    <W title="Lowest-usage features" source="amplitude" delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {features.map(f => (
+          <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+            <span style={{ fontSize: 12, color: C.textMuted }}>{f.monthlyUsers}/mo</span>
+            <span style={{ fontSize: 11, color: C.error, fontWeight: 600, width: 36, textAlign: "right" }}>{f.trend}%</span>
+          </div>
+        ))}
+      </div>
+    </W>
+  );
+}
+
+function WidgetSunsetCandidates({ delay }: { delay: number }) {
+  const candidates = getMock().jira.sunsetCandidates ?? [];
+  return (
+    <W title="Sunset candidates" source="jira" span={2} delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        {candidates.map((c, i) => (
+          <div key={c.feature} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < candidates.length - 1 ? `1px solid ${C.border}` : "none" }}>
+            <AlertTriangle size={13} color={c.openBugs >= 10 ? C.error : C.warning} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{c.feature}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                {c.monthlyUsers} users/mo · {c.openBugs} bugs · oldest {c.oldestBugDays}d
+              </div>
+            </div>
+            <span style={{ fontSize: 11, color: C.textMuted }}>{c.supportTickets} tickets</span>
+          </div>
+        ))}
+      </div>
+    </W>
+  );
+}
+
+function WidgetReleaseBlockers({ delay }: { delay: number }) {
+  const jira = getMock().jira;
+  const blockers = jira.releaseBlockers ?? [];
+  return (
+    <W title={`${jira.releaseVersion ?? "Release"} blockers`} source="jira" span={3} badge="Delayed" delay={delay}>
+      <div style={{ marginBottom: 14, padding: "10px 12px", background: C.errorFaint, borderRadius: 10, display: "flex", alignItems: "center", gap: 8 }}>
+        <AlertCircle size={14} color={C.error} />
+        <span style={{ fontSize: 12, color: C.error }}>
+          Postponed from <strong>{jira.releaseOriginalDate}</strong> to <strong>{jira.releaseNewDate}</strong>
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {blockers.map(b => (
+          <div key={b.feature}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>{b.feature}</div>
+            {b.bugs.map(bug => (
+              <div key={bug.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0 6px 12px", borderLeft: `2px solid ${bug.severity === "Critical" ? C.error : C.warning}` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+                    <span style={{ fontSize: 11, fontFamily: "monospace", color: C.textMuted }}>{bug.key}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: bug.severity === "Critical" ? C.error : C.warning }}>{bug.severity}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: C.textSecondary }}>{bug.summary}</div>
+                </div>
+                <span style={{ fontSize: 11, color: C.textMuted }}>{bug.ageDays}d</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </W>
+  );
+}
+
 const WIDGETS_BY_SOURCE: Record<SourceId, Array<{ id: string; node: (d: number) => React.ReactNode }>> = {
   amplitude:    [{ id: "amp-dau", node: d => <WidgetAmplitudeDAU key="amp-dau" delay={d} /> }, { id: "amp-ev", node: d => <WidgetAmplitudeEvents key="amp-ev" delay={d} /> }, { id: "amp-top", node: d => <WidgetAmplitudeTopEvents key="amp-top" delay={d} /> }],
   jira:         [{ id: "jira-sprint", node: d => <WidgetJiraSprint key="jira-sprint" delay={d} /> }, { id: "jira-bugs", node: d => <WidgetJiraBugs key="jira-bugs" delay={d} /> }, { id: "jira-vel", node: d => <WidgetJiraVelocity key="jira-vel" delay={d} /> }],
@@ -903,6 +1446,59 @@ const WIDGETS_BY_SOURCE: Record<SourceId, Array<{ id: string; node: (d: number) 
   confluence:   [{ id: "conf-ov", node: d => <WidgetConfluenceOverview key="conf-ov" delay={d} /> }, { id: "conf-pg", node: d => <WidgetConfluencePages key="conf-pg" delay={d} /> }],
   launchdarkly: [{ id: "ld-ov", node: d => <WidgetLDOverview key="ld-ov" delay={d} /> }, { id: "ld-flags", node: d => <WidgetLDFlags key="ld-flags" delay={d} /> }],
 };
+
+const SCENARIO_WIDGET_IDS: Partial<Record<DashboardScenarioId, Partial<Record<SourceId, string[]>>>> = {
+  "feature-adoption": {
+    amplitude: ["amp-ev", "amp-top"],
+    jira: ["jira-sprint"],
+    launchdarkly: ["ld-flags"],
+  },
+  "adoption-breakdown": {
+    amplitude: ["amp-top"],
+  },
+  "sunsetting": {},
+  "release-delays": {},
+  "sprint-health": {
+    jira: ["jira-sprint", "jira-bugs", "jira-vel"],
+    launchdarkly: ["ld-flags"],
+  },
+  engagement: {
+    amplitude: ["amp-dau", "amp-ev", "amp-top"],
+  },
+  "team-comms": {
+    slack: ["slack-msg", "slack-ch"],
+    launchdarkly: ["ld-ov", "ld-flags"],
+  },
+};
+
+const SCENARIO_EXTRA_WIDGETS: Partial<Record<DashboardScenarioId, (d: number) => React.ReactNode[]>> = {
+  "feature-adoption": d => [<WidgetSupportTickets key="support" delay={d + 0.08} />],
+  "adoption-breakdown": d => [<WidgetLicenseTierBreakdown key="tiers" delay={d + 0.04} />],
+  sunsetting: d => [
+    <WidgetSunsetCandidates key="sunset" delay={d + 0.04} />,
+    <WidgetLowUsageFeatures key="low-usage" delay={d + 0.08} />,
+  ],
+  "release-delays": d => [<WidgetReleaseBlockers key="blockers" delay={d + 0.04} />],
+};
+
+function buildDashboardWidgets(scenario: DashboardScenarioId, sources: SourceId[]): React.ReactNode[] {
+  const override = SCENARIO_WIDGET_IDS[scenario];
+  const widgets: React.ReactNode[] = [<WidgetTextSummary key="summary" delay={0} />];
+
+  sources.forEach((source, si) => {
+    const pool = WIDGETS_BY_SOURCE[source];
+    const selected = override
+      ? (override[source] ? pool.filter(w => override[source]!.includes(w.id)) : [])
+      : pool;
+    selected.forEach((w, wi) => widgets.push(w.node(si * 0.08 + wi * 0.06 + 0.04)));
+  });
+
+  const extras = SCENARIO_EXTRA_WIDGETS[scenario];
+  if (extras) widgets.push(...extras(sources.length * 0.08));
+
+  widgets.push(<WidgetFormattedInsights key="insights" delay={0.12 + sources.length * 0.04} />);
+  return widgets;
+}
 
 // ─── Shooting stars (dark mode only) ─────────────────────────────────────────
 const SHOOTING_STARS = Array.from({ length: 14 }, (_, i) => {
@@ -1863,6 +2459,8 @@ export default function IgniteIskraPageV3() {
   }, [activeDashboardId, savedDashboards]);
 
   const restorePromptHistory = useCallback((entry: PromptHistoryEntry) => {
+    const scenario = entry.scenario ?? detectScenario(entry.prompt);
+    setDashboardContext(scenario);
     setCurrentSources(entry.sources);
     setCurrentPrompt(entry.prompt);
     setCurrentName(entry.name);
@@ -1878,7 +2476,9 @@ export default function IgniteIskraPageV3() {
       const isRegenerate = currentSources !== null;
       setGenerating(true);
       setTimeout(() => {
-        const sources = detectSources(p).filter(s => activeSources.includes(s));
+        const scenario = detectScenario(p);
+        setDashboardContext(scenario);
+        const sources = detectSources(p, scenario).filter(s => activeSources.includes(s));
         const finalSources = sources.length > 0 ? sources : activeSources;
         setCurrentSources(finalSources);
         setCurrentPrompt(p);
@@ -1890,6 +2490,7 @@ export default function IgniteIskraPageV3() {
             prompt: p,
             sources: finalSources,
             name,
+            scenario,
             createdAt: new Date(),
           };
           setPromptHistory(prev => [...prev, entry]);
@@ -1911,6 +2512,7 @@ export default function IgniteIskraPageV3() {
               prompt: p,
               sources: finalSources,
               name,
+              scenario,
               createdAt: new Date(),
             };
             setPromptHistory([entry]);
@@ -1990,6 +2592,7 @@ export default function IgniteIskraPageV3() {
     setGenerating(true);
     setActiveDashboardId(null);
     setTimeout(() => {
+      setDashboardContext("default");
       const sources: SourceId[] = [sourceId];
       setCurrentSources(sources);
       setCurrentName(name);
@@ -1999,6 +2602,7 @@ export default function IgniteIskraPageV3() {
         prompt: p,
         sources,
         name,
+        scenario: "default",
         createdAt: new Date(),
       };
       setPromptHistory([entry]);
@@ -2017,6 +2621,7 @@ export default function IgniteIskraPageV3() {
   const handleSelectDashboard = useCallback((id: string) => {
     const d = savedDashboards.find(x => x.id === id);
     if (!d) return;
+    setDashboardContext(detectScenario(d.prompt));
     setCurrentSources(d.sources); setCurrentName(d.name); setCurrentPrompt(d.prompt);
     setPrompt(d.prompt);
     setActiveDashboardId(id);
@@ -2038,6 +2643,7 @@ export default function IgniteIskraPageV3() {
   }, [activeDashboardId]);
 
   const handleNewDashboard = useCallback(() => {
+    setDashboardContext("default");
     setCurrentSources(null); setCurrentName(null); setCurrentPrompt(null);
     setPrompt("");
     setActiveDashboardId(null);
@@ -2349,11 +2955,11 @@ export default function IgniteIskraPageV3() {
               <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, paddingLeft: 2 }}>…or use a prompt example to start</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SUGGESTED_PROMPTS.map(p => (
-                <button key={p} onClick={() => { setPrompt(p); handleGenerate(p); }}
+                <button key={p.id} onClick={() => { setPrompt(p.prompt); handleGenerate(p.prompt); }}
                   style={{ background: isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)", backdropFilter: "blur(16px) saturate(160%)", WebkitBackdropFilter: "blur(16px) saturate(160%)", border: isDark ? "1px solid rgba(251,146,60,0.28)" : "1px solid rgba(255,255,255,0.7)", borderRadius: BUTTON_RADIUS, padding: "8px 16px", cursor: "pointer", color: isDark ? C.sparkBright : "#5B4BD4", fontSize: 12, fontWeight: 500, fontFamily: BUTTON_FONT, boxShadow: isDark ? "inset 0 1px 0 rgba(251,146,60,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(124,92,231,0.1)", transition: "all 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.22)" : "rgba(255,255,255,0.58)"; e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.4)" : "rgba(255,255,255,0.9)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(249,115,22,0.14)" : "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = isDark ? "rgba(251,146,60,0.28)" : "rgba(255,255,255,0.7)"; }}>
-                  {p}
+                  {p.label}
                 </button>
               ))}
               </div>
@@ -2425,13 +3031,7 @@ export default function IgniteIskraPageV3() {
                 pointerEvents: isRegenerating ? "none" : "auto",
               }}
             >
-              {currentSources.length > 0 && (
-                <WidgetTextSummary delay={0} />
-              )}
-              {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06 + 0.04)))}
-              {currentSources.length > 0 && (
-                <WidgetFormattedInsights delay={0.12} />
-              )}
+              {currentSources.length > 0 && buildDashboardWidgets(activeScenario, currentSources)}
             </div>
           </div>
         )}
