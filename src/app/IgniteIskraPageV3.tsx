@@ -485,9 +485,10 @@ function DonutRing({ pct, color, size = 64 }: { pct: number; color: string; size
 }
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
-function W({ title, source, span = 1, badge, children, delay = 0 }: {
+function W({ title, source, span = 1, badge, children, delay = 0, summaryTooltip }: {
   title: string; source: SourceId; span?: 1 | 2 | 3;
   badge?: string; children: React.ReactNode; delay?: number;
+  summaryTooltip?: string;
 }) {
   const { color, label } = getSourceConfig(source);
   return (
@@ -512,10 +513,23 @@ function W({ title, source, span = 1, badge, children, delay = 0 }: {
           <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default", fontSize: 10, color: C.textMuted, fontWeight: 700, userSelect: "none" }}>?</div>
           <div className="w-tooltip" style={{ position: "absolute", right: 0, top: 22, background: C.bgSurface, border: `1px solid ${C.borderStrong}`, borderRadius: 10, padding: "8px 12px", minWidth: 160, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", opacity: 0, transition: "opacity 0.15s", pointerEvents: "none", zIndex: 50 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <SourceLogoBadge source={source} boxSize={20} logoSize={14} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{label}</span>
+              {summaryTooltip ? (
+                <>
+                  <Zap size={12} color={C.spark} aria-hidden />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>Iskra</span>
+                </>
+              ) : (
+                <>
+                  <SourceLogoBadge source={source} boxSize={20} logoSize={14} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{label}</span>
+                </>
+              )}
             </div>
-            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>Data sourced from <strong style={{ color: C.textSecondary }}>{label}</strong> integration.</div>
+            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
+              {summaryTooltip ?? (
+                <>Data sourced from <strong style={{ color: C.textSecondary }}>{label}</strong> integration.</>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -651,6 +665,90 @@ function WidgetJiraVelocity({ delay }: { delay: number }) {
         <div style={{ fontSize: 11, color: C.textMuted, paddingBottom: 4 }}>avg pts / sprint</div>
       </div>
       <MiniBar values={d.velocity} color={C.jira} />
+    </W>
+  );
+}
+
+function WidgetTextSummary({ delay }: { delay: number }) {
+  const d = MOCK;
+  const jiraPct = Math.round((d.jira.done / d.jira.total) * 100);
+  const jiraAvg = Math.round(d.jira.velocity.reduce((s, v) => s + v) / d.jira.velocity.length);
+  return (
+    <W
+      title="Executive summary"
+      source="amplitude"
+      span={3}
+      badge="AI"
+      delay={delay}
+      summaryTooltip="Synthesised by Iskra from your connected data sources."
+    >
+      <p style={{ margin: 0, fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>
+        Product engagement remains healthy — DAU is up {d.amplitude.dauChange}% week-over-week, with week-2 retention holding at 44%.
+        {" "}Engineering is on track: {d.jira.sprintName} is {jiraPct}% complete with ~{jiraAvg} pts/sprint velocity and {d.jira.critical} critical bugs open.
+        {" "}Slack activity peaked in #engineering ({d.slack.channels[0].messages} messages), while Confluence coverage sits at {d.confluence.coverage}%.
+        {" "}The <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> flag is at 12% rollout — worth monitoring adoption before expanding.
+      </p>
+    </W>
+  );
+}
+
+function WidgetFormattedInsights({ delay }: { delay: number }) {
+  const d = MOCK;
+  const jiraPct = Math.round((d.jira.done / d.jira.total) * 100);
+  return (
+    <W
+      title="Key takeaways"
+      source="jira"
+      span={3}
+      badge="AI"
+      delay={delay}
+      summaryTooltip="Synthesised by Iskra from your connected data sources."
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 13, lineHeight: 1.6, color: C.textSecondary }}>
+        <p style={{ margin: 0 }}>
+          Based on this week&apos;s data, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>overall product health is stable</strong> with two areas that deserve attention before the next release.
+        </p>
+
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, marginBottom: 8 }}>
+            Product &amp; growth
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+            <li>
+              <strong style={{ color: C.textPrimary, fontWeight: 600 }}>DAU +{d.amplitude.dauChange}%</strong> week-over-week — retention week 2 at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.
+            </li>
+            <li>
+              Top event: <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>dashboard_viewed</code> — consider doubling down on dashboard discovery.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, marginBottom: 8 }}>
+            Engineering &amp; delivery
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+            <li>
+              <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left — velocity is consistent.
+            </li>
+            <li>
+              <span style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</span> remain open — triage before Friday&apos;s release window.
+            </li>
+          </ul>
+        </div>
+
+        <div style={{
+          padding: "12px 14px",
+          borderRadius: 10,
+          background: isDarkMode ? "rgba(249,115,22,0.1)" : C.sparkFaint,
+          border: `1px solid ${isDarkMode ? "rgba(251,146,60,0.22)" : "rgba(124,92,231,0.14)"}`,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>Priority action</div>
+          <p style={{ margin: 0, fontSize: 12, color: C.textSecondary, lineHeight: 1.55 }}>
+            Monitor the <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> rollout at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> — expand only after adoption metrics from Amplitude confirm stable engagement.
+          </p>
+        </div>
+      </div>
     </W>
   );
 }
@@ -2327,7 +2425,13 @@ export default function IgniteIskraPageV3() {
                 pointerEvents: isRegenerating ? "none" : "auto",
               }}
             >
-              {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06)))}
+              {currentSources.length > 0 && (
+                <WidgetTextSummary delay={0} />
+              )}
+              {currentSources.flatMap((source, si) => WIDGETS_BY_SOURCE[source].map((w, wi) => w.node(si * 0.08 + wi * 0.06 + 0.04)))}
+              {currentSources.length > 0 && (
+                <WidgetFormattedInsights delay={0.12} />
+              )}
             </div>
           </div>
         )}
