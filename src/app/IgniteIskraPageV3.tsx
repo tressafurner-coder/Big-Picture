@@ -289,6 +289,14 @@ const SUNSET_PRIORITY_LABELS: { key: keyof SunsetBugPriorities; label: string; p
   { key: "low", label: "Low", priority: "Low" },
 ];
 
+interface FlowAbandonment {
+  flowName: string;
+  startEvent: string;
+  endEvent: string;
+  startedUsers: number;
+  completedUsers: number;
+}
+
 interface ReleaseBlockerBug {
   key: string;
   summary: string;
@@ -311,6 +319,7 @@ interface DashboardMock {
     weeklyAdopters?: number[];
     featureAdoptionByTier?: FeatureAdoptionByTier[];
     lowUsageFeatures?: LowUsageFeature[];
+    flowAbandonment?: FlowAbandonment[];
   };
   jira: {
     sprintName: string; done: number; total: number; daysLeft: number;
@@ -581,6 +590,22 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       retention: [100, 72, 58, 49, 42, 38, 34],
       featureName: "BigTemplate v3",
       weeklyAdopters: [120, 340, 580, 920, 1240, 1580, 1920],
+      flowAbandonment: [
+        {
+          flowName: "Create template",
+          startEvent: "bigtemplate_opened",
+          endEvent: "bigtemplate_saved",
+          startedUsers: 4680,
+          completedUsers: 1820,
+        },
+        {
+          flowName: "Export PDF",
+          startEvent: "bigtemplate_export_pdf",
+          endEvent: "bigtemplate_export_completed",
+          startedUsers: 2140,
+          completedUsers: 1580,
+        },
+      ],
     },
     jira: {
       ...DEFAULT_MOCK.jira,
@@ -1163,6 +1188,42 @@ function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
             </div>
           </div>
         ))}
+      </div>
+    </W>
+  );
+}
+
+function WidgetAbandonmentRate({ delay }: { delay: number }) {
+  const flows = getMock().amplitude.flowAbandonment ?? [];
+  return (
+    <W title="Abandonment rate" label="7 days" source="amplitude" delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {flows.map(flow => {
+          const completionPct = Math.round((flow.completedUsers / flow.startedUsers) * 100);
+          const abandonmentPct = 100 - completionPct;
+          const abandonedUsers = flow.startedUsers - flow.completedUsers;
+          return (
+            <div key={flow.flowName}>
+              <div style={{ ...wfBodyStrong(), marginBottom: 4 }}>{flow.flowName}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+                <code style={codeTagStyle()}>{flow.startEvent}</code>
+                <span style={wfLabel()}>→</span>
+                <code style={codeTagStyle()}>{flow.endEvent}</code>
+              </div>
+              <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", background: widgetBarTrack(), marginBottom: 6 }}>
+                <div style={{ width: `${completionPct}%`, background: C.spark }} />
+                <div style={{ width: `${abandonmentPct}%`, background: isDarkMode ? "rgba(251,191,36,0.45)" : C.warning }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ ...wfLabel(), color: C.spark }}>{completionPct}% completed</span>
+                <span style={{ ...wfLabel(), color: C.warning }}>{abandonmentPct}% abandoned</span>
+              </div>
+              <div style={{ ...wfLabel(), marginTop: 4 }}>
+                {fmt(flow.completedUsers)} of {fmt(flow.startedUsers)} users · {fmt(abandonedUsers)} dropped off
+              </div>
+            </div>
+          );
+        })}
       </div>
     </W>
   );
@@ -1867,7 +1928,7 @@ function WidgetReleaseBlockers({ delay }: { delay: number }) {
 }
 
 const WIDGETS_BY_SOURCE: Record<SourceId, Array<{ id: string; node: (d: number) => React.ReactNode }>> = {
-  amplitude:    [{ id: "amp-dau", node: d => <WidgetAmplitudeDAU key="amp-dau" delay={d} /> }, { id: "amp-ev", node: d => <WidgetAmplitudeEvents key="amp-ev" delay={d} /> }, { id: "amp-top", node: d => <WidgetAmplitudeTopEvents key="amp-top" delay={d} /> }],
+  amplitude:    [{ id: "amp-dau", node: d => <WidgetAmplitudeDAU key="amp-dau" delay={d} /> }, { id: "amp-ev", node: d => <WidgetAmplitudeEvents key="amp-ev" delay={d} /> }, { id: "amp-top", node: d => <WidgetAmplitudeTopEvents key="amp-top" delay={d} /> }, { id: "amp-abandon", node: d => <WidgetAbandonmentRate key="amp-abandon" delay={d} /> }],
   jira:         [{ id: "jira-sprint", node: d => <WidgetJiraSprint key="jira-sprint" delay={d} /> }, { id: "jira-bugs", node: d => <WidgetJiraBugs key="jira-bugs" delay={d} /> }, { id: "jira-vel", node: d => <WidgetJiraVelocity key="jira-vel" delay={d} /> }],
   slack:        [{ id: "slack-msg", node: d => <WidgetSlackMessages key="slack-msg" delay={d} /> }, { id: "slack-ch", node: d => <WidgetSlackChannels key="slack-ch" delay={d} /> }],
   confluence:   [{ id: "conf-ov", node: d => <WidgetConfluenceOverview key="conf-ov" delay={d} /> }, { id: "conf-pg", node: d => <WidgetConfluencePages key="conf-pg" delay={d} /> }],
@@ -1876,7 +1937,7 @@ const WIDGETS_BY_SOURCE: Record<SourceId, Array<{ id: string; node: (d: number) 
 
 const SCENARIO_WIDGET_IDS: Partial<Record<DashboardScenarioId, Partial<Record<SourceId, string[]>>>> = {
   "feature-adoption": {
-    amplitude: ["amp-ev", "amp-top"],
+    amplitude: ["amp-ev", "amp-top", "amp-abandon"],
     jira: [],
     launchdarkly: ["ld-flags"],
   },
