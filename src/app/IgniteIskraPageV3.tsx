@@ -210,6 +210,7 @@ type SourceId = "amplitude" | "jira" | "slack" | "confluence" | "launchdarkly";
 interface SavedDashboard {
   id: string; name: string; prompt: string;
   sources: SourceId[]; createdAt: Date;
+  lastRefreshedAt?: Date;
 }
 
 interface PromptHistoryEntry {
@@ -246,11 +247,29 @@ interface LowUsageFeature {
   momChange: number;
 }
 
-interface LicenseTierRow {
-  tier: string;
-  users: number;
-  topFeature: string;
+type LicenseTierId = "T1" | "T2" | "T3" | "T4" | "T5";
+
+interface FeatureTierAdoptionRow {
+  tier: LicenseTierId;
+  seats: number;
+  activeUsers: number;
   adoptionPct: number;
+}
+
+interface FeatureAdoptionByTier {
+  displayName: string;
+  eventName: string;
+  jiraEpicKey: string;
+  tiers: FeatureTierAdoptionRow[];
+}
+
+const LICENSE_TIER_ORDER: LicenseTierId[] = ["T5", "T4", "T3", "T2", "T1"];
+
+interface SunsetBugPriorities {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
 }
 
 interface SunsetCandidate {
@@ -258,8 +277,17 @@ interface SunsetCandidate {
   monthlyUsers: number;
   openBugs: number;
   oldestBugDays: number;
+  avgOpenDays: number;
   supportTickets: number;
+  bugPriorities: SunsetBugPriorities;
 }
+
+const SUNSET_PRIORITY_LABELS: { key: keyof SunsetBugPriorities; label: string; priority: SupportTicket["priority"] }[] = [
+  { key: "critical", label: "Crit", priority: "Critical" },
+  { key: "high", label: "High", priority: "High" },
+  { key: "medium", label: "Med", priority: "Medium" },
+  { key: "low", label: "Low", priority: "Low" },
+];
 
 interface ReleaseBlockerBug {
   key: string;
@@ -281,7 +309,7 @@ interface DashboardMock {
     retention: number[];
     featureName?: string;
     weeklyAdopters?: number[];
-    licenseTiers?: LicenseTierRow[];
+    featureAdoptionByTier?: FeatureAdoptionByTier[];
     lowUsageFeatures?: LowUsageFeature[];
   };
   jira: {
@@ -592,11 +620,67 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       ],
       retention: [100, 72, 58, 49, 42, 38, 34],
       featureName: "BigTemplate v3",
-      licenseTiers: [
-        { tier: "Enterprise", users: 840, topFeature: "export_pdf", adoptionPct: 78 },
-        { tier: "Pro", users: 2140, topFeature: "template_editor_open", adoptionPct: 62 },
-        { tier: "Standard", users: 4820, topFeature: "apply_branding", adoptionPct: 41 },
-        { tier: "Free", users: 9340, topFeature: "import_csv_data", adoptionPct: 18 },
+      featureAdoptionByTier: [
+        {
+          displayName: "Template editor",
+          eventName: "template_editor_open",
+          jiraEpicKey: "BT-140",
+          tiers: [
+            { tier: "T5", seats: 96000, activeUsers: 2840, adoptionPct: 74 },
+            { tier: "T4", seats: 42000, activeUsers: 2180, adoptionPct: 68 },
+            { tier: "T3", seats: 18500, activeUsers: 1420, adoptionPct: 54 },
+            { tier: "T2", seats: 8200, activeUsers: 680, adoptionPct: 38 },
+            { tier: "T1", seats: 2400, activeUsers: 210, adoptionPct: 22 },
+          ],
+        },
+        {
+          displayName: "Export PDF",
+          eventName: "export_pdf",
+          jiraEpicKey: "BT-141",
+          tiers: [
+            { tier: "T5", seats: 96000, activeUsers: 3120, adoptionPct: 88 },
+            { tier: "T4", seats: 42000, activeUsers: 2640, adoptionPct: 82 },
+            { tier: "T3", seats: 18500, activeUsers: 1180, adoptionPct: 61 },
+            { tier: "T2", seats: 8200, activeUsers: 420, adoptionPct: 34 },
+            { tier: "T1", seats: 2400, activeUsers: 96, adoptionPct: 12 },
+          ],
+        },
+        {
+          displayName: "Apply branding",
+          eventName: "apply_branding",
+          jiraEpicKey: "BT-143",
+          tiers: [
+            { tier: "T5", seats: 96000, activeUsers: 2480, adoptionPct: 65 },
+            { tier: "T4", seats: 42000, activeUsers: 1960, adoptionPct: 58 },
+            { tier: "T3", seats: 18500, activeUsers: 1240, adoptionPct: 47 },
+            { tier: "T2", seats: 8200, activeUsers: 540, adoptionPct: 31 },
+            { tier: "T1", seats: 2400, activeUsers: 144, adoptionPct: 18 },
+          ],
+        },
+        {
+          displayName: "Share template",
+          eventName: "share_template",
+          jiraEpicKey: "BT-144",
+          tiers: [
+            { tier: "T5", seats: 96000, activeUsers: 1680, adoptionPct: 52 },
+            { tier: "T4", seats: 42000, activeUsers: 1320, adoptionPct: 46 },
+            { tier: "T3", seats: 18500, activeUsers: 820, adoptionPct: 35 },
+            { tier: "T2", seats: 8200, activeUsers: 280, adoptionPct: 19 },
+            { tier: "T1", seats: 2400, activeUsers: 72, adoptionPct: 8 },
+          ],
+        },
+        {
+          displayName: "Import CSV",
+          eventName: "import_csv_data",
+          jiraEpicKey: "BT-145",
+          tiers: [
+            { tier: "T5", seats: 96000, activeUsers: 420, adoptionPct: 14 },
+            { tier: "T4", seats: 42000, activeUsers: 380, adoptionPct: 16 },
+            { tier: "T3", seats: 18500, activeUsers: 620, adoptionPct: 28 },
+            { tier: "T2", seats: 8200, activeUsers: 540, adoptionPct: 42 },
+            { tier: "T1", seats: 2400, activeUsers: 380, adoptionPct: 58 },
+          ],
+        },
       ],
     },
   },
@@ -616,11 +700,11 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       ...DEFAULT_MOCK.jira,
       critical: 1, high: 5, medium: 12, low: 28,
       sunsetCandidates: [
-        { feature: "Legacy Chart Builder", monthlyUsers: 42, openBugs: 14, oldestBugDays: 186, supportTickets: 9 },
-        { feature: "CSV Import v1", monthlyUsers: 68, openBugs: 11, oldestBugDays: 142, supportTickets: 6 },
-        { feature: "Custom CSS Editor", monthlyUsers: 91, openBugs: 8, oldestBugDays: 98, supportTickets: 4 },
-        { feature: "Old Dashboard v1", monthlyUsers: 156, openBugs: 7, oldestBugDays: 76, supportTickets: 3 },
-        { feature: "Bulk Email Sender", monthlyUsers: 124, openBugs: 5, oldestBugDays: 64, supportTickets: 2 },
+        { feature: "Legacy Chart Builder", monthlyUsers: 42, openBugs: 14, oldestBugDays: 186, avgOpenDays: 94, supportTickets: 9, bugPriorities: { critical: 2, high: 4, medium: 5, low: 3 } },
+        { feature: "CSV Import v1", monthlyUsers: 68, openBugs: 11, oldestBugDays: 142, avgOpenDays: 78, supportTickets: 6, bugPriorities: { critical: 1, high: 3, medium: 4, low: 3 } },
+        { feature: "Custom CSS Editor", monthlyUsers: 91, openBugs: 8, oldestBugDays: 98, avgOpenDays: 52, supportTickets: 4, bugPriorities: { critical: 0, high: 2, medium: 3, low: 3 } },
+        { feature: "Old Dashboard v1", monthlyUsers: 156, openBugs: 7, oldestBugDays: 76, avgOpenDays: 41, supportTickets: 3, bugPriorities: { critical: 0, high: 1, medium: 3, low: 3 } },
+        { feature: "Bulk Email Sender", monthlyUsers: 124, openBugs: 5, oldestBugDays: 64, avgOpenDays: 38, supportTickets: 2, bugPriorities: { critical: 0, high: 1, medium: 2, low: 2 } },
       ],
     },
   },
@@ -747,6 +831,10 @@ function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return n.toString();
+}
+
+function formatDataRefreshTime(date: Date): string {
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function widgetBarTrack(): string {
@@ -1180,7 +1268,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
     case "adoption-breakdown":
       body = (
         <>
-          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> adoption varies sharply by license tier — Enterprise leads at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>78%</strong> (top: export PDF), while Free tier sits at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>18%</strong> (mostly import CSV).
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> adoption varies sharply by license tier — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>T5</strong> (largest seat count) leads on export PDF at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>88%</strong>, while <strong style={{ color: C.textPrimary, fontWeight: 600 }}>T1</strong> skews toward import CSV at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>58%</strong>.
           {" "}The most used capability overall is <code style={codeTagStyle()}>template_editor_open</code> ({fmt(d.amplitude.topEvents[0].count)} events/week).
         </>
       );
@@ -1278,15 +1366,15 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
       callout = { title: "Recommended follow-up", body: <>Ask: <em>&quot;What is the distribution of clients using this feature by License Tier?&quot;</em></> };
       break;
     case "adoption-breakdown":
-      intro = <>Feature usage within <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> is heavily skewed toward Enterprise and Pro tiers.</>;
+      intro = <>Feature usage within <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> is heavily skewed toward higher tiers — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>T5</strong> has the most license seats and drives depth of use on core capabilities.</>;
       sections = [
-        { title: "By license tier", items: [
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Enterprise (78%)</strong> — export PDF is the top action.</>,
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Pro (62%)</strong> — template editor drives most sessions.</>,
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Free (18%)</strong> — mostly import CSV; low depth of use.</>,
+        { title: "By feature & tier", items: [
+          <><JiraIssueLink issueKey="BT-141" /> — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>88% on T5</strong>, only <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12% on T1</strong>.</>,
+          <><JiraIssueLink issueKey="BT-140" /> — template editor peaks at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>74% (T5)</strong> vs <strong style={{ color: C.textPrimary, fontWeight: 600 }}>22% (T1)</strong>.</>,
+          <><JiraIssueLink issueKey="BT-145" /> — import CSV inverts the curve: <strong style={{ color: C.textPrimary, fontWeight: 600 }}>58% on T1</strong>, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>14% on T5</strong>.</>,
         ]},
       ];
-      callout = { title: "Insight", body: <>Consider tailoring onboarding flows per tier — Free users rarely reach export or sharing features.</> };
+      callout = { title: "Insight", body: <>Tailor onboarding per tier — T1–T2 users rarely reach export or sharing; link each epic in Jira for full scope.</> };
       break;
     case "sunsetting":
       intro = <>Five features qualify as <strong style={{ color: C.textPrimary, fontWeight: 600 }}>sunset candidates</strong> based on low usage, stale bugs, and support load.</>;
@@ -1578,29 +1666,43 @@ function WidgetSupportTickets({ delay }: { delay: number }) {
   );
 }
 
-function WidgetLicenseTierBreakdown({ delay }: { delay: number }) {
-  const tiers = getMock().amplitude.licenseTiers ?? [];
-  const max = tiers[0]?.adoptionPct ?? 100;
+function WidgetFeatureAdoptionByTier({ feature, delay }: { feature: FeatureAdoptionByTier; delay: number }) {
+  const max = Math.max(...feature.tiers.map(t => t.adoptionPct), 1);
   return (
-    <W title="Adoption by license tier" source="amplitude" span={2} delay={delay}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {tiers.map((t, i) => (
-          <div key={t.tier}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={wfBodyStrong()}>{t.tier}</span>
-              <span style={wfLabel()}>{fmt(t.users)} users · {t.adoptionPct}%</span>
+    <W title={feature.displayName} source="amplitude" span={1} compact delay={delay}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+        <code style={codeTagStyle()}>{feature.eventName}</code>
+        <span style={wfLabel()}>·</span>
+        <JiraIssueLink issueKey={feature.jiraEpicKey} style={wfBodyStrong()} />
+        <span style={wfLabel()}>epic</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {LICENSE_TIER_ORDER.map((tierId, i) => {
+          const row = feature.tiers.find(t => t.tier === tierId);
+          if (!row) return null;
+          return (
+            <div key={tierId}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, gap: 6 }}>
+                <span style={wfBodyStrong()}>{tierId}</span>
+                <span style={{ ...wfLabel(), textAlign: "right" }}>{row.adoptionPct}% · {fmt(row.activeUsers)} users</span>
+              </div>
+              <div style={{ height: 4, background: widgetBarTrack(), borderRadius: 2 }}>
+                <div style={{ height: "100%", width: `${(row.adoptionPct / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.1 }} />
+              </div>
+              <div style={{ ...wfLabel(), marginTop: 2 }}>{fmt(row.seats)} seats on tier</div>
             </div>
-            <div style={{ height: 4, background: widgetBarTrack(), borderRadius: 2, marginBottom: 4 }}>
-              <div style={{ height: "100%", width: `${(t.adoptionPct / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
-            </div>
-            <div style={wfLabel()}>
-              Top feature: <code style={codeTagStyle()}>{t.topFeature}</code>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </W>
   );
+}
+
+function buildFeatureAdoptionWidgets(baseDelay: number): React.ReactNode[] {
+  const features = getMock().amplitude.featureAdoptionByTier ?? [];
+  return features.map((feature, i) => (
+    <WidgetFeatureAdoptionByTier key={feature.eventName} feature={feature} delay={baseDelay + i * 0.04} />
+  ));
 }
 
 function MomColHeader({ style }: { style: React.CSSProperties }) {
@@ -1650,10 +1752,10 @@ function WidgetLowUsageFeatures({ delay }: { delay: number }) {
     borderBottom: `1px solid ${C.border}`,
   };
   return (
-    <W title="Lowest usage" source="amplitude" span={2} compact delay={delay}>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 112px 52px", gap: "6px 8px", alignItems: "center" }}>
+    <W title="Lowest usage" source="amplitude" span={1} compact delay={delay}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 76px 44px", gap: "6px 6px", alignItems: "center" }}>
         <div style={headerStyle}>Event name</div>
-        <div style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }}>Last month usage</div>
+        <div style={{ ...headerStyle, textAlign: "right", lineHeight: 1.2, whiteSpace: "normal" }}>Last month usage</div>
         <MomColHeader style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }} />
         {features.map(f => {
           const momUp = f.momChange >= 0;
@@ -1687,7 +1789,7 @@ function WidgetSunsetCandidates({ delay }: { delay: number }) {
               display: "flex",
               alignItems: "flex-start",
               gap: 6,
-              padding: "5px 0",
+              padding: "6px 0",
               borderBottom: i < candidates.length - 1 ? `1px solid ${C.border}` : "none",
             }}
           >
@@ -1697,7 +1799,21 @@ function WidgetSunsetCandidates({ delay }: { delay: number }) {
                 {c.feature}
               </div>
               <div style={{ ...wfLabel(), marginTop: 1, lineHeight: 1.35 }}>
-                {c.monthlyUsers}/mo · {c.openBugs} bugs · {c.oldestBugDays}d
+                {c.monthlyUsers}/mo · {c.openBugs} bugs · {c.supportTickets} tickets
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 8px", marginTop: 3 }}>
+                {SUNSET_PRIORITY_LABELS.map(({ key, label, priority }) => {
+                  const count = c.bugPriorities[key];
+                  if (!count) return null;
+                  return (
+                    <span key={key} style={{ ...wfLabel(), fontWeight: 600, color: ticketPriorityColor(priority) }}>
+                      {count} {label}
+                    </span>
+                  );
+                })}
+              </div>
+              <div style={{ ...wfLabel(), marginTop: 2, lineHeight: 1.35 }}>
+                Oldest {c.oldestBugDays}d open · avg {c.avgOpenDays}d
               </div>
             </div>
           </div>
@@ -1793,7 +1909,7 @@ const SCENARIO_WIDGET_IDS: Partial<Record<DashboardScenarioId, Partial<Record<So
 
 const SCENARIO_EXTRA_WIDGETS: Partial<Record<DashboardScenarioId, (d: number) => React.ReactNode[]>> = {
   "feature-adoption": d => [<WidgetSupportTickets key="support" delay={d + 0.08} />],
-  "adoption-breakdown": d => [<WidgetLicenseTierBreakdown key="tiers" delay={d + 0.04} />],
+  "adoption-breakdown": d => buildFeatureAdoptionWidgets(d + 0.04),
   sunsetting: d => [
     <WidgetSunsetCandidates key="sunset" delay={d + 0.04} />,
     <WidgetLowUsageFeatures key="low-usage" delay={d + 0.08} />,
@@ -2743,6 +2859,164 @@ function RightPanel({ isDark }: { isDark: boolean }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+
+function RefreshDataButton({
+  onClick,
+  disabled,
+  refreshing,
+  size = 34,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  refreshing: boolean;
+  size?: number;
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+
+  const showTooltip = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setTooltipPos({ top: r.bottom + 6, left: r.right });
+    setTooltipVisible(true);
+  }, []);
+
+  return (
+    <>
+      <motion.button
+        ref={btnRef}
+        type="button"
+        aria-label="Refresh data from connected sources"
+        onClick={onClick}
+        disabled={disabled}
+        onMouseEnter={showTooltip}
+        onMouseLeave={() => setTooltipVisible(false)}
+        onFocus={showTooltip}
+        onBlur={() => setTooltipVisible(false)}
+        whileHover={!disabled ? { scale: 1.04 } : undefined}
+        whileTap={!disabled ? { scale: 0.96 } : undefined}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: size,
+          height: size,
+          flexShrink: 0,
+          borderRadius: BUTTON_RADIUS,
+          border: `1px solid ${C.border}`,
+          background: isDarkMode ? "rgba(255,255,255,0.05)" : C.bgElevated,
+          color: C.textSecondary,
+          cursor: disabled ? "default" : "pointer",
+          opacity: disabled ? 0.65 : 1,
+        }}
+      >
+        <RefreshCw
+          size={15}
+          style={refreshing ? { animation: "spin 0.8s linear infinite" } : undefined}
+        />
+      </motion.button>
+      {tooltipVisible && createPortal(
+        <div
+          role="tooltip"
+          style={{
+            position: "fixed",
+            top: tooltipPos.top,
+            left: tooltipPos.left,
+            transform: "translateX(-100%)",
+            background: C.bgSurface,
+            border: `1px solid ${C.borderStrong}`,
+            borderRadius: 8,
+            padding: "6px 10px",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            pointerEvents: "none",
+            zIndex: 100000,
+            fontSize: 11,
+            color: C.textSecondary,
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Refresh data
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+function DashboardDataSourcesBar({
+  sources,
+  lastRefreshedAt,
+  isDark,
+  canRefresh,
+  refreshing,
+  onRefresh,
+}: {
+  sources: SourceId[];
+  lastRefreshedAt: Date | null;
+  isDark: boolean;
+  canRefresh: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <div
+      style={{
+        ...glassPanel(isDark),
+        borderRadius: 12,
+        padding: "8px 12px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        marginBottom: 10,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+        <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>Data from</span>
+        {sources.map(source => {
+          const { label } = getSourceConfig(source);
+          return (
+            <span
+              key={source}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                fontSize: 11,
+                color: C.textSecondary,
+                fontWeight: 500,
+                background: isDark ? "rgba(255,255,255,0.05)" : C.bgElevated,
+                border: `1px solid ${C.border}`,
+                borderRadius: 20,
+                padding: "3px 8px 3px 4px",
+              }}
+            >
+              <SourceLogoBadge source={source} boxSize={18} logoSize={12} />
+              {label}
+            </span>
+          );
+        })}
+        {lastRefreshedAt && (
+          <span style={{ fontSize: 11, color: C.textMuted }}>
+            · Last refreshed {formatDataRefreshTime(lastRefreshedAt)}
+          </span>
+        )}
+      </div>
+      {canRefresh && (
+        <RefreshDataButton
+          onClick={onRefresh}
+          disabled={refreshing}
+          refreshing={refreshing}
+          size={32}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function IgniteIskraPageV3() {
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isDark, setIsDark] = useState(true);
@@ -2764,6 +3038,9 @@ export default function IgniteIskraPageV3() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [dataRefreshMode, setDataRefreshMode] = useState(false);
+  const [lastDataRefreshAt, setLastDataRefreshAt] = useState<Date | null>(null);
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
   const [sidebarMouse, setSidebarMouse] = useState({ x: 50, y: 30 });
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -2838,11 +3115,12 @@ export default function IgniteIskraPageV3() {
             setActiveHistoryId(entry.id);
             const id = `d-${++idRef.current}`;
             setSavedDashboards(prevDash => [
-              { id, name, prompt: p, sources: finalSources, createdAt: new Date() },
+              { id, name, prompt: p, sources: finalSources, createdAt: new Date(), lastRefreshedAt: new Date() },
               ...prevDash,
             ]);
             setActiveDashboardId(id);
             setIsDirty(false);
+            setLastDataRefreshAt(new Date());
             return name;
           });
         }
@@ -2850,6 +3128,26 @@ export default function IgniteIskraPageV3() {
     },
     [prompt, activeSources, currentSources],
   );
+
+  const handleRefreshData = useCallback(() => {
+    if (!currentPrompt || !currentSources || !activeDashboardId || isDirty || generating) return;
+    setDataRefreshMode(true);
+    setGenerating(true);
+    setTimeout(() => {
+      const scenario = detectScenario(currentPrompt);
+      setDashboardContext(scenario);
+      const refreshedAt = new Date();
+      setLastDataRefreshAt(refreshedAt);
+      setSavedDashboards(prev =>
+        prev.map(d =>
+          d.id === activeDashboardId ? { ...d, lastRefreshedAt: refreshedAt } : d,
+        ),
+      );
+      setDashboardRefreshKey(k => k + 1);
+      setGenerating(false);
+      setDataRefreshMode(false);
+    }, 900);
+  }, [activeDashboardId, currentPrompt, currentSources, generating, isDirty]);
 
   const handleSaveChanges = useCallback(() => {
     if (!currentSources || !currentName || !currentPrompt || !activeDashboardId) return;
@@ -2888,12 +3186,13 @@ export default function IgniteIskraPageV3() {
         prompt: currentPrompt,
         sources: currentSources,
         createdAt: new Date(),
+        lastRefreshedAt: lastDataRefreshAt ?? new Date(),
       },
       ...prev,
     ]);
     setActiveDashboardId(id);
     setIsDirty(false);
-  }, [currentSources, currentName, currentPrompt]);
+  }, [currentSources, currentName, currentPrompt, lastDataRefreshAt]);
 
   const commitDashboardName = useCallback(() => {
     if (!activeDashboardId || !currentName) return;
@@ -2928,11 +3227,12 @@ export default function IgniteIskraPageV3() {
       setActiveHistoryId(entry.id);
       const id = `d-${++idRef.current}`;
       setSavedDashboards(prev => [
-        { id, name, prompt: p, sources, createdAt: new Date() },
+        { id, name, prompt: p, sources, createdAt: new Date(), lastRefreshedAt: new Date() },
         ...prev,
       ]);
       setActiveDashboardId(id);
       setIsDirty(false);
+      setLastDataRefreshAt(new Date());
       setGenerating(false);
     }, 900);
   }, []);
@@ -2945,6 +3245,7 @@ export default function IgniteIskraPageV3() {
     setPrompt(d.prompt);
     setActiveDashboardId(id);
     setIsDirty(false);
+    setLastDataRefreshAt(d.lastRefreshedAt ?? d.createdAt);
     setActiveNav("dashboard");
     const match = [...promptHistory].reverse().find(e => historyEntryMatchesSaved(e, d));
     setActiveHistoryId(match?.id ?? null);
@@ -2971,14 +3272,18 @@ export default function IgniteIskraPageV3() {
     setActiveHistoryId(null);
     setHistoryOpen(false);
     setIsDirty(false);
+    setLastDataRefreshAt(null);
+    setDataRefreshMode(false);
   }, []);
 
   const toggleSource = (s: SourceId) => setActiveSources(prev => prev.includes(s) ? (prev.length > 1 ? prev.filter(x => x !== s) : prev) : [...prev, s]);
 
   const hasDashboard = currentSources !== null;
-  const isRegenerating = generating && currentSources !== null;
+  const isRefreshingData = generating && dataRefreshMode;
+  const isRegenerating = generating && currentSources !== null && !dataRefreshMode;
   const showSavePair = isDirty || isRegenerating;
   const savePairEnabled = isDirty && !generating;
+  const canRefreshData = Boolean(activeDashboardId && !isDirty && hasDashboard);
 
   if (!isAuthenticated) {
     return <IskraSignInScreen isDark={isDark} onSignIn={() => setIsAuthenticated(true)} />;
@@ -3305,8 +3610,16 @@ export default function IgniteIskraPageV3() {
         {/* Widget grid */}
         {hasDashboard && currentSources && (
           <div style={{ padding: "16px 28px 40px", position: "relative" }}>
+            <DashboardDataSourcesBar
+              sources={currentSources}
+              lastRefreshedAt={lastDataRefreshAt}
+              isDark={isDark}
+              canRefresh={canRefreshData}
+              refreshing={isRefreshingData}
+              onRefresh={handleRefreshData}
+            />
             <AnimatePresence>
-              {isRegenerating && (
+              {(isRegenerating || isRefreshingData) && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -3336,18 +3649,23 @@ export default function IgniteIskraPageV3() {
                       />
                     ))}
                   </div>
-                  <div style={{ fontSize: 13, color: C.textMuted }}>Re-building your dashboard…</div>
+                  <div style={{ fontSize: 13, color: C.textMuted }}>
+                    {isRefreshingData
+                      ? `Pulling latest data from ${currentSources.map(s => getSourceConfig(s).label).join(", ")}…`
+                      : "Re-building your dashboard…"}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
             <div
+              key={dashboardRefreshKey}
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)",
                 gap: 10,
-                opacity: isRegenerating ? 0.45 : 1,
+                opacity: isRegenerating || isRefreshingData ? 0.45 : 1,
                 transition: "opacity 0.2s ease",
-                pointerEvents: isRegenerating ? "none" : "auto",
+                pointerEvents: isRegenerating || isRefreshingData ? "none" : "auto",
               }}
             >
               {currentSources.length > 0 && buildDashboardWidgets(activeScenario, currentSources)}
