@@ -736,6 +736,39 @@ function fmt(n: number): string {
   return n.toString();
 }
 
+function widgetBarTrack(): string {
+  return isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)";
+}
+
+function ticketPriorityColor(priority: SupportTicket["priority"]): string {
+  if (priority === "Critical") return C.error;
+  if (priority === "High") return C.warning;
+  return C.textMuted;
+}
+
+function bugSeverityColor(severity: string): string {
+  if (severity === "Critical") return C.error;
+  if (severity === "High") return C.warning;
+  return C.textMuted;
+}
+
+function coverageColor(pct: number): string {
+  if (pct >= 80) return C.success;
+  if (pct >= 60) return C.warning;
+  return C.error;
+}
+
+function codeTagStyle(): React.CSSProperties {
+  return {
+    fontSize: 12,
+    fontFamily: "monospace",
+    color: isDarkMode ? C.sparkBright : C.spark,
+    background: C.sparkFaint,
+    padding: "1px 6px",
+    borderRadius: 4,
+  };
+}
+
 // ─── SVG charts ───────────────────────────────────────────────────────────────
 function Sparkline({ values, color = C.spark }: { values: number[]; color?: string }) {
   const max = Math.max(...values), min = Math.min(...values), range = max - min || 1;
@@ -864,7 +897,7 @@ function WidgetAmplitudeDAU({ delay }: { delay: number }) {
           </div>
         ))}
       </div>
-      <Sparkline values={d.retention} color={C.amplitude} />
+      <Sparkline values={d.retention} />
       <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>7-day retention curve</div>
     </W>
   );
@@ -887,7 +920,7 @@ function WidgetAmplitudeEvents({ delay }: { delay: number }) {
           <span style={{ fontSize: 12, color: C.success }}>+{d.dauChange}% vs last week</span>
         </div>
       </div>
-      <MiniBar values={values} color={C.amplitude} />
+      <MiniBar values={values} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
         {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => <span key={d} style={{ fontSize: 11, color: C.textMuted }}>{d}</span>)}
       </div>
@@ -907,8 +940,8 @@ function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
               <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{e.name}</span>
               <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(e.count)}</span>
             </div>
-            <div style={{ height: 3, background: "rgba(128,128,128,0.1)", borderRadius: 2 }}>
-              <div style={{ height: "100%", width: `${(e.count / max) * 100}%`, background: C.amplitude, borderRadius: 2, opacity: i === 0 ? 1 : 0.5 }} />
+            <div style={{ height: 3, background: widgetBarTrack(), borderRadius: 2 }}>
+              <div style={{ height: "100%", width: `${(e.count / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
             </div>
           </div>
         ))}
@@ -923,14 +956,14 @@ function WidgetJiraSprint({ delay }: { delay: number }) {
   return (
     <W title={d.sprintName} source="jira" badge={`${d.daysLeft}d left`} delay={delay}>
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-        <DonutRing pct={pct} color={C.jira} size={60} />
+        <DonutRing pct={pct} color={C.spark} size={60} />
         <div>
           <div style={{ fontSize: 26, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{pct}%</div>
           <div style={{ fontSize: 12, color: C.textMuted }}>{d.done} / {d.total} pts</div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-        {[{ label: "Open", val: d.open, color: C.warning }, { label: "In Progress", val: d.inProgress, color: C.jira }, { label: "Done", val: d.closed, color: C.success }].map(item => (
+        {[{ label: "Open", val: d.open, color: C.warning }, { label: "In Progress", val: d.inProgress, color: C.textPrimary }, { label: "Done", val: d.closed, color: C.success }].map(item => (
           <div key={item.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: item.color }}>{item.val}</div>
             <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{item.label}</div>
@@ -943,7 +976,7 @@ function WidgetJiraSprint({ delay }: { delay: number }) {
 
 function WidgetJiraBugs({ delay }: { delay: number }) {
   const d = getMock().jira;
-  const bugs = [{ label: "Critical", val: d.critical, color: C.error }, { label: "High", val: d.high, color: C.warning }, { label: "Medium", val: d.medium, color: C.jira }, { label: "Low", val: d.low, color: C.textMuted }];
+  const bugs = [{ label: "Critical", val: d.critical, color: C.error }, { label: "High", val: d.high, color: C.warning }, { label: "Medium", val: d.medium, color: C.textSecondary }, { label: "Low", val: d.low, color: C.textMuted }];
   const total = bugs.reduce((s, b) => s + b.val, 0);
   return (
     <W title="Bug Distribution" source="jira" delay={delay}>
@@ -951,7 +984,7 @@ function WidgetJiraBugs({ delay }: { delay: number }) {
         {bugs.map(b => (
           <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 11, color: C.textMuted, width: 52 }}>{b.label}</span>
-            <div style={{ flex: 1, height: 6, background: "rgba(128,128,128,0.1)", borderRadius: 3 }}>
+            <div style={{ flex: 1, height: 6, background: widgetBarTrack(), borderRadius: 3 }}>
               <div style={{ height: "100%", width: `${(b.val / total) * 100}%`, background: b.color, borderRadius: 3 }} />
             </div>
             <span style={{ fontSize: 12, color: b.color, fontWeight: 600, width: 20, textAlign: "right" }}>{b.val}</span>
@@ -976,7 +1009,7 @@ function WidgetJiraVelocity({ delay }: { delay: number }) {
         <div style={{ fontSize: 24, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{avg}</div>
         <div style={{ fontSize: 11, color: C.textMuted, paddingBottom: 4 }}>avg pts / sprint</div>
       </div>
-      <MiniBar values={d.velocity} color={C.jira} />
+      <MiniBar values={d.velocity} />
     </W>
   );
 }
@@ -1009,7 +1042,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
         <>
           <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> rollout is at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{flag.rollout}%</strong>
           {" "}(started {d.launchdarkly.rolloutStarted}, target {d.launchdarkly.rolloutTarget}) with <strong style={{ color: C.textPrimary, fontWeight: 600 }}>1,920 weekly adopters</strong> (+{d.amplitude.dauChange}% WoW).
-          {" "}Amplitude shows strong usage of <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>bigtemplate_opened</code> and <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>bigtemplate_export_pdf</code>.
+          {" "}Amplitude shows strong usage of <code style={codeTagStyle()}>bigtemplate_opened</code> and <code style={codeTagStyle()}>bigtemplate_export_pdf</code>.
           {" "}There are <strong style={{ color: C.textPrimary, fontWeight: 600 }}>4 support tickets</strong> — <strong style={{ color: C.error, fontWeight: 600 }}>{pdfTickets} complain about low PDF resolution</strong>. Consider fixing before expanding rollout.
         </>
       );
@@ -1018,7 +1051,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
       body = (
         <>
           <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BigTemplate v3</strong> adoption varies sharply by license tier — Enterprise leads at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>78%</strong> (top: export PDF), while Free tier sits at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>18%</strong> (mostly import CSV).
-          {" "}The most used capability overall is <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>template_editor_open</code> ({fmt(d.amplitude.topEvents[0].count)} events/week).
+          {" "}The most used capability overall is <code style={codeTagStyle()}>template_editor_open</code> ({fmt(d.amplitude.topEvents[0].count)} events/week).
         </>
       );
       break;
@@ -1050,7 +1083,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
       body = (
         <>
           User engagement is trending up — DAU <strong style={{ color: C.textPrimary, fontWeight: 600 }}>+{d.amplitude.dauChange}%</strong> WoW, MAU <strong style={{ color: C.textPrimary, fontWeight: 600 }}>+{d.amplitude.mauChange}%</strong>, with week-2 retention at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.
-          {" "}Top events are <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>session_start</code> and <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>dashboard_view</code>.
+          {" "}Top events are <code style={codeTagStyle()}>session_start</code> and <code style={codeTagStyle()}>dashboard_view</code>.
         </>
       );
       break;
@@ -1104,7 +1137,7 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
       intro = <>BigTemplate v3 rollout is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>progressing well on adoption</strong> but user feedback highlights a quality gap in PDF export.</>;
       sections = [
         { title: "Rollout & adoption", items: [
-          <>Flag <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>bigtemplate-v3-rework</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>35%</strong> — on track for 100% by {d.launchdarkly.rolloutTarget}.</>,
+          <>Flag <code style={codeTagStyle()}>bigtemplate-v3-rework</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>35%</strong> — on track for 100% by {d.launchdarkly.rolloutTarget}.</>,
           <>Weekly adopters grew to <strong style={{ color: C.textPrimary, fontWeight: 600 }}>1,920</strong> (+{d.amplitude.dauChange}% WoW).</>,
         ]},
         { title: "Support & feedback", items: [
@@ -1152,7 +1185,7 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
       sections = [
         { title: "Product & growth", items: [
           <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>DAU +{d.amplitude.dauChange}%</strong> week-over-week — retention week 2 at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.</>,
-          <>Top event: <code style={{ fontSize: 12, fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark, background: C.amplitudeFaint, padding: "1px 6px", borderRadius: 4 }}>dashboard_view</code>.</>,
+          <>Top event: <code style={codeTagStyle()}>dashboard_view</code>.</>,
         ]},
         { title: "Engineering & delivery", items: [
           <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left.</>,
@@ -1192,7 +1225,7 @@ function WidgetSlackMessages({ delay }: { delay: number }) {
           </div>
         </div>
       </div>
-      <Sparkline values={d.dailyMessages} color={C.slack} />
+      <Sparkline values={d.dailyMessages} />
     </W>
   );
 }
@@ -1209,8 +1242,8 @@ function WidgetSlackChannels({ delay }: { delay: number }) {
               <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{ch.name}</span>
               <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(ch.messages)}</span>
             </div>
-            <div style={{ height: 3, background: "rgba(128,128,128,0.1)", borderRadius: 2 }}>
-              <div style={{ height: "100%", width: `${(ch.messages / max) * 100}%`, background: C.slack, borderRadius: 2, opacity: i === 0 ? 1 : 0.5 }} />
+            <div style={{ height: 3, background: widgetBarTrack(), borderRadius: 2 }}>
+              <div style={{ height: "100%", width: `${(ch.messages / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
             </div>
           </div>
         ))}
@@ -1224,7 +1257,7 @@ function WidgetConfluenceOverview({ delay }: { delay: number }) {
   return (
     <W title="Documentation Health" source="confluence" delay={delay}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-        <DonutRing pct={d.coverage} color={d.coverage >= 80 ? C.success : d.coverage >= 60 ? C.warning : C.error} size={60} />
+        <DonutRing pct={d.coverage} color={coverageColor(d.coverage)} size={60} />
         <div>
           <div style={{ fontSize: 24, fontWeight: 700, color: C.textPrimary }}>{d.coverage}%</div>
           <div style={{ fontSize: 11, color: C.textMuted }}>doc coverage</div>
@@ -1255,7 +1288,7 @@ function WidgetConfluencePages({ delay }: { delay: number }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {d.pages.map((p, i) => (
           <div key={p.title} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < d.pages.length - 1 ? `1px solid ${C.border}` : "none" }}>
-            <FileText size={13} color={C.confluence} style={{ flexShrink: 0 }} />
+            <FileText size={13} color={C.textMuted} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, color: C.textPrimary, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
               <div style={{ fontSize: 11, color: C.textMuted }}>{p.space}</div>
@@ -1274,7 +1307,7 @@ function WidgetLDOverview({ delay }: { delay: number }) {
     <W title="Feature Flag Status" source="launchdarkly" delay={delay}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.success }}>{d.active}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary }}>{d.active}</div>
           <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>active flags</div>
         </div>
         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
@@ -1283,7 +1316,7 @@ function WidgetLDOverview({ delay }: { delay: number }) {
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <Activity size={12} color={C.launchdarkly} />
+        <Activity size={12} color={C.textMuted} />
         <span style={{ fontSize: 12, color: C.textSecondary }}>{d.evaluations} evaluations this week</span>
         <TrendingUp size={11} color={C.success} />
         <span style={{ fontSize: 11, color: C.success }}>+{d.evalChange}%</span>
@@ -1304,10 +1337,10 @@ function WidgetLDFlags({ delay }: { delay: number }) {
             </div>
             <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace", flex: 1 }}>{f.key}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 80, height: 4, background: "rgba(128,128,128,0.1)", borderRadius: 2 }}>
-                <div style={{ height: "100%", width: `${f.rollout}%`, background: f.on ? C.launchdarkly : C.textMuted, borderRadius: 2 }} />
+              <div style={{ width: 80, height: 4, background: widgetBarTrack(), borderRadius: 2 }}>
+                <div style={{ height: "100%", width: `${f.rollout}%`, background: f.on ? C.spark : C.textMuted, borderRadius: 2, opacity: f.on ? 1 : 0.5 }} />
               </div>
-              <span style={{ fontSize: 11, color: f.on ? C.launchdarkly : C.textMuted, width: 32, textAlign: "right" }}>{f.rollout}%</span>
+              <span style={{ fontSize: 11, color: C.textSecondary, width: 32, textAlign: "right" }}>{f.rollout}%</span>
             </div>
           </div>
         ))}
@@ -1318,8 +1351,7 @@ function WidgetLDFlags({ delay }: { delay: number }) {
 
 function WidgetSupportTickets({ delay }: { delay: number }) {
   const tickets = getMock().jira.supportTickets ?? [];
-  const priorityColor = (p: SupportTicket["priority"]) =>
-    p === "Critical" ? C.error : p === "High" ? C.warning : p === "Medium" ? C.jira : C.textMuted;
+  const priorityColor = ticketPriorityColor;
   return (
     <W title="Support tickets" source="jira" span={2} delay={delay}>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -1353,8 +1385,8 @@ function WidgetLicenseTierBreakdown({ delay }: { delay: number }) {
               <span style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{t.tier}</span>
               <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(t.users)} users · {t.adoptionPct}%</span>
             </div>
-            <div style={{ height: 4, background: "rgba(128,128,128,0.1)", borderRadius: 2, marginBottom: 4 }}>
-              <div style={{ height: "100%", width: `${(t.adoptionPct / max) * 100}%`, background: C.amplitude, borderRadius: 2, opacity: i === 0 ? 1 : 0.55 }} />
+            <div style={{ height: 4, background: widgetBarTrack(), borderRadius: 2, marginBottom: 4 }}>
+              <div style={{ height: "100%", width: `${(t.adoptionPct / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
             </div>
             <div style={{ fontSize: 11, color: C.textMuted }}>
               Top feature: <code style={{ fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark }}>{t.topFeature}</code>
@@ -1421,11 +1453,11 @@ function WidgetReleaseBlockers({ delay }: { delay: number }) {
           <div key={b.feature}>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>{b.feature}</div>
             {b.bugs.map(bug => (
-              <div key={bug.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0 6px 12px", borderLeft: `2px solid ${bug.severity === "Critical" ? C.error : C.warning}` }}>
+              <div key={bug.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0 6px 12px", borderLeft: `2px solid ${bugSeverityColor(bug.severity)}` }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
                     <span style={{ fontSize: 11, fontFamily: "monospace", color: C.textMuted }}>{bug.key}</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: bug.severity === "Critical" ? C.error : C.warning }}>{bug.severity}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: bugSeverityColor(bug.severity) }}>{bug.severity}</span>
                   </div>
                   <div style={{ fontSize: 12, color: C.textSecondary }}>{bug.summary}</div>
                 </div>
@@ -1483,7 +1515,7 @@ const SCENARIO_EXTRA_WIDGETS: Partial<Record<DashboardScenarioId, (d: number) =>
 
 function buildDashboardWidgets(scenario: DashboardScenarioId, sources: SourceId[]): React.ReactNode[] {
   const override = SCENARIO_WIDGET_IDS[scenario];
-  const widgets: React.ReactNode[] = [<WidgetTextSummary key="summary" delay={0} />];
+  const widgets: React.ReactNode[] = [<WidgetFormattedInsights key="insights" delay={0} />];
 
   sources.forEach((source, si) => {
     const pool = WIDGETS_BY_SOURCE[source];
@@ -1496,7 +1528,6 @@ function buildDashboardWidgets(scenario: DashboardScenarioId, sources: SourceId[
   const extras = SCENARIO_EXTRA_WIDGETS[scenario];
   if (extras) widgets.push(...extras(sources.length * 0.08));
 
-  widgets.push(<WidgetFormattedInsights key="insights" delay={0.12 + sources.length * 0.04} />);
   return widgets;
 }
 
