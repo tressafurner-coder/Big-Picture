@@ -769,6 +769,19 @@ function codeTagStyle(): React.CSSProperties {
   };
 }
 
+function widgetTitleLabelStyle(): React.CSSProperties {
+  return {
+    fontSize: 11,
+    color: C.textMuted,
+    background: isDarkMode ? "rgba(255,255,255,0.06)" : C.bgElevated,
+    border: `1px solid ${C.border}`,
+    padding: "2px 10px",
+    borderRadius: 20,
+    fontWeight: 500,
+    letterSpacing: "0.01em",
+  };
+}
+
 // ─── SVG charts ───────────────────────────────────────────────────────────────
 function Sparkline({ values, color = C.spark }: { values: number[]; color?: string }) {
   const max = Math.max(...values), min = Math.min(...values), range = max - min || 1;
@@ -827,12 +840,12 @@ function DonutRing({ pct, color, size = 64 }: { pct: number; color: string; size
 }
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
-function W({ title, source, span = 1, badge, children, delay = 0, summaryTooltip }: {
+function W({ title, source, span = 1, badge, label, children, delay = 0, summaryTooltip }: {
   title: string; source: SourceId; span?: 1 | 2 | 3;
-  badge?: string; children: React.ReactNode; delay?: number;
+  badge?: string; label?: string; children: React.ReactNode; delay?: number;
   summaryTooltip?: string;
 }) {
-  const { color, label } = getSourceConfig(source);
+  const { color, label: sourceLabel } = getSourceConfig(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
@@ -847,6 +860,7 @@ function W({ title, source, span = 1, badge, children, delay = 0, summaryTooltip
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14, gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }}>
           <span style={{ fontSize: 13, color: C.textSecondary, fontWeight: 600 }}>{title}</span>
+          {label && <span style={widgetTitleLabelStyle()}>{label}</span>}
           {badge && <span style={{ fontSize: 11, color, background: `${color}18`, padding: "2px 10px", borderRadius: 20, fontWeight: 600 }}>{badge}</span>}
         </div>
         <div className={`w-tooltip-wrap-${source}`} style={{ position: "relative", flexShrink: 0 }}
@@ -863,13 +877,13 @@ function W({ title, source, span = 1, badge, children, delay = 0, summaryTooltip
               ) : (
                 <>
                   <SourceLogoBadge source={source} boxSize={20} logoSize={14} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{sourceLabel}</span>
                 </>
               )}
             </div>
             <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
               {summaryTooltip ?? (
-                <>Data sourced from <strong style={{ color: C.textSecondary }}>{label}</strong> integration.</>
+                <>Data sourced from <strong style={{ color: C.textSecondary }}>{sourceLabel}</strong> integration.</>
               )}
             </div>
           </div>
@@ -898,7 +912,9 @@ function WidgetAmplitudeDAU({ delay }: { delay: number }) {
         ))}
       </div>
       <Sparkline values={d.retention} />
-      <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>7-day retention curve</div>
+      <div style={{ marginTop: 6 }}>
+        <span style={widgetTitleLabelStyle()}>7-day retention curve</span>
+      </div>
     </W>
   );
 }
@@ -909,7 +925,13 @@ function WidgetAmplitudeEvents({ delay }: { delay: number }) {
   const values = adopters ?? d.weeklyEvents;
   const totalLabel = adopters ? "new adopters this week" : "total this week";
   return (
-    <W title={adopters ? `${d.featureName ?? "Feature"} adoption (7 days)` : "Event Volume (7 days)"} source="amplitude" span={2} delay={delay}>
+    <W
+      title={adopters ? `${d.featureName ?? "Feature"} adoption` : "Event Volume"}
+      label="7 days"
+      source="amplitude"
+      span={2}
+      delay={delay}
+    >
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(values.reduce((a, b) => a + b))}</div>
@@ -932,7 +954,12 @@ function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
   const d = getMock().amplitude;
   const max = d.topEvents[0].count;
   return (
-    <W title={d.featureName ? `${d.featureName} — top events` : "Top Events"} source="amplitude" delay={delay}>
+    <W
+      title={d.featureName ?? "Top Events"}
+      label={d.featureName ? "top events" : undefined}
+      source="amplitude"
+      delay={delay}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {d.topEvents.map((e, i) => (
           <div key={e.name}>
@@ -1004,7 +1031,7 @@ function WidgetJiraVelocity({ delay }: { delay: number }) {
   const d = getMock().jira;
   const avg = Math.round(d.velocity.reduce((s, v) => s + v) / d.velocity.length);
   return (
-    <W title="Velocity (last 6 sprints)" source="jira" delay={delay}>
+    <W title="Velocity" label="last 6 sprints" source="jira" delay={delay}>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 10 }}>
         <div style={{ fontSize: 24, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{avg}</div>
         <div style={{ fontSize: 11, color: C.textMuted, paddingBottom: 4 }}>avg pts / sprint</div>
@@ -1107,7 +1134,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
   }
 
   return (
-    <W title="Executive summary" source="amplitude" span={3} badge="AI" delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
+    <W title="Executive summary" source="amplitude" span={3} delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
       <p style={{ margin: 0, fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>{body}</p>
     </W>
   );
@@ -1180,23 +1207,86 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
       ];
       callout = { title: "Next step", body: <>Fix PDF Export criticals first — they account for 3 of 4 release-blocking bugs.</> };
       break;
-    default:
-      intro = <>Based on this week&apos;s data, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>overall product health is stable</strong> with two areas that deserve attention before the next release.</>;
+    case "full-health":
+      intro = (
+        <>
+          You asked for <strong style={{ color: C.textPrimary, fontWeight: 600 }}>full product health across all sources</strong> — Iskra combined Amplitude, Jira, Slack, Confluence and LaunchDarkly.
+          {" "}Engagement and delivery look healthy overall, but <strong style={{ color: C.textPrimary, fontWeight: 600 }}>two cross-source risks</strong> stand out before the next release.
+        </>
+      );
       sections = [
-        { title: "Product & growth", items: [
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>DAU +{d.amplitude.dauChange}%</strong> week-over-week — retention week 2 at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.</>,
-          <>Top event: <code style={codeTagStyle()}>dashboard_view</code>.</>,
+        { title: "Risk 1 — ai-copilot rollout (LaunchDarkly + Amplitude)", items: [
+          <>LaunchDarkly: <code style={codeTagStyle()}>ai-copilot</code> is live at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> — too early to expand without adoption proof.</>,
+          <>Amplitude: watch <code style={codeTagStyle()}>feature_clicked</code> and <code style={codeTagStyle()}>dashboard_view</code> in the cohort before raising rollout.</>,
         ]},
-        { title: "Engineering & delivery", items: [
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left.</>,
-          <><span style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</span> remain open.</>,
+        { title: "Risk 2 — release blockers (Jira)", items: [
+          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3841</span> (Critical) — memory leak in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export / BigTemplate</strong>.</>,
+          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3812</span> (Critical) — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth token refresh</strong> fails during long exports.</>,
+          <><span style={{ color: C.warning, fontWeight: 600 }}>{d.jira.high} high-severity bugs</span> tied to <strong style={{ color: C.textPrimary, fontWeight: 600 }}>release v4.2.0</strong> — threatens the Friday window despite {d.jira.sprintName} being {jiraPct}% done.</>,
         ]},
       ];
-      callout = { title: "Priority action", body: <>Monitor the <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> rollout at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> before expanding.</> };
+      callout = { title: "Priority action", body: <>Fix Jira criticals in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>auth</strong> before expanding <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> in LaunchDarkly.</> };
+      break;
+    case "sprint-health":
+      intro = <>Sprint and deployment readiness review: <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is on pace, but <strong style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</strong> and gated release flags block a safe deploy.</>;
+      sections = [
+        { title: "Sprint progress (Jira)", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left — velocity ~{Math.round(d.jira.velocity.reduce((s, v) => s + v, 0) / d.jira.velocity.length)} pts/sprint.</>,
+          <><span style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical</span> and <span style={{ color: C.warning, fontWeight: 600 }}>{d.jira.high} high</span> bugs open — triage before release window.</>,
+        ]},
+        { title: "Deployment flags (LaunchDarkly)", items: [
+          <><code style={codeTagStyle()}>release-v4.2.0</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>0%</strong> — gated until Jira blockers close.</>,
+          <><code style={codeTagStyle()}>canary-prod-eu</code> at 15% — canary running; <code style={codeTagStyle()}>hotfix-auth-token</code> fully deployed.</>,
+        ]},
+      ];
+      callout = { title: "Priority action", body: <>Close critical bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>auth</strong>, then ungate <code style={codeTagStyle()}>release-v4.2.0</code>.</> };
+      break;
+    case "engagement":
+      intro = <>User engagement overview: growth is positive, with no blockers — the main watchpoint is whether new users reach core features beyond the first session.</>;
+      sections = [
+        { title: "Amplitude signals", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>DAU +{d.amplitude.dauChange}%</strong> WoW, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>MAU +{d.amplitude.mauChange}%</strong> — week-2 retention at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>44%</strong>.</>,
+          <>Top events: <code style={codeTagStyle()}>session_start</code>, <code style={codeTagStyle()}>dashboard_view</code> — users arrive but depth of use varies.</>,
+        ]},
+      ];
+      callout = { title: "Suggested follow-up", body: <>Ask which cohorts drop off between week 1 and week 2 retention.</> };
+      break;
+    case "team-comms":
+      intro = <>Team communication and feature flag status: release coordination is active in Slack; flag rollouts need alignment with engineering chatter.</>;
+      sections = [
+        { title: "Slack activity", items: [
+          <>Peak channel: <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.slack.channels[0].name}</strong> ({d.slack.channels[0].messages} messages) — release coordination in progress.</>,
+          <>Avg response time <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.slack.avgResponse}</strong> ({Math.abs(d.slack.responseChange)}% faster than last week).</>,
+        ]},
+        { title: "Feature flags", items: [
+          <><code style={codeTagStyle()}>bigtemplate-v3</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>35%</strong>, <code style={codeTagStyle()}>ai-copilot</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong>.</>,
+        ]},
+      ];
+      callout = { title: "Priority action", body: <>Confirm in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>#release-v4.2</strong> that flag rollout matches the deployment runbook.</> };
+      break;
+    default:
+      intro = (
+        <>
+          Based on your prompt, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>two areas need attention</strong>:{" "}
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot rollout</strong> and{" "}
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>critical bugs in PDF export &amp; authentication</strong>.
+        </>
+      );
+      sections = [
+        { title: "ai-copilot rollout", items: [
+          <>The <code style={codeTagStyle()}>ai-copilot</code> flag is at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> — hold expansion until Amplitude shows stable engagement.</>,
+        ]},
+        { title: "Critical bugs by feature", items: [
+          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3841</span> — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export / BigTemplate</strong> memory leak.</>,
+          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3812</span> — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth token refresh</strong> during long exports.</>,
+        ]},
+      ];
+      callout = { title: "Priority action", body: <>Triage PDF export and auth criticals first; hold ai-copilot expansion until adoption is confirmed.</> };
+      break;
   }
 
   return (
-    <W title="Key takeaways" source="jira" span={3} badge="AI" delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
+    <W title="Key takeaways" source="jira" span={3} delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
       <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 13, lineHeight: 1.6, color: C.textSecondary }}>
         <p style={{ margin: 0 }}>{intro}</p>
         {sections.map(s => <InsightSection key={s.title} title={s.title} items={s.items} />)}
@@ -1210,7 +1300,7 @@ function WidgetSlackMessages({ delay }: { delay: number }) {
   const d = getMock().slack;
   const total = d.dailyMessages.reduce((s, v) => s + v);
   return (
-    <W title="Message Volume (7 days)" source="slack" span={2} delay={delay}>
+    <W title="Message Volume" label="7 days" source="slack" span={2} delay={delay}>
       <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(total)}</div>
@@ -1441,7 +1531,7 @@ function WidgetReleaseBlockers({ delay }: { delay: number }) {
   const jira = getMock().jira;
   const blockers = jira.releaseBlockers ?? [];
   return (
-    <W title={`${jira.releaseVersion ?? "Release"} blockers`} source="jira" span={3} badge="Delayed" delay={delay}>
+    <W title={jira.releaseVersion ?? "Release"} label="blockers" source="jira" span={3} badge="Delayed" delay={delay}>
       <div style={{ marginBottom: 14, padding: "10px 12px", background: C.errorFaint, borderRadius: 10, display: "flex", alignItems: "center", gap: 8 }}>
         <AlertCircle size={14} color={C.error} />
         <span style={{ fontSize: 12, color: C.error }}>
