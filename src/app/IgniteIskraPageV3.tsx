@@ -309,7 +309,7 @@ interface DashboardMock {
   };
   launchdarkly: {
     active: number; inactive: number; evaluations: string; evalChange: number;
-    flags: { key: string; on: boolean; rollout: number; enabledOn?: string }[];
+    flags: { key: string; on: boolean; rollout: number; enabledOn?: string; rolloutTarget?: string }[];
     rolloutStarted?: string;
     rolloutTarget?: string;
   };
@@ -470,11 +470,11 @@ const DEFAULT_MOCK: DashboardMock = {
   launchdarkly: {
     active: 24, inactive: 8, evaluations: "4.2M", evalChange: 22.1,
     flags: [
-      { key: "new-dashboard-beta", on: true, rollout: 35, enabledOn: "3 Mar 2026" },
-      { key: "enhanced-search", on: true, rollout: 100, enabledOn: "8 Jan 2026" },
-      { key: "ai-copilot", on: true, rollout: 12, enabledOn: "18 May 2026" },
+      { key: "new-dashboard-beta", on: true, rollout: 35, enabledOn: "3 Mar 2026", rolloutTarget: "15 Aug 2026" },
+      { key: "enhanced-search", on: true, rollout: 100, enabledOn: "8 Jan 2026", rolloutTarget: "22 Jan 2026" },
+      { key: "ai-copilot", on: true, rollout: 12, enabledOn: "18 May 2026", rolloutTarget: "30 Sep 2026" },
       { key: "csv-export-v2", on: false, rollout: 0 },
-      { key: "performance-mode", on: true, rollout: 50, enabledOn: "22 Apr 2026" },
+      { key: "performance-mode", on: true, rollout: 50, enabledOn: "22 Apr 2026", rolloutTarget: "1 Jul 2026" },
     ],
   },
 };
@@ -494,10 +494,10 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
     launchdarkly: {
       ...DEFAULT_MOCK.launchdarkly,
       flags: [
-        { key: "release-v4.2.0", on: true, rollout: 0, enabledOn: "1 Jun 2026" },
-        { key: "hotfix-auth-token", on: true, rollout: 100, enabledOn: "28 May 2026" },
-        { key: "deploy-gate-check", on: true, rollout: 100, enabledOn: "15 Jan 2026" },
-        { key: "canary-prod-eu", on: true, rollout: 15, enabledOn: "26 May 2026" },
+        { key: "release-v4.2.0", on: true, rollout: 0, enabledOn: "1 Jun 2026", rolloutTarget: "29 May 2026" },
+        { key: "hotfix-auth-token", on: true, rollout: 100, enabledOn: "28 May 2026", rolloutTarget: "28 May 2026" },
+        { key: "deploy-gate-check", on: true, rollout: 100, enabledOn: "15 Jan 2026", rolloutTarget: "15 Jan 2026" },
+        { key: "canary-prod-eu", on: true, rollout: 15, enabledOn: "26 May 2026", rolloutTarget: "15 Jun 2026" },
         { key: "rollback-v4.1.9", on: false, rollout: 0 },
       ],
     },
@@ -531,9 +531,9 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       ...DEFAULT_MOCK.launchdarkly,
       active: 18, inactive: 6, evaluations: "2.8M", evalChange: 14.3,
       flags: [
-        { key: "ai-copilot", on: true, rollout: 12, enabledOn: "18 May 2026" },
-        { key: "bigtemplate-v3", on: true, rollout: 35, enabledOn: "12 Mar 2026" },
-        { key: "enhanced-search", on: true, rollout: 100, enabledOn: "8 Jan 2026" },
+        { key: "ai-copilot", on: true, rollout: 12, enabledOn: "18 May 2026", rolloutTarget: "30 Sep 2026" },
+        { key: "bigtemplate-v3", on: true, rollout: 35, enabledOn: "12 Mar 2026", rolloutTarget: "30 Jun 2026" },
+        { key: "enhanced-search", on: true, rollout: 100, enabledOn: "8 Jan 2026", rolloutTarget: "22 Jan 2026" },
         { key: "csv-export-v2", on: false, rollout: 0 },
       ],
     },
@@ -572,9 +572,9 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       rolloutStarted: "12 Mar 2026",
       rolloutTarget: "30 Jun 2026",
       flags: [
-        { key: "bigtemplate-v3-rework", on: true, rollout: 35, enabledOn: "12 Mar 2026" },
+        { key: "bigtemplate-v3-rework", on: true, rollout: 35, enabledOn: "12 Mar 2026", rolloutTarget: "30 Jun 2026" },
         { key: "bigtemplate-pdf-hd", on: false, rollout: 0 },
-        { key: "bigtemplate-marketplace", on: true, rollout: 100, enabledOn: "5 Feb 2026" },
+        { key: "bigtemplate-marketplace", on: true, rollout: 100, enabledOn: "5 Feb 2026", rolloutTarget: "18 Feb 2026" },
       ],
     },
   },
@@ -1531,7 +1531,14 @@ function WidgetLDFlags({ delay }: { delay: number }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={wfBody()}>{f.key}</div>
               <div style={{ ...wfLabel(), marginTop: 3 }}>
-                {f.enabledOn ? <>Enabled <span style={{ color: C.textSecondary }}>{f.enabledOn}</span></> : "Not enabled"}
+                {f.enabledOn ? (
+                  <>
+                    Enabled <span style={{ color: C.textSecondary }}>{f.enabledOn}</span>
+                    {f.rolloutTarget && (
+                      <> · 100% by <span style={{ color: C.textSecondary }}>{f.rolloutTarget}</span></>
+                    )}
+                  </>
+                ) : "Not enabled"}
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
@@ -1596,6 +1603,45 @@ function WidgetLicenseTierBreakdown({ delay }: { delay: number }) {
   );
 }
 
+function MomColHeader({ style }: { style: React.CSSProperties }) {
+  return (
+    <div
+      style={{ ...style, position: "relative", cursor: "help" }}
+      onMouseEnter={e => { const t = e.currentTarget.querySelector<HTMLElement>(".mom-col-tooltip"); if (t) t.style.opacity = "1"; }}
+      onMouseLeave={e => { const t = e.currentTarget.querySelector<HTMLElement>(".mom-col-tooltip"); if (t) t.style.opacity = "0"; }}
+    >
+      MoM
+      <div
+        className="mom-col-tooltip"
+        style={{
+          position: "absolute",
+          right: 0,
+          bottom: "calc(100% + 6px)",
+          background: C.bgSurface,
+          border: `1px solid ${C.borderStrong}`,
+          borderRadius: 8,
+          padding: "6px 10px",
+          width: 210,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+          opacity: 0,
+          transition: "opacity 0.15s",
+          pointerEvents: "none",
+          zIndex: 50,
+          ...wfLabel(),
+          textTransform: "none",
+          letterSpacing: "normal",
+          fontWeight: 400,
+          lineHeight: 1.45,
+          whiteSpace: "normal",
+          textAlign: "left",
+        }}
+      >
+        Month over month — % change in usage compared to the previous month.
+      </div>
+    </div>
+  );
+}
+
 function WidgetLowUsageFeatures({ delay }: { delay: number }) {
   const features = getMock().amplitude.lowUsageFeatures ?? [];
   const headerStyle: React.CSSProperties = {
@@ -1608,7 +1654,7 @@ function WidgetLowUsageFeatures({ delay }: { delay: number }) {
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 112px 52px", gap: "6px 8px", alignItems: "center" }}>
         <div style={headerStyle}>Event name</div>
         <div style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }}>Last month usage</div>
-        <div style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }}>MoM</div>
+        <MomColHeader style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }} />
         {features.map(f => {
           const momUp = f.momChange >= 0;
           return (
@@ -3317,14 +3363,17 @@ export default function IgniteIskraPageV3() {
             padding: "16px 28px 22px",
             fontSize: 10,
             fontWeight: 400,
-            lineHeight: 1.4,
+            lineHeight: 1.5,
             textAlign: "center",
-            letterSpacing: "0.06em",
+            letterSpacing: "0.01em",
             color: isDark ? "rgba(251,146,60,0.16)" : "rgba(124,92,231,0.2)",
             userSelect: "none",
+            maxWidth: 720,
+            marginLeft: "auto",
+            marginRight: "auto",
           }}
         >
-          Iskra can make mistakes. Check important info.
+          Iskra is AI — it can make mistakes, so please check responses.
         </p>
       </div>
 
