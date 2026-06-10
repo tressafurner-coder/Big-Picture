@@ -239,6 +239,13 @@ interface SupportTicket {
   ageDays: number;
 }
 
+interface LowUsageFeature {
+  eventName: string;
+  confluenceUrl: string;
+  monthlyUsers: number;
+  momChange: number;
+}
+
 interface LicenseTierRow {
   tier: string;
   users: number;
@@ -254,9 +261,16 @@ interface SunsetCandidate {
   supportTickets: number;
 }
 
+interface ReleaseBlockerBug {
+  key: string;
+  summary: string;
+  status: "Blocked";
+  blockedSince: string;
+}
+
 interface ReleaseBlocker {
   feature: string;
-  bugs: { key: string; summary: string; severity: string; ageDays: number }[];
+  bugs: ReleaseBlockerBug[];
 }
 
 interface DashboardMock {
@@ -268,7 +282,7 @@ interface DashboardMock {
     featureName?: string;
     weeklyAdopters?: number[];
     licenseTiers?: LicenseTierRow[];
-    lowUsageFeatures?: { name: string; monthlyUsers: number; trend: number }[];
+    lowUsageFeatures?: LowUsageFeature[];
   };
   jira: {
     sprintName: string; done: number; total: number; daysLeft: number;
@@ -278,6 +292,8 @@ interface DashboardMock {
     supportTickets?: SupportTicket[];
     sunsetCandidates?: SunsetCandidate[];
     releaseVersion?: string;
+    releasePlanStart?: string;
+    releasePlanEnd?: string;
     releaseOriginalDate?: string;
     releaseNewDate?: string;
     releaseBlockers?: ReleaseBlocker[];
@@ -589,11 +605,11 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
     amplitude: {
       ...DEFAULT_MOCK.amplitude,
       lowUsageFeatures: [
-        { name: "legacy-chart-builder", monthlyUsers: 42, trend: -28 },
-        { name: "csv-import-v1", monthlyUsers: 68, trend: -19 },
-        { name: "custom-css-editor", monthlyUsers: 91, trend: -12 },
-        { name: "bulk-email-sender", monthlyUsers: 124, trend: -8 },
-        { name: "old-dashboard-v1", monthlyUsers: 156, trend: -31 },
+        { eventName: "legacy_chart_builder", confluenceUrl: "https://appfire.atlassian.net/wiki/spaces/Product/pages/42100/Legacy+Chart+Builder", monthlyUsers: 42, momChange: -28 },
+        { eventName: "csv_import_v1", confluenceUrl: "https://appfire.atlassian.net/wiki/spaces/Product/pages/42118/CSV+Import+v1", monthlyUsers: 68, momChange: -19 },
+        { eventName: "custom_css_editor", confluenceUrl: "https://appfire.atlassian.net/wiki/spaces/Engineering/pages/43012/Custom+CSS+Editor", monthlyUsers: 91, momChange: -12 },
+        { eventName: "bulk_email_sender", confluenceUrl: "https://appfire.atlassian.net/wiki/spaces/Product/pages/43044/Bulk+Email+Sender", monthlyUsers: 124, momChange: -8 },
+        { eventName: "old_dashboard_v1", confluenceUrl: "https://appfire.atlassian.net/wiki/spaces/Product/pages/43102/Old+Dashboard+v1", monthlyUsers: 156, momChange: -31 },
       ],
     },
     jira: {
@@ -616,27 +632,22 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       done: 38, total: 50, daysLeft: 0,
       critical: 4, high: 7, medium: 9, low: 14,
       releaseVersion: "v4.2.0",
+      releasePlanStart: "1 May 2026",
+      releasePlanEnd: "15 May 2026",
       releaseOriginalDate: "15 May 2026",
       releaseNewDate: "29 May 2026",
       releaseBlockers: [
         {
           feature: "PDF Export (BigTemplate)",
           bugs: [
-            { key: "BUG-3841", summary: "Critical memory leak on large PDF export", severity: "Critical", ageDays: 11 },
-            { key: "BUG-3829", summary: "Export fails silently for >50-page templates", severity: "Critical", ageDays: 8 },
+            { key: "BUG-3841", summary: "Memory leak on large PDF export", status: "Blocked", blockedSince: "8 May 2026" },
+            { key: "BUG-3829", summary: "Export fails silently for >50-page templates", status: "Blocked", blockedSince: "10 May 2026" },
           ],
         },
         {
           feature: "Auth Token Refresh",
           bugs: [
-            { key: "BUG-3812", summary: "Session expires during long-running export", severity: "Critical", ageDays: 6 },
-          ],
-        },
-        {
-          feature: "Marketplace Sync",
-          bugs: [
-            { key: "BUG-3798", summary: "Template version mismatch after marketplace update", severity: "High", ageDays: 14 },
-            { key: "BUG-3784", summary: "Rollback leaves stale cache in CDN", severity: "High", ageDays: 9 },
+            { key: "BUG-3812", summary: "Session expires during long-running export", status: "Blocked", blockedSince: "12 May 2026" },
           ],
         },
       ],
@@ -683,7 +694,7 @@ const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
   { id: "feature-adoption", label: "New feature adoption & support feedback", prompt: "We released new reworked BigTemplate to the marketplace. What is the adoption and user feedback?" },
   { id: "adoption-breakdown", label: "Functionality adoption breakdown", prompt: "We released new reworked BigTemplate to the marketplace. What are the most used features? Break them down by user license tier." },
   { id: "sunsetting", label: "Sunsetting features or products", prompt: "Which features are least used and have most unresolved bugs for the longest time? Help me find features to remove from the app to simplify it." },
-  { id: "release-delays", label: "Release delays from critical bugs", prompt: "Bugs related to which features caused the last release to be postponed?" },
+  { id: "release-delays", label: "Release delays from blocked bugs", prompt: "Bugs related to which features caused the last release to be postponed?" },
 ];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -748,9 +759,8 @@ function ticketPriorityColor(priority: SupportTicket["priority"]): string {
   return C.textMuted;
 }
 
-function bugSeverityColor(severity: string): string {
-  if (severity === "Critical") return C.error;
-  if (severity === "High") return C.warning;
+function bugReleaseStatusColor(status: string): string {
+  if (status === "Blocked") return C.error;
   return C.textMuted;
 }
 
@@ -760,11 +770,54 @@ function coverageColor(pct: number): string {
   return C.error;
 }
 
+const WIDGET_FONT = "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+function wfTitle(): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 12, fontWeight: 600, color: C.textSecondary };
+}
+
+function wfMetric(): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" };
+}
+
+function wfStat(): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 12, fontWeight: 700, color: C.textPrimary };
+}
+
+function wfLabel(): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 11, color: C.textMuted };
+}
+
+function wfBody(color: string = C.textSecondary): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 12, color };
+}
+
+function wfBodyStrong(color: string = C.textPrimary): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 12, fontWeight: 600, color };
+}
+
+function wfColHeader(): React.CSSProperties {
+  return {
+    fontFamily: WIDGET_FONT,
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: C.textMuted,
+  };
+}
+
+function wfSectionTitle(): React.CSSProperties {
+  return { ...wfColHeader(), marginBottom: 8 };
+}
+
+function wfBadge(color: string): React.CSSProperties {
+  return { fontFamily: WIDGET_FONT, fontSize: 11, fontWeight: 600, color };
+}
+
 function codeTagStyle(): React.CSSProperties {
   return {
-    fontSize: 12,
-    fontFamily: "monospace",
-    color: isDarkMode ? C.sparkBright : C.spark,
+    ...wfBody(isDarkMode ? C.sparkBright : C.spark),
     background: C.sparkFaint,
     padding: "1px 6px",
     borderRadius: 4,
@@ -773,8 +826,7 @@ function codeTagStyle(): React.CSSProperties {
 
 function widgetTitleLabelStyle(): React.CSSProperties {
   return {
-    fontSize: 11,
-    color: C.textMuted,
+    ...wfLabel(),
     background: isDarkMode ? "rgba(255,255,255,0.06)" : C.bgElevated,
     border: `1px solid ${C.border}`,
     padding: "2px 10px",
@@ -782,6 +834,53 @@ function widgetTitleLabelStyle(): React.CSSProperties {
     fontWeight: 500,
     letterSpacing: "0.01em",
   };
+}
+
+const JIRA_BROWSE_URL = "https://appfire.atlassian.net/browse";
+
+function jiraIssueUrl(key: string): string {
+  return `${JIRA_BROWSE_URL}/${key}`;
+}
+
+function JiraIssueLink({ issueKey, style }: { issueKey: string; style?: React.CSSProperties }) {
+  return (
+    <a
+      href={jiraIssueUrl(issueKey)}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...wfBody(isDarkMode ? C.sparkBright : C.spark),
+        textDecoration: "none",
+        ...style,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }}
+      onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}
+    >
+      {issueKey}
+    </a>
+  );
+}
+
+function ConfluenceDocLink({ href, label, style }: { href: string; label: string; style?: React.CSSProperties }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...wfBody(isDarkMode ? C.sparkBright : C.spark),
+        textDecoration: "none",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        ...style,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }}
+      onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}
+    >
+      {label}
+    </a>
+  );
 }
 
 // ─── SVG charts ───────────────────────────────────────────────────────────────
@@ -842,10 +941,10 @@ function DonutRing({ pct, color, size = 64 }: { pct: number; color: string; size
 }
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
-function W({ title, source, span = 1, badge, label, children, delay = 0, summaryTooltip }: {
+function W({ title, source, span = 1, badge, label, children, delay = 0, summaryTooltip, compact }: {
   title: string; source: SourceId; span?: 1 | 2 | 3;
   badge?: string; label?: string; children: React.ReactNode; delay?: number;
-  summaryTooltip?: string;
+  summaryTooltip?: string; compact?: boolean;
 }) {
   const { color, label: sourceLabel } = getSourceConfig(source);
   return (
@@ -854,36 +953,38 @@ function W({ title, source, span = 1, badge, label, children, delay = 0, summary
       transition={{ delay, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       style={{
         ...glassPanel(),
-        borderRadius: 16,
-        padding: "18px 20px 20px", gridColumn: span > 1 ? `span ${span}` : undefined,
+        fontFamily: WIDGET_FONT,
+        borderRadius: compact ? 12 : 16,
+        padding: compact ? "12px 14px 14px" : "18px 20px 20px",
+        gridColumn: span > 1 ? `span ${span}` : undefined,
         position: "relative", overflow: "hidden",
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14, gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }}>
-          <span style={{ fontSize: 13, color: C.textSecondary, fontWeight: 600 }}>{title}</span>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: compact ? 8 : 14, gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+          <span style={wfTitle()}>{title}</span>
           {label && <span style={widgetTitleLabelStyle()}>{label}</span>}
-          {badge && <span style={{ fontSize: 11, color, background: `${color}18`, padding: "2px 10px", borderRadius: 20, fontWeight: 600 }}>{badge}</span>}
+          {badge && <span style={{ ...wfBadge(color), background: `${color}18`, padding: "2px 10px", borderRadius: 20 }}>{badge}</span>}
         </div>
         <div className={`w-tooltip-wrap-${source}`} style={{ position: "relative", flexShrink: 0 }}
           onMouseEnter={e => { const t = e.currentTarget.querySelector<HTMLElement>(".w-tooltip"); if (t) t.style.opacity = "1"; }}
           onMouseLeave={e => { const t = e.currentTarget.querySelector<HTMLElement>(".w-tooltip"); if (t) t.style.opacity = "0"; }}>
-          <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default", fontSize: 10, color: C.textMuted, fontWeight: 700, userSelect: "none" }}>?</div>
+          <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default", ...wfLabel(), fontWeight: 700, userSelect: "none" }}>?</div>
           <div className="w-tooltip" style={{ position: "absolute", right: 0, top: 22, background: C.bgSurface, border: `1px solid ${C.borderStrong}`, borderRadius: 10, padding: "8px 12px", minWidth: 160, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", opacity: 0, transition: "opacity 0.15s", pointerEvents: "none", zIndex: 50 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
               {summaryTooltip ? (
                 <>
                   <Zap size={12} color={C.spark} aria-hidden />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>Iskra</span>
+                  <span style={{ ...wfBodyStrong(), fontWeight: 700 }}>Iskra</span>
                 </>
               ) : (
                 <>
                   <SourceLogoBadge source={source} boxSize={20} logoSize={14} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary }}>{sourceLabel}</span>
+                  <span style={{ ...wfBodyStrong(), fontWeight: 700 }}>{sourceLabel}</span>
                 </>
               )}
             </div>
-            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
+            <div style={{ ...wfLabel(), lineHeight: 1.5 }}>
               {summaryTooltip ?? (
                 <>Data sourced from <strong style={{ color: C.textSecondary }}>{sourceLabel}</strong> integration.</>
               )}
@@ -904,11 +1005,11 @@ function WidgetAmplitudeDAU({ delay }: { delay: number }) {
       <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
         {[{ v: d.dau, ch: d.dauChange, label: "DAU" }, { v: d.mau, ch: d.mauChange, label: "MAU" }].map(item => (
           <div key={item.label}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: C.textPrimary, letterSpacing: "-1px" }}>{fmt(item.v)}</div>
-            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{item.label}</div>
+            <div style={wfMetric()}>{fmt(item.v)}</div>
+            <div style={{ ...wfLabel(), marginTop: 2 }}>{item.label}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
               <TrendingUp size={11} color={C.success} />
-              <span style={{ fontSize: 12, color: C.success }}>{item.ch}%</span>
+              <span style={wfBody(C.success)}>{item.ch}%</span>
             </div>
           </div>
         ))}
@@ -936,17 +1037,17 @@ function WidgetAmplitudeEvents({ delay }: { delay: number }) {
     >
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(values.reduce((a, b) => a + b))}</div>
-          <div style={{ fontSize: 12, color: C.textMuted }}>{totalLabel}</div>
+          <div style={wfMetric()}>{fmt(values.reduce((a, b) => a + b))}</div>
+          <div style={wfLabel()}>{totalLabel}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, paddingBottom: 4 }}>
           <TrendingUp size={12} color={C.success} />
-          <span style={{ fontSize: 12, color: C.success }}>+{d.dauChange}% vs last week</span>
+          <span style={wfBody(C.success)}>+{d.dauChange}% vs last week</span>
         </div>
       </div>
       <MiniBar values={values} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => <span key={d} style={{ fontSize: 11, color: C.textMuted }}>{d}</span>)}
+        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => <span key={d} style={wfLabel()}>{d}</span>)}
       </div>
     </W>
   );
@@ -966,8 +1067,8 @@ function WidgetAmplitudeTopEvents({ delay }: { delay: number }) {
         {d.topEvents.map((e, i) => (
           <div key={e.name}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{e.name}</span>
-              <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(e.count)}</span>
+              <span style={wfBody()}>{e.name}</span>
+              <span style={wfLabel()}>{fmt(e.count)}</span>
             </div>
             <div style={{ height: 3, background: widgetBarTrack(), borderRadius: 2 }}>
               <div style={{ height: "100%", width: `${(e.count / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
@@ -987,15 +1088,15 @@ function WidgetJiraSprint({ delay }: { delay: number }) {
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
         <DonutRing pct={pct} color={C.spark} size={60} />
         <div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{pct}%</div>
-          <div style={{ fontSize: 12, color: C.textMuted }}>{d.done} / {d.total} pts</div>
+          <div style={wfMetric()}>{pct}%</div>
+          <div style={wfLabel()}>{d.done} / {d.total} pts</div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
         {[{ label: "Open", val: d.open, color: C.warning }, { label: "In Progress", val: d.inProgress, color: C.textPrimary }, { label: "Done", val: d.closed, color: C.success }].map(item => (
           <div key={item.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: item.color }}>{item.val}</div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{item.label}</div>
+            <div style={{ ...wfStat(), color: item.color }}>{item.val}</div>
+            <div style={{ ...wfLabel(), marginTop: 2 }}>{item.label}</div>
           </div>
         ))}
       </div>
@@ -1012,18 +1113,18 @@ function WidgetJiraBugs({ delay }: { delay: number }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {bugs.map(b => (
           <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 11, color: C.textMuted, width: 52 }}>{b.label}</span>
+            <span style={{ ...wfLabel(), width: 52 }}>{b.label}</span>
             <div style={{ flex: 1, height: 6, background: widgetBarTrack(), borderRadius: 3 }}>
               <div style={{ height: "100%", width: `${(b.val / total) * 100}%`, background: b.color, borderRadius: 3 }} />
             </div>
-            <span style={{ fontSize: 12, color: b.color, fontWeight: 600, width: 20, textAlign: "right" }}>{b.val}</span>
+            <span style={{ ...wfBodyStrong(b.color), width: 20, textAlign: "right" }}>{b.val}</span>
           </div>
         ))}
       </div>
       <div style={{ marginTop: 12, padding: "8px 10px", background: d.critical > 0 ? C.errorFaint : C.successFaint, borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
         {d.critical > 0
-          ? <><AlertCircle size={12} color={C.error} /><span style={{ fontSize: 11, color: C.error }}>{d.critical} critical bugs need immediate attention</span></>
-          : <><CheckCircle size={12} color={C.success} /><span style={{ fontSize: 11, color: C.success }}>No critical bugs</span></>}
+          ? <><AlertCircle size={12} color={C.error} /><span style={{ ...wfLabel(), color: C.error }}>{d.critical} critical bugs need immediate attention</span></>
+          : <><CheckCircle size={12} color={C.success} /><span style={{ ...wfLabel(), color: C.success }}>No critical bugs</span></>}
       </div>
     </W>
   );
@@ -1035,8 +1136,8 @@ function WidgetJiraVelocity({ delay }: { delay: number }) {
   return (
     <W title="Velocity" label="last 6 sprints" source="jira" delay={delay}>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 10 }}>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{avg}</div>
-        <div style={{ fontSize: 11, color: C.textMuted, paddingBottom: 4 }}>avg pts / sprint</div>
+        <div style={wfMetric()}>{avg}</div>
+        <div style={{ ...wfLabel(), paddingBottom: 4 }}>avg pts / sprint</div>
       </div>
       <MiniBar values={d.velocity} />
     </W>
@@ -1051,8 +1152,8 @@ function SummaryCallout({ title, children }: { title: string; children: React.Re
       background: isDarkMode ? "rgba(249,115,22,0.1)" : C.sparkFaint,
       border: `1px solid ${isDarkMode ? "rgba(251,146,60,0.22)" : "rgba(124,92,231,0.14)"}`,
     }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>{title}</div>
-      <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.55 }}>{children}</div>
+      <div style={{ ...wfBodyStrong(), marginBottom: 4 }}>{title}</div>
+      <div style={{ ...wfBody(), lineHeight: 1.55 }}>{children}</div>
     </div>
   );
 }
@@ -1096,7 +1197,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
       body = (
         <>
           <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseVersion}</strong> was postponed from <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseOriginalDate}</strong> to <strong style={{ color: C.error, fontWeight: 600 }}>{d.jira.releaseNewDate}</strong>.
-          {" "}The primary blockers are <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF Export (BigTemplate)</strong> — 2 critical bugs including a memory leak — and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth Token Refresh</strong> causing session expiry during long exports.
+          {" "}Only <strong style={{ color: C.error, fontWeight: 600 }}>Blocked</strong> bugs within the release plan window ({d.jira.releasePlanStart} – {d.jira.releasePlanEnd}) caused the slip — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF Export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth Token Refresh</strong>.
         </>
       );
       break;
@@ -1137,7 +1238,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
 
   return (
     <W title="Executive summary" source="amplitude" span={3} delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
-      <p style={{ margin: 0, fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>{body}</p>
+      <p style={{ margin: 0, ...wfBody(), lineHeight: 1.65 }}>{body}</p>
     </W>
   );
 }
@@ -1145,7 +1246,7 @@ function WidgetTextSummary({ delay }: { delay: number }) {
 function InsightSection({ title, items }: { title: string; items: React.ReactNode[] }) {
   return (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.textMuted, marginBottom: 8 }}>{title}</div>
+      <div style={wfSectionTitle()}>{title}</div>
       <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
         {items.map((item, i) => <li key={i}>{item}</li>)}
       </ul>
@@ -1170,7 +1271,7 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
           <>Weekly adopters grew to <strong style={{ color: C.textPrimary, fontWeight: 600 }}>1,920</strong> (+{d.amplitude.dauChange}% WoW).</>,
         ]},
         { title: "Support & feedback", items: [
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>4 open tickets</strong> — 3 about low PDF resolution (SUP-4821, SUP-4798, SUP-4762).</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>4 open tickets</strong> — 3 about low PDF resolution (<JiraIssueLink issueKey="SUP-4821" />, <JiraIssueLink issueKey="SUP-4798" />, <JiraIssueLink issueKey="SUP-4762" />).</>,
           <>Epic <strong style={{ color: C.textPrimary, fontWeight: 600 }}>BT-142</strong> is {jiraPct}% complete with no critical bugs.</>,
         ]},
       ];
@@ -1199,15 +1300,15 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
       callout = { title: "Priority action", body: <>Start deprecation comms for Legacy Chart Builder — highest bug-to-user ratio with no active development.</> };
       break;
     case "release-delays":
-      intro = <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseVersion}</strong> slipped 14 days — bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>3 feature areas</strong> blocked the release window.</>;
+      intro = <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.releaseVersion}</strong> slipped 14 days — <strong style={{ color: C.error, fontWeight: 600 }}>3 Blocked bugs</strong> within the release plan ({d.jira.releasePlanStart} – {d.jira.releasePlanEnd}) held the window.</>;
       sections = [
-        { title: "Blocking features", items: [
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF Export</strong> — BUG-3841 (memory leak), BUG-3829 (silent failure &gt;50 pages).</>,
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth Token Refresh</strong> — BUG-3812 (session expiry during export).</>,
-          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Marketplace Sync</strong> — 2 high-severity bugs, 9–14 days old.</>,
+        { title: "Blocked bugs by feature", items: [
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF Export</strong> — <JiraIssueLink issueKey="BUG-3841" style={{ color: C.error, fontWeight: 600 }} /> &amp; <JiraIssueLink issueKey="BUG-3829" style={{ color: C.error, fontWeight: 600 }} /> (<span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> since 8 &amp; 10 May).</>,
+          <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth Token Refresh</strong> — <JiraIssueLink issueKey="BUG-3812" style={{ color: C.error, fontWeight: 600 }} /> (<span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> since 12 May).</>,
+          <>High/Critical bugs outside the plan window or without Blocked status did <strong style={{ color: C.textPrimary, fontWeight: 600 }}>not</strong> trigger the postponement.</>,
         ]},
       ];
-      callout = { title: "Next step", body: <>Fix PDF Export criticals first — they account for 3 of 4 release-blocking bugs.</> };
+      callout = { title: "Next step", body: <>Resolve Blocked bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> first — all three blockers fall inside the original release plan dates.</> };
       break;
     case "full-health":
       intro = (
@@ -1222,26 +1323,26 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
           <>Amplitude: watch <code style={codeTagStyle()}>feature_clicked</code> and <code style={codeTagStyle()}>dashboard_view</code> in the cohort before raising rollout.</>,
         ]},
         { title: "Risk 2 — release blockers (Jira)", items: [
-          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3841</span> (Critical) — memory leak in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export / BigTemplate</strong>.</>,
-          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3812</span> (Critical) — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth token refresh</strong> fails during long exports.</>,
-          <><span style={{ color: C.warning, fontWeight: 600 }}>{d.jira.high} high-severity bugs</span> tied to <strong style={{ color: C.textPrimary, fontWeight: 600 }}>release v4.2.0</strong> — threatens the Friday window despite {d.jira.sprintName} being {jiraPct}% done.</>,
+          <>Only <span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> status within the release plan window delays a ship — not Critical or High alone.</>,
+          <><JiraIssueLink issueKey="BUG-3841" style={{ color: C.error, fontWeight: 600 }} /> (<span style={{ color: C.error, fontWeight: 600 }}>Blocked</span>) — memory leak in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export / BigTemplate</strong>.</>,
+          <><JiraIssueLink issueKey="BUG-3812" style={{ color: C.error, fontWeight: 600 }} /> (<span style={{ color: C.error, fontWeight: 600 }}>Blocked</span>) — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth token refresh</strong> during long exports.</>,
         ]},
       ];
-      callout = { title: "Priority action", body: <>Fix Jira criticals in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>auth</strong> before expanding <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong> in LaunchDarkly.</> };
+      callout = { title: "Priority action", body: <>Clear <span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>auth</strong> within the release plan before expanding <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot</strong>.</> };
       break;
     case "sprint-health":
-      intro = <>Sprint and deployment readiness review: <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is on pace, but <strong style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical bugs</strong> and gated release flags block a safe deploy.</>;
+      intro = <>Sprint and deployment readiness review: <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{d.jira.sprintName}</strong> is on pace, but <span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> bugs within the release plan and gated flags block a safe deploy.</>;
       sections = [
         { title: "Sprint progress (Jira)", items: [
           <><strong style={{ color: C.textPrimary, fontWeight: 600 }}>{jiraPct}% complete</strong> with {d.jira.daysLeft} days left — velocity ~{Math.round(d.jira.velocity.reduce((s, v) => s + v, 0) / d.jira.velocity.length)} pts/sprint.</>,
-          <><span style={{ color: C.error, fontWeight: 600 }}>{d.jira.critical} critical</span> and <span style={{ color: C.warning, fontWeight: 600 }}>{d.jira.high} high</span> bugs open — triage before release window.</>,
+          <><span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> bugs in the release plan window must clear before ship — Critical/High alone do not postpone.</>,
         ]},
         { title: "Deployment flags (LaunchDarkly)", items: [
           <><code style={codeTagStyle()}>release-v4.2.0</code> at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>0%</strong> — gated until Jira blockers close.</>,
           <><code style={codeTagStyle()}>canary-prod-eu</code> at 15% — canary running; <code style={codeTagStyle()}>hotfix-auth-token</code> fully deployed.</>,
         ]},
       ];
-      callout = { title: "Priority action", body: <>Close critical bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>auth</strong>, then ungate <code style={codeTagStyle()}>release-v4.2.0</code>.</> };
+      callout = { title: "Priority action", body: <>Clear <span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> bugs in <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export</strong> and <strong style={{ color: C.textPrimary, fontWeight: 600 }}>auth</strong> within the release plan, then ungate <code style={codeTagStyle()}>release-v4.2.0</code>.</> };
       break;
     case "engagement":
       intro = <>User engagement overview: growth is positive, with no blockers — the main watchpoint is whether new users reach core features beyond the first session.</>;
@@ -1271,25 +1372,25 @@ function WidgetFormattedInsights({ delay }: { delay: number }) {
         <>
           Based on your prompt, <strong style={{ color: C.textPrimary, fontWeight: 600 }}>two areas need attention</strong>:{" "}
           <strong style={{ color: C.textPrimary, fontWeight: 600 }}>ai-copilot rollout</strong> and{" "}
-          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>critical bugs in PDF export &amp; authentication</strong>.
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>blocked bugs in PDF export &amp; authentication</strong>.
         </>
       );
       sections = [
         { title: "ai-copilot rollout", items: [
           <>The <code style={codeTagStyle()}>ai-copilot</code> flag is at <strong style={{ color: C.textPrimary, fontWeight: 600 }}>12%</strong> — hold expansion until Amplitude shows stable engagement.</>,
         ]},
-        { title: "Critical bugs by feature", items: [
-          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3841</span> — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export / BigTemplate</strong> memory leak.</>,
-          <><span style={{ color: C.error, fontWeight: 600 }}>BUG-3812</span> — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth token refresh</strong> during long exports.</>,
+        { title: "Blocked bugs by feature", items: [
+          <><JiraIssueLink issueKey="BUG-3841" style={{ color: C.error, fontWeight: 600 }} /> (<span style={{ color: C.error, fontWeight: 600 }}>Blocked</span>) — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>PDF export / BigTemplate</strong> memory leak.</>,
+          <><JiraIssueLink issueKey="BUG-3812" style={{ color: C.error, fontWeight: 600 }} /> (<span style={{ color: C.error, fontWeight: 600 }}>Blocked</span>) — <strong style={{ color: C.textPrimary, fontWeight: 600 }}>Auth token refresh</strong> during long exports.</>,
         ]},
       ];
-      callout = { title: "Priority action", body: <>Triage PDF export and auth criticals first; hold ai-copilot expansion until adoption is confirmed.</> };
+      callout = { title: "Priority action", body: <>Clear <span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> bugs in the release plan first; hold ai-copilot expansion until adoption is confirmed.</> };
       break;
   }
 
   return (
     <W title="Key takeaways" source="jira" span={3} delay={delay} summaryTooltip="Synthesised by Iskra from your connected data sources.">
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 13, lineHeight: 1.6, color: C.textSecondary }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, ...wfBody(), lineHeight: 1.6 }}>
         <p style={{ margin: 0 }}>{intro}</p>
         {sections.map(s => <InsightSection key={s.title} title={s.title} items={s.items} />)}
         {callout && <SummaryCallout title={callout.title}>{callout.body}</SummaryCallout>}
@@ -1305,15 +1406,15 @@ function WidgetSlackMessages({ delay }: { delay: number }) {
     <W title="Message Volume" label="7 days" source="slack" span={2} delay={delay}>
       <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>{fmt(total)}</div>
-          <div style={{ fontSize: 11, color: C.textMuted }}>messages this week</div>
+          <div style={wfMetric()}>{fmt(total)}</div>
+          <div style={wfLabel()}>messages this week</div>
         </div>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary }}>{d.avgResponse}</div>
-          <div style={{ fontSize: 11, color: C.textMuted }}>avg response time</div>
+          <div style={wfMetric()}>{d.avgResponse}</div>
+          <div style={wfLabel()}>avg response time</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
             <TrendingDown size={11} color={C.success} />
-            <span style={{ fontSize: 11, color: C.success }}>{Math.abs(d.responseChange)}% faster</span>
+            <span style={{ ...wfLabel(), color: C.success }}>{Math.abs(d.responseChange)}% faster</span>
           </div>
         </div>
       </div>
@@ -1331,8 +1432,8 @@ function WidgetSlackChannels({ delay }: { delay: number }) {
         {d.channels.map((ch, i) => (
           <div key={ch.name}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{ch.name}</span>
-              <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(ch.messages)}</span>
+              <span style={wfBody()}>{ch.name}</span>
+              <span style={wfLabel()}>{fmt(ch.messages)}</span>
             </div>
             <div style={{ height: 3, background: widgetBarTrack(), borderRadius: 2 }}>
               <div style={{ height: "100%", width: `${(ch.messages / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
@@ -1351,19 +1452,19 @@ function WidgetConfluenceOverview({ delay }: { delay: number }) {
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
         <DonutRing pct={d.coverage} color={coverageColor(d.coverage)} size={60} />
         <div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: C.textPrimary }}>{d.coverage}%</div>
-          <div style={{ fontSize: 11, color: C.textMuted }}>doc coverage</div>
+          <div style={wfMetric()}>{d.coverage}%</div>
+          <div style={wfLabel()}>doc coverage</div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {[{ v: fmt(d.totalPages), label: "total pages" }, { v: fmt(d.weeklyViews), label: "weekly views", change: d.viewsChange }].map(item => (
           <div key={item.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "8px 10px" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary }}>{item.v}</div>
-            <div style={{ fontSize: 10, color: C.textMuted }}>{item.label}</div>
+            <div style={wfStat()}>{item.v}</div>
+            <div style={wfLabel()}>{item.label}</div>
             {"change" in item && item.change && (
               <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
                 <TrendingUp size={10} color={C.success} />
-                <span style={{ fontSize: 10, color: C.success }}>{item.change}%</span>
+                <span style={{ ...wfLabel(), color: C.success }}>{item.change}%</span>
               </div>
             )}
           </div>
@@ -1382,10 +1483,10 @@ function WidgetConfluencePages({ delay }: { delay: number }) {
           <div key={p.title} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < d.pages.length - 1 ? `1px solid ${C.border}` : "none" }}>
             <FileText size={13} color={C.textMuted} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: C.textPrimary, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
-              <div style={{ fontSize: 11, color: C.textMuted }}>{p.space}</div>
+              <div style={{ ...wfBodyStrong(), fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+              <div style={wfLabel()}>{p.space}</div>
             </div>
-            <div style={{ fontSize: 11, color: C.textMuted, flexShrink: 0 }}>{p.ago}</div>
+            <div style={{ ...wfLabel(), flexShrink: 0 }}>{p.ago}</div>
           </div>
         ))}
       </div>
@@ -1399,19 +1500,19 @@ function WidgetLDOverview({ delay }: { delay: number }) {
     <W title="Feature Flag Status" source="launchdarkly" delay={delay}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary }}>{d.active}</div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>active flags</div>
+          <div style={wfMetric()}>{d.active}</div>
+          <div style={{ ...wfLabel(), marginTop: 2 }}>active flags</div>
         </div>
         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.textMuted }}>{d.inactive}</div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>inactive</div>
+          <div style={{ ...wfMetric(), color: C.textMuted }}>{d.inactive}</div>
+          <div style={{ ...wfLabel(), marginTop: 2 }}>inactive</div>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <Activity size={12} color={C.textMuted} />
-        <span style={{ fontSize: 12, color: C.textSecondary }}>{d.evaluations} evaluations this week</span>
+        <span style={wfBody()}>{d.evaluations} evaluations this week</span>
         <TrendingUp size={11} color={C.success} />
-        <span style={{ fontSize: 11, color: C.success }}>+{d.evalChange}%</span>
+        <span style={{ ...wfLabel(), color: C.success }}>+{d.evalChange}%</span>
       </div>
     </W>
   );
@@ -1428,13 +1529,13 @@ function WidgetLDFlags({ delay }: { delay: number }) {
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "white", marginLeft: f.on ? "auto" : 0 }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{f.key}</div>
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+              <div style={wfBody()}>{f.key}</div>
+              <div style={{ ...wfLabel(), marginTop: 3 }}>
                 {f.enabledOn ? <>Enabled <span style={{ color: C.textSecondary }}>{f.enabledOn}</span></> : "Not enabled"}
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: C.textSecondary, fontWeight: 600 }}>{f.rollout}%</span>
+              <span style={wfBodyStrong()}>{f.rollout}%</span>
               <div style={{ width: 80, height: 4, background: widgetBarTrack(), borderRadius: 2 }}>
                 <div style={{ height: "100%", width: `${f.rollout}%`, background: f.on ? C.spark : C.textMuted, borderRadius: 2, opacity: f.on ? 1 : 0.5 }} />
               </div>
@@ -1457,12 +1558,12 @@ function WidgetSupportTickets({ delay }: { delay: number }) {
             <Bug size={13} color={priorityColor(t.priority)} style={{ flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                <span style={{ fontSize: 11, fontFamily: "monospace", color: C.textMuted }}>{t.key}</span>
-                <span style={{ fontSize: 10, fontWeight: 600, color: priorityColor(t.priority) }}>{t.priority}</span>
+                <JiraIssueLink issueKey={t.key} style={wfLabel()} />
+                <span style={{ ...wfLabel(), fontWeight: 600, color: priorityColor(t.priority) }}>{t.priority}</span>
               </div>
-              <div style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.4 }}>{t.summary}</div>
+              <div style={{ ...wfBodyStrong(), lineHeight: 1.4 }}>{t.summary}</div>
             </div>
-            <span style={{ fontSize: 11, color: C.textMuted, flexShrink: 0 }}>{t.ageDays}d</span>
+            <span style={{ ...wfLabel(), flexShrink: 0 }}>{t.ageDays}d</span>
           </div>
         ))}
       </div>
@@ -1479,14 +1580,14 @@ function WidgetLicenseTierBreakdown({ delay }: { delay: number }) {
         {tiers.map((t, i) => (
           <div key={t.tier}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{t.tier}</span>
-              <span style={{ fontSize: 12, color: C.textMuted }}>{fmt(t.users)} users · {t.adoptionPct}%</span>
+              <span style={wfBodyStrong()}>{t.tier}</span>
+              <span style={wfLabel()}>{fmt(t.users)} users · {t.adoptionPct}%</span>
             </div>
             <div style={{ height: 4, background: widgetBarTrack(), borderRadius: 2, marginBottom: 4 }}>
               <div style={{ height: "100%", width: `${(t.adoptionPct / max) * 100}%`, background: C.spark, borderRadius: 2, opacity: 1 - i * 0.12 }} />
             </div>
-            <div style={{ fontSize: 11, color: C.textMuted }}>
-              Top feature: <code style={{ fontFamily: "monospace", color: isDarkMode ? C.sparkBright : C.spark }}>{t.topFeature}</code>
+            <div style={wfLabel()}>
+              Top feature: <code style={codeTagStyle()}>{t.topFeature}</code>
             </div>
           </div>
         ))}
@@ -1497,16 +1598,32 @@ function WidgetLicenseTierBreakdown({ delay }: { delay: number }) {
 
 function WidgetLowUsageFeatures({ delay }: { delay: number }) {
   const features = getMock().amplitude.lowUsageFeatures ?? [];
+  const headerStyle: React.CSSProperties = {
+    ...wfColHeader(),
+    paddingBottom: 3,
+    borderBottom: `1px solid ${C.border}`,
+  };
   return (
-    <W title="Lowest-usage features" source="amplitude" delay={delay}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {features.map(f => (
-          <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
-            <span style={{ fontSize: 12, color: C.textMuted }}>{f.monthlyUsers}/mo</span>
-            <span style={{ fontSize: 11, color: C.error, fontWeight: 600, width: 36, textAlign: "right" }}>{f.trend}%</span>
-          </div>
-        ))}
+    <W title="Lowest usage" source="amplitude" span={2} compact delay={delay}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 112px 52px", gap: "6px 8px", alignItems: "center" }}>
+        <div style={headerStyle}>Event name</div>
+        <div style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }}>Last month usage</div>
+        <div style={{ ...headerStyle, textAlign: "right", whiteSpace: "nowrap" }}>MoM</div>
+        {features.map(f => {
+          const momUp = f.momChange >= 0;
+          return (
+            <div key={f.eventName} style={{ display: "contents" }}>
+              <ConfluenceDocLink href={f.confluenceUrl} label={f.eventName} />
+              <span style={{ ...wfBodyStrong(), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                {fmt(f.monthlyUsers)}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 2, ...wfBodyStrong(momUp ? C.success : C.error), fontVariantNumeric: "tabular-nums" }}>
+                {momUp ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                {momUp ? "+" : ""}{f.momChange}%
+              </span>
+            </div>
+          );
+        })}
       </div>
     </W>
   );
@@ -1515,18 +1632,28 @@ function WidgetLowUsageFeatures({ delay }: { delay: number }) {
 function WidgetSunsetCandidates({ delay }: { delay: number }) {
   const candidates = getMock().jira.sunsetCandidates ?? [];
   return (
-    <W title="Sunset candidates" source="jira" span={2} delay={delay}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+    <W title="Sunset candidates" source="jira" span={1} compact delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         {candidates.map((c, i) => (
-          <div key={c.feature} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < candidates.length - 1 ? `1px solid ${C.border}` : "none" }}>
-            <AlertTriangle size={13} color={c.openBugs >= 10 ? C.error : C.warning} style={{ flexShrink: 0 }} />
+          <div
+            key={c.feature}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 6,
+              padding: "5px 0",
+              borderBottom: i < candidates.length - 1 ? `1px solid ${C.border}` : "none",
+            }}
+          >
+            <AlertTriangle size={10} color={c.openBugs >= 10 ? C.error : C.warning} style={{ flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary }}>{c.feature}</div>
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                {c.monthlyUsers} users/mo · {c.openBugs} bugs · oldest {c.oldestBugDays}d
+              <div style={{ ...wfBodyStrong(), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {c.feature}
+              </div>
+              <div style={{ ...wfLabel(), marginTop: 1, lineHeight: 1.35 }}>
+                {c.monthlyUsers}/mo · {c.openBugs} bugs · {c.oldestBugDays}d
               </div>
             </div>
-            <span style={{ fontSize: 11, color: C.textMuted }}>{c.supportTickets} tickets</span>
           </div>
         ))}
       </div>
@@ -1539,26 +1666,35 @@ function WidgetReleaseBlockers({ delay }: { delay: number }) {
   const blockers = jira.releaseBlockers ?? [];
   return (
     <W title={jira.releaseVersion ?? "Release"} label="blockers" source="jira" span={3} badge="Delayed" delay={delay}>
+      {jira.releasePlanStart && jira.releasePlanEnd && (
+        <div style={{ marginBottom: 10, padding: "10px 12px", background: C.bgElevated, borderRadius: 10, border: `1px solid ${C.border}` }}>
+          <div style={{ ...wfLabel(), marginBottom: 4 }}>Release plan window</div>
+          <div style={wfBodyStrong()}>{jira.releasePlanStart} – {jira.releasePlanEnd}</div>
+          <div style={{ ...wfLabel(), marginTop: 6, lineHeight: 1.45 }}>
+            Only bugs with <span style={{ color: C.error, fontWeight: 600 }}>Blocked</span> status within this window caused the release to slip.
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: 14, padding: "10px 12px", background: C.errorFaint, borderRadius: 10, display: "flex", alignItems: "center", gap: 8 }}>
         <AlertCircle size={14} color={C.error} />
-        <span style={{ fontSize: 12, color: C.error }}>
+        <span style={wfBody(C.error)}>
           Postponed from <strong>{jira.releaseOriginalDate}</strong> to <strong>{jira.releaseNewDate}</strong>
         </span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {blockers.map(b => (
           <div key={b.feature}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>{b.feature}</div>
+            <div style={{ ...wfBodyStrong(), marginBottom: 8 }}>{b.feature}</div>
             {b.bugs.map(bug => (
-              <div key={bug.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0 6px 12px", borderLeft: `2px solid ${bugSeverityColor(bug.severity)}` }}>
+              <div key={bug.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0 6px 12px", borderLeft: `2px solid ${bugReleaseStatusColor(bug.status)}` }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
-                    <span style={{ fontSize: 11, fontFamily: "monospace", color: C.textMuted }}>{bug.key}</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: bugSeverityColor(bug.severity) }}>{bug.severity}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2, flexWrap: "wrap" }}>
+                    <JiraIssueLink issueKey={bug.key} style={wfLabel()} />
+                    <span style={{ ...wfLabel(), fontWeight: 600, color: bugReleaseStatusColor(bug.status) }}>{bug.status}</span>
+                    <span style={wfLabel()}>since {bug.blockedSince}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: C.textSecondary }}>{bug.summary}</div>
+                  <div style={wfBody()}>{bug.summary}</div>
                 </div>
-                <span style={{ fontSize: 11, color: C.textMuted }}>{bug.ageDays}d</span>
               </div>
             ))}
           </div>
@@ -1579,14 +1715,23 @@ const WIDGETS_BY_SOURCE: Record<SourceId, Array<{ id: string; node: (d: number) 
 const SCENARIO_WIDGET_IDS: Partial<Record<DashboardScenarioId, Partial<Record<SourceId, string[]>>>> = {
   "feature-adoption": {
     amplitude: ["amp-ev", "amp-top"],
-    jira: ["jira-sprint"],
+    jira: [],
     launchdarkly: ["ld-flags"],
   },
   "adoption-breakdown": {
     amplitude: ["amp-top"],
   },
   "sunsetting": {},
-  "release-delays": {},
+  "release-delays": {
+    jira: [],
+  },
+  "full-health": {
+    amplitude: ["amp-dau", "amp-ev", "amp-top"],
+    jira: ["jira-sprint", "jira-bugs"],
+    slack: ["slack-msg", "slack-ch"],
+    confluence: ["conf-ov", "conf-pg"],
+    launchdarkly: ["ld-ov", "ld-flags"],
+  },
   "sprint-health": {
     jira: ["jira-sprint", "jira-bugs", "jira-vel"],
     launchdarkly: ["ld-flags"],
@@ -3153,7 +3298,7 @@ export default function IgniteIskraPageV3() {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 14,
+                gap: 10,
                 opacity: isRegenerating ? 0.45 : 1,
                 transition: "opacity 0.2s ease",
                 pointerEvents: isRegenerating ? "none" : "auto",
@@ -3179,7 +3324,7 @@ export default function IgniteIskraPageV3() {
             userSelect: "none",
           }}
         >
-          Created during Ignite · June 2026
+          Iskra can make mistakes. Check important info.
         </p>
       </div>
 
