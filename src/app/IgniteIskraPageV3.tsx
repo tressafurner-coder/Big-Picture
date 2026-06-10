@@ -1670,16 +1670,16 @@ function WidgetLDOverview({ delay }: { delay: number }) {
 function WidgetLDFlags({ delay }: { delay: number }) {
   const d = getMock().launchdarkly;
   return (
-    <W title="Active Rollouts" source="launchdarkly" span={2} delay={delay}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <W title="Active Rollouts" source="launchdarkly" span={1} compact delay={delay}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {d.flags.map(f => (
-          <div key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <div style={{ width: 28, height: 16, borderRadius: 8, background: f.on ? C.success : "rgba(128,128,128,0.2)", display: "flex", alignItems: "center", padding: "0 3px", transition: "background 0.2s", flexShrink: 0, marginTop: 2 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "white", marginLeft: f.on ? "auto" : 0 }} />
+          <div key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <div style={{ width: 26, height: 14, borderRadius: 7, background: f.on ? C.success : "rgba(128,128,128,0.2)", display: "flex", alignItems: "center", padding: "0 2px", transition: "background 0.2s", flexShrink: 0, marginTop: 2 }}>
+              <div style={{ width: 9, height: 9, borderRadius: "50%", background: "white", marginLeft: f.on ? "auto" : 0 }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={wfBody()}>{f.key}</div>
-              <div style={{ ...wfLabel(), marginTop: 3 }}>
+              <div style={{ ...wfBody(), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.key}</div>
+              <div style={{ ...wfLabel(), marginTop: 2, lineHeight: 1.35 }}>
                 {f.enabledOn ? (
                   <>
                     Enabled <span style={{ color: C.textSecondary }}>{f.enabledOn}</span>
@@ -1690,9 +1690,9 @@ function WidgetLDFlags({ delay }: { delay: number }) {
                 ) : "Not enabled"}
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
               <span style={wfBodyStrong()}>{f.rollout}%</span>
-              <div style={{ width: 80, height: 4, background: widgetBarTrack(), borderRadius: 2 }}>
+              <div style={{ width: 56, height: 4, background: widgetBarTrack(), borderRadius: 2 }}>
                 <div style={{ height: "100%", width: `${f.rollout}%`, background: f.on ? C.spark : C.textMuted, borderRadius: 2, opacity: f.on ? 1 : 0.5 }} />
               </div>
             </div>
@@ -1707,19 +1707,19 @@ function WidgetSupportTickets({ delay }: { delay: number }) {
   const tickets = getMock().jira.supportTickets ?? [];
   const priorityColor = ticketPriorityColor;
   return (
-    <W title="Support tickets" source="jira" span={2} delay={delay}>
+    <W title="Support tickets" source="jira" span={1} compact delay={delay}>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {tickets.map((t, i) => (
-          <div key={t.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: i < tickets.length - 1 ? `1px solid ${C.border}` : "none" }}>
-            <Bug size={13} color={priorityColor(t.priority)} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div key={t.key} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "6px 0", borderBottom: i < tickets.length - 1 ? `1px solid ${C.border}` : "none" }}>
+            <Bug size={11} color={priorityColor(t.priority)} style={{ flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 1, flexWrap: "wrap" }}>
                 <JiraIssueLink issueKey={t.key} style={wfLabel()} />
                 <span style={{ ...wfLabel(), fontWeight: 600, color: priorityColor(t.priority) }}>{t.priority}</span>
+                <span style={{ ...wfLabel(), marginLeft: "auto", flexShrink: 0 }}>{t.ageDays}d</span>
               </div>
-              <div style={{ ...wfBodyStrong(), lineHeight: 1.4 }}>{t.summary}</div>
+              <div style={{ ...wfBody(), lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{t.summary}</div>
             </div>
-            <span style={{ ...wfLabel(), flexShrink: 0 }}>{t.ageDays}d</span>
           </div>
         ))}
       </div>
