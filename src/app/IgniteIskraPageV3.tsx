@@ -293,7 +293,7 @@ interface DashboardMock {
   };
   launchdarkly: {
     active: number; inactive: number; evaluations: string; evalChange: number;
-    flags: { key: string; on: boolean; rollout: number }[];
+    flags: { key: string; on: boolean; rollout: number; enabledOn?: string }[];
     rolloutStarted?: string;
     rolloutTarget?: string;
   };
@@ -454,9 +454,11 @@ const DEFAULT_MOCK: DashboardMock = {
   launchdarkly: {
     active: 24, inactive: 8, evaluations: "4.2M", evalChange: 22.1,
     flags: [
-      { key: "new-dashboard-beta", on: true, rollout: 35 }, { key: "enhanced-search", on: true, rollout: 100 },
-      { key: "ai-copilot", on: true, rollout: 12 }, { key: "csv-export-v2", on: false, rollout: 0 },
-      { key: "performance-mode", on: true, rollout: 50 },
+      { key: "new-dashboard-beta", on: true, rollout: 35, enabledOn: "3 Mar 2026" },
+      { key: "enhanced-search", on: true, rollout: 100, enabledOn: "8 Jan 2026" },
+      { key: "ai-copilot", on: true, rollout: 12, enabledOn: "18 May 2026" },
+      { key: "csv-export-v2", on: false, rollout: 0 },
+      { key: "performance-mode", on: true, rollout: 50, enabledOn: "22 Apr 2026" },
     ],
   },
 };
@@ -476,10 +478,10 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
     launchdarkly: {
       ...DEFAULT_MOCK.launchdarkly,
       flags: [
-        { key: "release-v4.2.0", on: true, rollout: 0 },
-        { key: "hotfix-auth-token", on: true, rollout: 100 },
-        { key: "deploy-gate-check", on: true, rollout: 100 },
-        { key: "canary-prod-eu", on: true, rollout: 15 },
+        { key: "release-v4.2.0", on: true, rollout: 0, enabledOn: "1 Jun 2026" },
+        { key: "hotfix-auth-token", on: true, rollout: 100, enabledOn: "28 May 2026" },
+        { key: "deploy-gate-check", on: true, rollout: 100, enabledOn: "15 Jan 2026" },
+        { key: "canary-prod-eu", on: true, rollout: 15, enabledOn: "26 May 2026" },
         { key: "rollback-v4.1.9", on: false, rollout: 0 },
       ],
     },
@@ -513,9 +515,9 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       ...DEFAULT_MOCK.launchdarkly,
       active: 18, inactive: 6, evaluations: "2.8M", evalChange: 14.3,
       flags: [
-        { key: "ai-copilot", on: true, rollout: 12 },
-        { key: "bigtemplate-v3", on: true, rollout: 35 },
-        { key: "enhanced-search", on: true, rollout: 100 },
+        { key: "ai-copilot", on: true, rollout: 12, enabledOn: "18 May 2026" },
+        { key: "bigtemplate-v3", on: true, rollout: 35, enabledOn: "12 Mar 2026" },
+        { key: "enhanced-search", on: true, rollout: 100, enabledOn: "8 Jan 2026" },
         { key: "csv-export-v2", on: false, rollout: 0 },
       ],
     },
@@ -554,9 +556,9 @@ const SCENARIO_MOCKS: Record<DashboardScenarioId, DashboardMock> = {
       rolloutStarted: "12 Mar 2026",
       rolloutTarget: "30 Jun 2026",
       flags: [
-        { key: "bigtemplate-v3-rework", on: true, rollout: 35 },
+        { key: "bigtemplate-v3-rework", on: true, rollout: 35, enabledOn: "12 Mar 2026" },
         { key: "bigtemplate-pdf-hd", on: false, rollout: 0 },
-        { key: "bigtemplate-marketplace", on: true, rollout: 100 },
+        { key: "bigtemplate-marketplace", on: true, rollout: 100, enabledOn: "5 Feb 2026" },
       ],
     },
   },
@@ -1419,18 +1421,23 @@ function WidgetLDFlags({ delay }: { delay: number }) {
   const d = getMock().launchdarkly;
   return (
     <W title="Active Rollouts" source="launchdarkly" span={2} delay={delay}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {d.flags.map(f => (
-          <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 28, height: 16, borderRadius: 8, background: f.on ? C.success : "rgba(128,128,128,0.2)", display: "flex", alignItems: "center", padding: "0 3px", transition: "background 0.2s" }}>
+          <div key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <div style={{ width: 28, height: 16, borderRadius: 8, background: f.on ? C.success : "rgba(128,128,128,0.2)", display: "flex", alignItems: "center", padding: "0 3px", transition: "background 0.2s", flexShrink: 0, marginTop: 2 }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "white", marginLeft: f.on ? "auto" : 0 }} />
             </div>
-            <span style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace", flex: 1 }}>{f.key}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: C.textSecondary, fontFamily: "monospace" }}>{f.key}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+                {f.enabledOn ? <>Enabled <span style={{ color: C.textSecondary }}>{f.enabledOn}</span></> : "Not enabled"}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: C.textSecondary, fontWeight: 600 }}>{f.rollout}%</span>
               <div style={{ width: 80, height: 4, background: widgetBarTrack(), borderRadius: 2 }}>
                 <div style={{ height: "100%", width: `${f.rollout}%`, background: f.on ? C.spark : C.textMuted, borderRadius: 2, opacity: f.on ? 1 : 0.5 }} />
               </div>
-              <span style={{ fontSize: 11, color: C.textSecondary, width: 32, textAlign: "right" }}>{f.rollout}%</span>
             </div>
           </div>
         ))}
