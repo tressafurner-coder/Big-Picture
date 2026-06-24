@@ -5,6 +5,7 @@ import {
   IGNITE_ISKRA_V3_LAST_UPDATE_DISPLAY,
   MERGING_BOARD_GOALS_LAST_UPDATE_DISPLAY,
   SHOW_VALID_API_TOKENS_LAST_UPDATE_DISPLAY,
+  TASK_STRUCTURE_IN_GROUPING_LAST_UPDATE_DISPLAY,
   TEAMS_PROTOTYPE_LAST_EDITED_DISPLAY,
   TEST_PROTOTYPE_LAST_UPDATE_DISPLAY,
 } from "./generated/prototypeHubDates";
@@ -29,6 +30,16 @@ export type PrototypeEntry = {
 
 /** Hub table order: newest / most relevant first — prepend new entries here (top of the list). */
 export const PROTOTYPE_ENTRIES: PrototypeEntry[] = [
+  {
+    id: "task-structure-in-grouping",
+    name: "Task structure in grouping",
+    status: "In Development",
+    summary:
+      "How parent and child tasks render inside BigPicture group headers — epic, sprint, and custom field groupings with expandable hierarchy.",
+    lastEdited: TASK_STRUCTURE_IN_GROUPING_LAST_UPDATE_DISPLAY,
+    kind: "route",
+    routeSegment: "task-structure-in-grouping",
+  },
   {
     id: "ignite-iskra-v3",
     name: "Ignite Iskra project 3",

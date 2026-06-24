@@ -16,6 +16,7 @@ import IgniteIskraPageV3 from "./app/IgniteIskraPageV3.tsx";
 import MergingBoardGoalsPage from "./app/MergingBoardGoalsPage.tsx";
 import ShowOnlyValidApiTokensPage from "./app/ShowOnlyValidApiTokensPage.tsx";
 import PrototypesHub from "./app/PrototypesHub.tsx";
+import TaskStructureInGroupingPage from "./app/TaskStructureInGroupingPage.tsx";
 import TeamsDemoPage from "./app/TeamsDemoPage.tsx";
 import TestPrototypePage from "./app/TestPrototypePage.tsx";
 import "./styles/index.css";
@@ -125,6 +126,14 @@ const hubRoutes = (
     <Route
       path="/test/"
       element={<Navigate to="/risk-matrix-jira-custom-fields" replace />}
+    />
+    <Route
+      path="/task-structure-in-grouping"
+      element={<TaskStructureInGroupingPage />}
+    />
+    <Route
+      path="/task-structure-in-grouping/"
+      element={<TaskStructureInGroupingPage />}
     />
     <Route path="*" element={<UnknownPrototypeRoute />} />
   </Routes>
